@@ -199,7 +199,7 @@
         <span id="members-badge" class="text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded">—</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Total Members</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Waumini (Rejista)</p>
         <h3 id="stat-total-members" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -207,12 +207,12 @@
     <div class="stat-card bg-surface-container-lowest p-8 rounded-xl flex flex-col justify-between h-48">
       <div class="flex justify-between items-start">
         <div class="p-3 bg-yellow-50 rounded-lg">
-          <span class="material-symbols-outlined text-secondary text-2xl">person_add</span>
+          <span class="material-symbols-outlined text-secondary text-2xl">family_restroom</span>
         </div>
-        <span class="text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded">This month</span>
+        <span class="text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded">Rejista</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">New Registrations</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Familia</p>
         <h3 id="stat-new-members" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -225,7 +225,7 @@
         <span id="giving-badge" class="text-xs font-bold px-2 py-1 rounded">—</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Monthly Giving</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Makusanyo ya Mwezi</p>
         <h3 id="stat-monthly-giving" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -437,48 +437,21 @@ async function loadDashboard() {
   }
 }
 
-/* ─── Stats ─── */
+/* ─── Stats — from the parish register and ledger (church_overview) ─── */
+let __overview = null;
+const overview = () => (__overview = __overview || supabase.rpc('church_overview').then(r => { if (r.error) throw r.error; return r.data; }));
+
 async function loadStats() {
-  const today = new Date().toISOString().split('T')[0];
-  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString().split('T')[0];
-
-  const [
-    { count: totalMembers },
-    { count: newThisMonth },
-    { data: monthContribs },
-    { data: prevMonthContribs },
-    { count: upcomingEvents }
-  ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true })
-      .eq('role', 'member').eq('status', 'active'),
-
-    supabase.from('profiles').select('*', { count: 'exact', head: true })
-      .gte('created_at', firstOfMonth + 'T00:00:00'),
-
-    supabase.from('contributions').select('amount').gte('contribution_date', firstOfMonth),
-
-    supabase.from('contributions').select('amount')
-      .gte('contribution_date', new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().split('T')[0])
-      .lt('contribution_date', firstOfMonth),
-
-    supabase.from('events').select('*', { count: 'exact', head: true }).gte('event_date', today),
-  ]);
-
-  const monthTotal = (monthContribs || []).reduce((s, c) => s + (c.amount || 0), 0);
-  const prevTotal  = (prevMonthContribs || []).reduce((s, c) => s + (c.amount || 0), 0);
-
-  document.getElementById('stat-total-members').textContent  = (totalMembers || 0).toLocaleString();
-  document.getElementById('stat-new-members').textContent    = (newThisMonth || 0).toLocaleString();
+  const o = await overview();
+  const monthTotal = Number(o.income_month) || 0, prevTotal = Number(o.income_prev_month) || 0;
+  document.getElementById('stat-total-members').textContent  = Number(o.parishioners || 0).toLocaleString();
+  document.getElementById('stat-new-members').textContent    = Number(o.families || 0).toLocaleString();
   document.getElementById('stat-monthly-giving').textContent = formatTZS(monthTotal);
-  document.getElementById('stat-events').textContent         = String(upcomingEvents || 0).padStart(2, '0');
+  document.getElementById('stat-events').textContent         = String(o.upcoming_events || 0).padStart(2, '0');
 
-  // Members badge (placeholder — no prev count available cheaply)
-  document.getElementById('members-badge').textContent = totalMembers + ' active';
-  document.getElementById('members-badge').className =
-    'text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded';
+  document.getElementById('members-badge').textContent = o.scope ? o.scope : `${Number(o.accounts_linked || 0)} wana akaunti`;
+  document.getElementById('members-badge').className = 'text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded';
 
-  // Giving badge (vs last month)
   const givingBadge = document.getElementById('giving-badge');
   if (prevTotal > 0) {
     const pct = ((monthTotal - prevTotal) / prevTotal * 100).toFixed(1);
@@ -486,49 +459,25 @@ async function loadStats() {
     givingBadge.textContent = (up ? '+' : '') + pct + '%';
     givingBadge.className   = `text-xs font-bold px-2 py-1 rounded ${up ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`;
   } else {
-    givingBadge.textContent = 'This month';
+    givingBadge.textContent = 'Mwezi huu';
     givingBadge.className   = 'text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded';
   }
-
   document.getElementById('stats-skeleton').classList.add('hidden');
   document.getElementById('stats-content').classList.remove('hidden');
 }
 
-/* ─── Bar Chart ─── */
+/* ─── Bar Chart: last 6 months of posted parish income ─── */
 async function loadChart() {
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-  sixMonthsAgo.setDate(1);
-
-  const { data: contribs } = await supabase
-    .from('contributions')
-    .select('amount, contribution_date')
-    .gte('contribution_date', sixMonthsAgo.toISOString().split('T')[0]);
-
-  // Build 6-month buckets
-  const buckets = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    buckets.push({
-      label: d.toLocaleString('en', { month: 'short' }).toUpperCase(),
-      year:  d.getFullYear(),
-      month: d.getMonth(),
-      total: 0
-    });
-  }
-  (contribs || []).forEach(c => {
-    const d = new Date(c.contribution_date);
-    const bucket = buckets.find(b => b.year === d.getFullYear() && b.month === d.getMonth());
-    if (bucket) bucket.total += (c.amount || 0);
+  const o = await overview();
+  const buckets = (o.monthly || []).map(m => {
+    const d = new Date(m.month);
+    return { label: d.toLocaleString('en', { month: 'short' }).toUpperCase(), month: d.getMonth(), year: d.getFullYear(), total: Number(m.total) || 0 };
   });
-
   const maxVal = Math.max(...buckets.map(b => b.total), 1);
   const currentMonth = new Date().getMonth();
-
   const container = document.getElementById('chart-content');
   container.innerHTML = buckets.map(b => {
-    const pct    = Math.max((b.total / maxVal) * 90, 4); // min 4% height for empty
+    const pct    = Math.max((b.total / maxVal) * 90, 4);
     const active = b.month === currentMonth;
     return `
       <div class="flex-1 flex flex-col items-center gap-4">
@@ -538,7 +487,6 @@ async function loadChart() {
         <span class="text-[10px] font-bold ${active ? 'text-primary' : 'text-slate-400'}">${b.label}</span>
       </div>`;
   }).join('');
-
   document.getElementById('chart-skeleton').classList.add('hidden');
   container.classList.remove('hidden');
 }
@@ -614,89 +562,25 @@ async function loadDistribution() {
   document.getElementById('donut-content').classList.remove('hidden');
 }
 
-/* ─── Recent Activity ─── */
+/* ─── Recent Activity: latest posted payments + newest accounts ─── */
 async function loadActivity() {
-  // Fetch last 8 contributions
-  const { data: contribs } = await supabase
-    .from('contributions')
-    .select('id, amount, category, contribution_date, member_id')
-    .order('contribution_date', { ascending: false })
-    .limit(8);
-
-  // Fetch last 5 new members
-  const { data: newMembers } = await supabase
-    .from('profiles')
-    .select('id, full_name, avatar_url, created_at')
-    .eq('role', 'member')
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  // Resolve contribution member names
-  let profileMap = {};
-  if (contribs?.length) {
-    const ids = [...new Set(contribs.map(c => c.member_id).filter(Boolean))];
-    if (ids.length) {
-      const { data: prows } = await supabase
-        .from('profiles').select('id, full_name, avatar_url').in('id', ids);
-      profileMap = Object.fromEntries((prows || []).map(p => [p.id, p]));
-    }
-  }
-
-  // Build unified activity list
-  const items = [];
-
-  (contribs || []).forEach(c => {
-    const p = profileMap[c.member_id] || {};
-    items.push({
-      kind:      'contribution',
-      id:        c.id,
-      name:      p.full_name || 'Member',
-      avatar:    p.avatar_url || null,
-      subtitle:  capitalize(c.category?.replace(/_/g, ' ') || 'Contribution') + ' received',
-      amount:    c.amount,
-      timestamp: c.contribution_date,
-    });
-  });
-
-  (newMembers || []).forEach(m => {
-    items.push({
-      kind:      'member',
-      id:        m.id,
-      name:      m.full_name || 'New Member',
-      avatar:    m.avatar_url || null,
-      subtitle:  'Registered as a new member',
-      amount:    null,
-      timestamp: m.created_at,
-    });
-  });
-
-  // Sort by timestamp desc, take top 6
-  items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  const top = items.slice(0, 6);
-
-  const TYPE_BADGE = {
-    contribution: '<span class="text-[10px] font-bold text-green-600 uppercase">Contribution</span>',
-    member:       '<span class="text-[10px] font-bold text-blue-600 uppercase">New Member</span>',
-  };
-
+  const [o, { data: newMembers }] = await Promise.all([
+    overview(),
+    supabase.from('profiles').select('id, full_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(5),
+  ]);
+  const items = [
+    ...(o.recent || []).map(c => ({ kind: 'contribution', name: c.payer_name || 'Mlipaji', avatar: null,
+        subtitle: `${c.category}${c.jumuiya ? ' · ' + c.jumuiya : ''}`, amount: c.amount, timestamp: c.txn_date })),
+    ...(newMembers || []).map(m => ({ kind: 'member', name: m.full_name || 'Mtumiaji mpya', avatar: m.avatar_url || null,
+        subtitle: 'Amejisajili kwenye mfumo', amount: null, timestamp: m.created_at })),
+  ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 6);
+  const TYPE_BADGE = { member: '<span class="text-[10px] font-bold text-blue-600 uppercase">Akaunti mpya</span>' };
   const list = document.getElementById('activity-list');
-  if (top.length === 0) {
-    list.innerHTML = '<p class="text-sm text-on-surface-variant text-center py-8">No recent activity</p>';
-  } else {
-    list.innerHTML = top.map(item => {
-      const avatarHtml = item.avatar
-        ? `<img src="${escapeHtml(item.avatar)}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover rounded-full"/>`
-        : `<span class="text-white font-bold text-sm">${escapeHtml(getInitials(item.name))}</span>`;
-
-      const rightHtml = item.kind === 'contribution'
-        ? `<span class="text-xs font-bold text-primary">${formatTZS(item.amount)}</span>`
-        : TYPE_BADGE[item.kind];
-
-      return `
+  list.innerHTML = items.length ? items.map(item => `
         <div class="activity-item flex items-center justify-between p-4 bg-surface-container-low/30 rounded-xl">
           <div class="flex items-center gap-4">
             <div class="h-10 w-10 rounded-full bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
-              ${avatarHtml}
+              ${item.avatar ? `<img src="${escapeHtml(item.avatar)}" alt="" class="w-full h-full object-cover rounded-full"/>` : `<span class="text-white font-bold text-sm">${escapeHtml(getInitials(item.name))}</span>`}
             </div>
             <div>
               <p class="text-sm font-bold text-primary">${escapeHtml(item.name)}</p>
@@ -705,12 +589,9 @@ async function loadActivity() {
           </div>
           <div class="text-right flex-shrink-0 ml-4">
             <p class="text-xs font-bold text-slate-400 mb-1">${timeAgo(item.timestamp)}</p>
-            ${rightHtml}
+            ${item.kind === 'contribution' ? `<span class="text-xs font-bold text-primary">${formatTZS(item.amount)}</span>` : TYPE_BADGE.member}
           </div>
-        </div>`;
-    }).join('');
-  }
-
+        </div>`).join('') : '<p class="text-sm text-on-surface-variant text-center py-8">Hakuna shughuli za karibuni</p>';
   document.getElementById('activity-skeleton').classList.add('hidden');
   list.classList.remove('hidden');
 }

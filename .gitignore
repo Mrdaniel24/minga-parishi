@@ -35,3 +35,12 @@ CREDENTIALS.md
 # AI assistant config
 .claude/
 CLAUDE.md
+
+# Parish data — never commit (personal and financial records)
+private/
+*.xlsm
+*.xlsx
+*.xls
+**/minga_import.sql
+**/workbook.json
+tools/dev/.storage/

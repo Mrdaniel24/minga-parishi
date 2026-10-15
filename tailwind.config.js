@@ -17,6 +17,7 @@ module.exports = {
     './admin/**/*.html',
     './super-admin/**/*.html',
     './member/**/*.html',
+    './parish/**/*.html',
     './assets/js/**/*.js',
   ],
   plugins: [require('@tailwindcss/forms'), require('@tailwindcss/container-queries')],

@@ -3,7 +3,8 @@
  * Supabase Client Configuration
  */
 
-const SUPABASE_URL = 'https://ztafklfgtsaolyvaybop.supabase.co';
+// window.KH_SUPABASE_URL is only set by the local development server (tools/dev/local-supabase.mjs)
+const SUPABASE_URL = window.KH_SUPABASE_URL || 'https://ztafklfgtsaolyvaybop.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0YWZrbGZndHNhb2x5dmF5Ym9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MzQ0NzYsImV4cCI6MjEwNzQxMDQ3Nn0.ADu8bj4b84fETTyErCwOsmuYnA8A-SyQQBq25Yv1v1I';
 
 /**

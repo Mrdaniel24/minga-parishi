@@ -1,13 +1,16 @@
 {
-  "name": "kanisa-hub-demo",
+  "name": "minga-parish-management-system",
   "version": "1.0.0",
   "private": true,
-  "description": "Kanisa Hub by FocusTec — demo. Static site; npm is only used to build the Tailwind CSS.",
+  "description": "Minga Parish Management System (Kanisa Hub by FocusTec). Static frontend + Supabase. npm builds Tailwind CSS and runs the database tests.",
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i assets/css/tailwind.src.css -o assets/css/tailwind.css --minify",
-    "watch:css": "tailwindcss -c tailwind.config.js -i assets/css/tailwind.src.css -o assets/css/tailwind.css --watch"
+    "watch:css": "tailwindcss -c tailwind.config.js -i assets/css/tailwind.src.css -o assets/css/tailwind.css --watch",
+    "test": "node --test \"tests/db/*.test.mjs\"",
+    "seed:build": "python -I tools/migration/build_seed.py"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",
     "tailwindcss": "^3.4.17"

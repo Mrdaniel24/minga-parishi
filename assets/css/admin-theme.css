@@ -609,3 +609,45 @@ body > header.sticky,
 /* mobile bottom nav accent */
 .bottom-nav-item.bottom-nav-active,
 .bottom-nav-item:hover { color: var(--kh-sidebar) !important; }
+
+/* section headings of the shared sidebar menu (admin-layout.js) */
+#sidebar .kh-nav-h { padding: 1.1rem 2.2rem .35rem; font-size: 9px; font-weight: 900; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+#sidebar .kh-nav-h:first-child { padding-top: .2rem; }
+#sidebar .kh-nav [hidden] { display: none !important; }
+#sidebar .kh-nav { overflow-y: auto; }
+
+/* ── member's parish record (assets/js/member-parish.js) ── */
+.mp-card { background: var(--kh-card); border-radius: var(--kh-radius); box-shadow: var(--kh-shadow); padding: 1.4rem; margin-bottom: 1.25rem; }
+.mp-card h3 { font-weight: 900; color: var(--kh-sidebar); font-size: 1.05rem; margin-bottom: .6rem; }
+.mp-card--gold { border-left: 5px solid var(--kh-gold); }
+.mp-muted { color: var(--kh-muted); font-size: .85rem; }
+.mp-note { background: var(--kh-gold-soft); padding: .6rem .8rem; border-radius: 12px; font-size: .85rem; margin: .6rem 0; }
+.mp-eyebrow { font-size: .65rem; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: var(--kh-gold); }
+.mp-row { display: flex; gap: 1rem; align-items: flex-start; }
+.mp-ico { font-size: 2rem !important; color: var(--kh-sidebar); }
+.mp-id { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+.mp-id h3 { font-size: 1.35rem; margin: .1rem 0; }
+.mp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-top: 1rem; }
+.mp-kpis > div { background: #f4f8f6; border-radius: 14px; padding: .8rem .9rem; }
+.mp-kpis p { font-size: .65rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--kh-muted); }
+.mp-kpis b { display: block; font-size: 1.1rem; color: var(--kh-sidebar); margin-top: .2rem; }
+.mp-zaka { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .3rem; margin-top: 1rem; }
+.mp-zaka span { text-align: center; font-size: .65rem; font-weight: 800; padding: .35rem 0; border-radius: 8px; background: #eef2f1; color: var(--kh-muted); }
+.mp-zaka span.on { background: var(--kh-teal); color: #fff; }
+.mp-zaka span.due { background: var(--kh-gold-soft); color: #78561d; }
+.mp-zaka--big span { font-size: .8rem; padding: .6rem 0; }
+@media (max-width: 520px) { .mp-zaka { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.mp-camp { margin-top: .8rem; font-size: .85rem; font-weight: 700; }
+.mp-camp small { float: right; color: var(--kh-muted); }
+.mp-bar { height: 6px; background: #e8eeec; border-radius: 99px; overflow: hidden; margin-top: .3rem; }
+.mp-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--kh-teal), var(--kh-sidebar)); }
+.mp-btn { display: inline-flex; align-items: center; gap: .4rem; background: var(--kh-sidebar); color: #fff; font-weight: 800; font-size: .85rem; padding: .6rem 1.1rem; border-radius: 999px; border: 0; cursor: pointer; }
+.mp-btn--ghost { background: #fff; color: var(--kh-sidebar); border: 1px solid var(--kh-line); }
+.mp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; margin-top: 1rem; align-items: end; }
+.mp-form label { display: flex; flex-direction: column; gap: .3rem; font-size: .72rem; font-weight: 800; color: var(--kh-muted); }
+.mp-form input, .mp-form select { border: 1px solid #d6e0dc; border-radius: 12px; padding: .6rem .7rem; font-size: .9rem; font-weight: 600; background: #fbfdfc; }
+.mp-table { overflow-x: auto; }
+.mp-table table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.mp-table th { text-align: left; font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--kh-muted); padding: .55rem; border-bottom: 2px solid var(--kh-line); }
+.mp-table td { padding: .55rem; border-bottom: 1px solid var(--kh-line); vertical-align: top; }
+.mp-table a { color: var(--kh-sidebar); font-weight: 800; text-decoration: underline; }

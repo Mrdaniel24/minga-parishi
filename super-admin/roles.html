@@ -455,8 +455,9 @@ function renderCards(admins) {
       el.addEventListener('change', () => markUnsaved(card));
     });
 
-    card.querySelector('.btn-save-card').addEventListener('click', () => saveCard(card, adminId));
-    card.querySelector('.btn-reset-card').addEventListener('click', () => resetCard(card, adminId));
+    // desktop and phone layouts each have their own Save / Reset buttons
+    card.querySelectorAll('.btn-save-card').forEach(b => b.addEventListener('click', () => saveCard(card, adminId)));
+    card.querySelectorAll('.btn-reset-card').forEach(b => b.addEventListener('click', () => resetCard(card, adminId)));
   });
 }
 
@@ -577,9 +578,10 @@ function renderAdminCard(admin) {
 
 function markUnsaved(card) {
   card.classList.add('unsaved');
-  const btn = card.querySelector('.btn-save-card');
-  btn.disabled = false;
-  btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  card.querySelectorAll('.btn-save-card').forEach(btn => {
+    btn.disabled = false;
+    btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  });
 }
 
 function resetCard(card, adminId) {
@@ -593,9 +595,10 @@ function resetCard(card, adminId) {
   card.querySelector('.dept-select').value = String(admin.department_id || '');
 
   card.classList.remove('unsaved');
-  const btn = card.querySelector('.btn-save-card');
-  btn.disabled = true;
-  btn.classList.add('opacity-40', 'cursor-not-allowed');
+  card.querySelectorAll('.btn-save-card').forEach(btn => {
+    btn.disabled = true;
+    btn.classList.add('opacity-40', 'cursor-not-allowed');
+  });
 }
 
 async function saveCard(card, adminId) {
@@ -640,9 +643,10 @@ async function saveCard(card, adminId) {
     }
 
     card.classList.remove('unsaved');
-    const btn = card.querySelector('.btn-save-card');
-    btn.disabled = true;
-    btn.classList.add('opacity-40', 'cursor-not-allowed');
+    card.querySelectorAll('.btn-save-card').forEach(btn => {
+      btn.disabled = true;
+      btn.classList.add('opacity-40', 'cursor-not-allowed');
+    });
 
     updateStats();
     Toast.success('Permissions saved.');

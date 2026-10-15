@@ -182,6 +182,11 @@ async function handleRegistration(formData) {
       return { success: true, needsConfirmation: true };
     }
 
+    // ask to be linked to the parish register (jumuiya chosen on the form)
+    if (formData.department_id) {
+      try { await supabase.rpc('request_parish_link', { p: { department_id: formData.department_id, full_name: formData.full_name, phone: formData.phone } }); }
+      catch (e) { console.warn('parish link request failed', e); }
+    }
     clearProfileCache?.();
     redirectToDashboard('member');
 

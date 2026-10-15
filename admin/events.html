@@ -94,7 +94,7 @@
         <p id="page-subtitle-2" class="mt-2 text-slate-500">Create, manage, and track department events and church-wide visibility.</p>
       </div>
       <div class="flex flex-wrap gap-3">
-        <button class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-primary">Calendar View</button>
+        <button id="btn-calendar-view" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-primary flex items-center gap-2"><span class="material-symbols-outlined text-sm">calendar_month</span><span>Kalenda</span></button>
         <button id="btn-create-event" class="rounded-2xl bg-primary px-5 py-3 font-bold text-white flex items-center gap-2">
           <span class="material-symbols-outlined text-sm">add</span>
           Create Event
@@ -162,6 +162,7 @@
           </div>
         </div>
 
+        <div id="events-calendar" class="hidden mb-6"></div>
         <div id="events-list" class="space-y-4"></div>
       </div>
 
@@ -172,9 +173,9 @@
             <span class="material-symbols-outlined text-primary">bolt</span>
           </div>
           <div class="grid gap-3">
-            <button class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">Create Event</button>
-            <button class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">View Calendar</button>
-            <button class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">Export Event List</button>
+            <button id="qa-create" class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">Create Event</button>
+            <button id="qa-calendar" class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">View Calendar</button>
+            <button id="qa-export" class="rounded-2xl bg-slate-50 px-4 py-4 text-left font-bold text-slate-700">Export Event List</button>
           </div>
         </div>
 
@@ -195,7 +196,7 @@
 
     <div class="flex items-center justify-between px-8 py-6 border-b border-slate-200">
       <div>
-        <h3 class="font-headline font-bold text-2xl text-primary">Create Event</h3>
+        <h3 id="event-modal-title" class="font-headline font-bold text-2xl text-primary">Create Event</h3>
         <p class="text-sm text-slate-500 mt-1">Add a new event for your department.</p>
       </div>
       <button id="modal-close-event" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
@@ -236,7 +237,7 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Location</label>
-          <input id="event-location" type="text" placeholder="e.g. KANISA LA NEEMA"
+          <input id="event-location" type="text" placeholder="mf. Kanisani Minga"
             class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-secondary"/>
         </div>
         <div>
@@ -261,6 +262,14 @@
           <img id="event-image-preview" src="" alt="Event poster preview"
             class="w-full max-w-xs h-44 object-contain rounded-xl border border-slate-200 bg-slate-50"/>
         </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Kampeni ya michango (hiari)</label>
+        <select id="event-campaign" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-secondary">
+          <option value="">— Haihusiani na kampeni —</option>
+        </select>
+        <p class="text-xs text-slate-400 mt-1">Mf. Sikukuu ya Mavuno → Mavuno 2026: makusanyo ya kampeni yataonekana kwenye tukio.</p>
       </div>
 
       <div id="event-error" class="hidden rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700 font-semibold"></div>
@@ -300,10 +309,22 @@
     let allEvents = [];
 
     async function loadEvents() {
+      // Parish-wide admins (no department / jumuiya scope) see every event
+      const perms = window.__blbPermissions || await getAdminPermissions();
+      if (profile.role === 'super_admin' || (perms && !perms.department_id)) {
+        const { data: all, error: allErr } = await supabase
+          .from('events')
+          .select('id, title, description, event_date, end_date, location, category, created_by, campaign_id, image_url, status')
+          .order('event_date', { ascending: false });
+        if (allErr) { Toast.error('Failed to load events.'); return; }
+        allEvents = all || [];
+        renderEventsPage();
+        return;
+      }
       // Admin sees: their own department's events + general/church-wide events (department_id IS NULL)
       const { data, error } = await supabase
         .from('events')
-        .select('id, title, description, event_date, end_date, location, category, created_by')
+        .select('id, title, description, event_date, end_date, location, category, created_by, campaign_id, image_url, status')
         .or(`created_by.eq.${profile.id},category.eq.general`)
         .order('event_date', { ascending: false });
 
@@ -312,7 +333,7 @@
       // Also fetch events created by members in this department
       const { data: deptEvents } = await supabase
         .from('events')
-        .select('id, title, description, event_date, end_date, location, category, created_by, creator:profiles!events_created_by_fkey(department_id)')
+        .select('id, title, description, event_date, end_date, location, category, created_by, campaign_id, image_url, status, creator:profiles!events_created_by_fkey(department_id)')
         .neq('category', 'general')
         .order('event_date', { ascending: false });
 
@@ -374,8 +395,9 @@
               <p class="mt-2 text-sm text-slate-500">${escapeHtml(item.location || '')} · ${formatDate(item.event_date)}</p>
             </div>
             <div class="flex gap-2">
-              <button class="rounded-xl bg-white px-4 py-2 text-xs font-bold text-slate-700">View</button>
-              <button class="rounded-xl bg-blue-50 px-4 py-2 text-xs font-bold text-primary">Edit</button>
+              <button data-view="${item.id}" class="rounded-xl bg-white px-4 py-2 text-xs font-bold text-slate-700">View</button>
+              ${canEdit(item) ? `<button data-edit="${item.id}" class="rounded-xl bg-blue-50 px-4 py-2 text-xs font-bold text-primary">Edit</button>
+              <button data-del="${item.id}" class="rounded-xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700">Futa</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -400,6 +422,134 @@
       renderEventStats(filtered);
       renderEventsList(filtered);
       renderHighlights(filtered);
+      if (!document.getElementById('events-calendar').classList.contains('hidden')) renderCalendar(filtered);
+    }
+
+    // creators edit their own events; super admins and parish-wide admins edit all
+    const canEdit = item => item.created_by === profile.id || profile.role === 'super_admin'
+      || hasPermission(window.__blbPermissions, 'can_manage_departments');
+
+    // ── Month calendar ──
+    const calMonth = new Date(); calMonth.setDate(1);
+    function renderCalendar(data) {
+      const box = document.getElementById('events-calendar');
+      const y = calMonth.getFullYear(), m = calMonth.getMonth();
+      const first = (new Date(y, m, 1).getDay() + 6) % 7;            // weeks start on Monday
+      const days = new Date(y, m + 1, 0).getDate();
+      const byDay = {};
+      data.forEach(e => {
+        const d = new Date(e.event_date);
+        if (d.getFullYear() === y && d.getMonth() === m) (byDay[d.getDate()] = byDay[d.getDate()] || []).push(e);
+      });
+      const today = new Date();
+      const cells = [];
+      for (let i = 0; i < first; i++) cells.push('<div></div>');
+      for (let d = 1; d <= days; d++) {
+        const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+        cells.push(`<div class="min-h-[74px] rounded-xl border ${isToday ? 'border-primary' : 'border-slate-100'} bg-white p-1.5 text-left">
+          <p class="text-[11px] font-black ${isToday ? 'text-primary' : 'text-slate-400'}">${d}</p>
+          ${(byDay[d] || []).map(e => `<button data-view="${e.id}" class="block w-full truncate text-left text-[10px] font-bold rounded-md px-1 py-0.5 mt-0.5 bg-blue-50 text-primary">${escapeHtml(e.title)}</button>`).join('')}</div>`);
+      }
+      box.innerHTML = `<div class="flex items-center justify-between mb-3">
+          <button id="cal-prev" class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+          <p class="font-extrabold text-primary">${calMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+          <button id="cal-next" class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold"><span class="material-symbols-outlined text-sm">chevron_right</span></button></div>
+        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">${['Jtt', 'Jnn', 'Jtn', 'Alh', 'Ijm', 'Jms', 'Jpl'].map(x => `<div>${x}</div>`).join('')}</div>
+        <div class="grid grid-cols-7 gap-1">${cells.join('')}</div>`;
+      box.querySelector('#cal-prev').onclick = () => { calMonth.setMonth(calMonth.getMonth() - 1); renderCalendar(applyEventFilters()); };
+      box.querySelector('#cal-next').onclick = () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCalendar(applyEventFilters()); };
+    }
+    const toggleCalendar = () => {
+      const box = document.getElementById('events-calendar');
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) { renderCalendar(applyEventFilters()); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
+    document.getElementById('btn-calendar-view').addEventListener('click', toggleCalendar);
+    document.getElementById('qa-calendar').addEventListener('click', toggleCalendar);
+
+    // ── Export (CSV, opens in Excel) ──
+    document.getElementById('qa-export').addEventListener('click', () => {
+      const rows = applyEventFilters();
+      const head = ['Tukio', 'Tarehe', 'Mwisho', 'Mahali', 'Aina', 'Hali', 'Maelezo'];
+      const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const csv = [head, ...rows.map(e => [e.title, e.event_date, e.end_date, e.location, e.category,
+        new Date(e.event_date) > new Date() ? 'Yajayo' : 'Yaliyopita', e.description])]
+        .map(r => r.map(q).join(',')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = `matukio_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+
+    // ── Campaigns for the event form ──
+    (async () => {
+      const { data } = await supabase.from('campaigns').select('id, name, campaign_year, status').neq('status', 'closed')
+        .order('campaign_year', { ascending: false }).order('name');
+      document.getElementById('event-campaign').insertAdjacentHTML('beforeend',
+        (data || []).map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join(''));
+    })();
+
+    // ── View / Edit / Delete (list rows, highlights and calendar) ──
+    document.querySelector('main').addEventListener('click', async e => {
+      const v = e.target.closest('[data-view]'), ed = e.target.closest('[data-edit]'), del = e.target.closest('[data-del]');
+      if (v) return showEvent(allEvents.find(x => x.id === v.dataset.view));
+      if (ed) return openEdit(allEvents.find(x => x.id === ed.dataset.edit));
+      if (del) {
+        const ev = allEvents.find(x => x.id === del.dataset.del);
+        if (!confirm(`Futa tukio "${ev.title}"?`)) return;
+        const { error } = await supabase.from('events').delete().eq('id', ev.id);
+        if (error) return Toast.error(error.message);
+        Toast.success('Tukio limefutwa.');
+        loadEvents();
+      }
+    });
+
+    async function showEvent(ev) {
+      if (!ev) return;
+      let camp = '';
+      if (ev.campaign_id) {
+        const { data } = await supabase.from('v_campaign_progress').select('name, target, collected, pledged, target_pct')
+          .eq('campaign_id', ev.campaign_id).maybeSingle();
+        if (data) camp = `<div class="rounded-2xl bg-slate-50 p-4 mt-4">
+            <p class="text-xs font-extrabold uppercase tracking-widest text-slate-400">Kampeni: ${escapeHtml(data.name)}</p>
+            <p class="mt-2 text-sm">Imekusanywa: <b>${formatTZS(data.collected)}</b>${Number(data.target) ? ` kati ya ${formatTZS(data.target)} (${Number(data.target_pct || 0).toFixed(0)}%)` : ''} · Ahadi: ${formatTZS(data.pledged)}</p>
+            <a class="text-xs font-bold text-primary underline" href="../parish/index.html#/campaigns?id=${ev.campaign_id}">Fungua kampeni</a></div>`;
+      }
+      const ov = document.createElement('div');
+      ov.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+      ov.style.cssText = 'background:rgba(0,0,0,0.45);backdrop-filter:blur(4px)';
+      ov.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-7">
+        ${ev.image_url ? `<img src="${escapeHtml(ev.image_url)}" class="w-full max-h-56 object-cover rounded-xl mb-4" alt="">` : ''}
+        <p class="text-xs font-extrabold uppercase tracking-widest text-slate-400">${escapeHtml(ev.category || '')}</p>
+        <h3 class="text-2xl font-extrabold text-primary mt-1">${escapeHtml(ev.title)}</h3>
+        <p class="text-sm text-slate-500 mt-2">${formatDateTime(ev.event_date)}${ev.end_date ? ' – ' + formatDateTime(ev.end_date) : ''}${ev.location ? ' · ' + escapeHtml(ev.location) : ''}</p>
+        <p class="text-sm text-slate-700 mt-4 whitespace-pre-line">${escapeHtml(ev.description || '')}</p>${camp}
+        <div class="mt-6 flex justify-end"><button class="rounded-xl border border-slate-300 px-5 py-2 font-bold text-sm" data-close-view>Funga</button></div></div>`;
+      ov.addEventListener('click', x => { if (x.target === ov || x.target.closest('[data-close-view]')) ov.remove(); });
+      document.body.appendChild(ov);
+    }
+
+    let editingId = null;
+    const toLocal = iso => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 16);
+    };
+    function openEdit(ev) {
+      resetEventForm();
+      editingId = ev.id;
+      document.getElementById('event-modal-title').textContent = 'Hariri Tukio';
+      document.getElementById('btn-submit-event').textContent = 'Hifadhi Mabadiliko';
+      document.getElementById('event-title').value = ev.title || '';
+      document.getElementById('event-description').value = ev.description || '';
+      document.getElementById('event-start-date').value = toLocal(ev.event_date);
+      document.getElementById('event-end-date').value = toLocal(ev.end_date);
+      document.getElementById('event-location').value = ev.location || '';
+      document.getElementById('event-category').value = ev.category || 'general';
+      document.getElementById('event-campaign').value = ev.campaign_id || '';
+      modal.classList.remove('hidden');
     }
 
     ['event-search', 'event-scope-filter', 'event-status-filter'].forEach(id => {
@@ -414,10 +564,9 @@
 
     // ── Create Event Modal ──
     const modal = document.getElementById('modal-add-event');
-    document.getElementById('btn-create-event').addEventListener('click', () => {
-      resetEventForm();
-      modal.classList.remove('hidden');
-    });
+    const openCreate = () => { resetEventForm(); modal.classList.remove('hidden'); };
+    document.getElementById('btn-create-event').addEventListener('click', openCreate);
+    document.getElementById('qa-create').addEventListener('click', openCreate);
     document.getElementById('modal-close-event').addEventListener('click', () => modal.classList.add('hidden'));
     document.getElementById('btn-cancel-event').addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
@@ -464,21 +613,23 @@
           imageUrl = urlData?.publicUrl || null;
         }
 
-        const { error } = await supabase.from('events').insert([{
+        const row = {
           title,
           description: description || null,
           event_date: new Date(startDate).toISOString(),
           end_date: endDate ? new Date(endDate).toISOString() : null,
           location: location || null,
           category: category || 'general',
-          image_url: imageUrl,
-          status: 'upcoming',
-          created_by: uid
-        }]);
+          campaign_id: document.getElementById('event-campaign').value || null,
+        };
+        if (imageUrl) row.image_url = imageUrl;
+        const { error } = editingId
+          ? await supabase.from('events').update(row).eq('id', editingId)
+          : await supabase.from('events').insert([{ ...row, image_url: imageUrl, status: 'upcoming', created_by: uid }]);
 
         if (error) throw error;
 
-        Toast.success('Event created successfully.');
+        Toast.success(editingId ? 'Tukio limesasishwa.' : 'Event created successfully.');
         modal.classList.add('hidden');
         await loadEvents();
       } catch (err) {
@@ -491,6 +642,10 @@
     });
 
     function resetEventForm() {
+      editingId = null;
+      document.getElementById('event-modal-title').textContent = 'Create Event';
+      document.getElementById('btn-submit-event').textContent = 'Create Event';
+      document.getElementById('event-campaign').value = '';
       ['event-title','event-description','event-location'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('event-start-date').value = '';
       document.getElementById('event-end-date').value = '';

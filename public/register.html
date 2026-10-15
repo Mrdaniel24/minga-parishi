@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
   <link rel="preconnect" href="https://ztafklfgtsaolyvaybop.supabase.co" crossorigin/>
-  <title>Register | Kanisa Hub — Join the Sanctuary</title>
+  <title>Jisajili | Mfumo wa Parokia ya Minga — Kanisa Hub</title>
   <meta name="description" content="Join Kanisa Hub community. Create your member account to access events, sermons, and stay connected.">
 
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&display=swap" rel="stylesheet"/>
@@ -70,7 +70,7 @@
       <div>
         <div class="auth-panel__brand">
           <span class="auth-panel__logo"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">church</span></span>
-          <span><b>Kanisa Hub</b><small>Kanisa la Neema</small></span>
+          <span><b>Kanisa Hub</b><small>Parokia ya Minga</small></span>
         </div>
         <div class="auth-panel__headline">
           <p class="auth-panel__eyebrow">The Digital Sanctuary</p>
@@ -190,7 +190,7 @@
         </div>
 
         <div>
-          <label for="department_id" class="block text-[11px] font-bold text-[color:#5f706b] uppercase tracking-widest mb-2">Ministry / Department</label>
+          <label for="department_id" class="block text-[11px] font-bold text-[color:#5f706b] uppercase tracking-widest mb-2">Jumuiya yako</label>
           <select id="department_id" name="department_id" class="input-field w-full bg-[color:#eef4f2] border border-[color:#cfdad6] rounded-xl py-3.5 px-4 text-sm">
             <option value="">Loading ministries...</option>
           </select>
@@ -301,10 +301,13 @@
         showDebug('Loading active ministries from database...', 'info');
         select.innerHTML = '<option value="">Loading ministries...</option>';
 
+        // jumuiya first (each jumuiya is a group in the system), then parish groups/ministries
         const { data, error } = await supabase
           .from('departments')
-          .select('id, name')
+          .select('id, name, category, description')
+          .eq('is_active', true)
           .order('name', { ascending: true });
+        if (data) data.sort((a, b) => (a.category === 'jumuiya' ? 0 : 1) - (b.category === 'jumuiya' ? 0 : 1) || a.name.localeCompare(b.name));
 
         if (error) {
           throw error;
@@ -316,12 +319,12 @@
           return;
         }
 
-        select.innerHTML = '<option value="">Select your ministry</option>';
+        select.innerHTML = '<option value="">Chagua jumuiya yako</option>';
 
         data.forEach((dept) => {
           const option = document.createElement('option');
           option.value = dept.id;
-          option.textContent = dept.name;
+          option.textContent = dept.category === 'jumuiya' && dept.description ? `${dept.name} — ${dept.description.split('—').pop().trim()}` : dept.name;
           select.appendChild(option);
         });
 
@@ -382,7 +385,7 @@
         gender: document.getElementById('gender').value || null,
         marital_status: document.getElementById('marital_status').value || null,
         date_of_birth: document.getElementById('date_of_birth').value || null,
-        department_id: document.getElementById,
+        department_id: document.getElementById('department_id').value || null,
         address: document.getElementById('address').value.trim() || null
       };
 

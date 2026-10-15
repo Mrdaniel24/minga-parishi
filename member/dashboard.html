@@ -184,10 +184,10 @@
       </div>
     </div>
     <div class="flex items-center gap-4">
-      <button class="text-slate-600 hover:text-primary transition-colors relative">
+      <a href="announcements.html" title="Matangazo" class="text-slate-600 hover:text-primary transition-colors relative">
         <span class="material-symbols-outlined">notifications</span>
         <span id="notif-badge" class="hidden absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full"></span>
-      </button>
+      </a>
       <a href="profile.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
         <div id="header-avatar" class="w-9 h-9 rounded-full overflow-hidden border-2 border-secondary-container bg-primary flex items-center justify-center">
           <span class="text-white text-sm font-bold" id="header-initials">?</span>
@@ -199,6 +199,9 @@
       </a>
     </div>
   </header>
+
+  <!-- The member's parish record: jumuiya, giving, Zaka months, pledges (assets/js/member-parish.js) -->
+  <div id="member-parish" class="px-6 md:px-10 lg:px-12 pt-6 max-w-7xl mx-auto"></div>
 
   <!-- Page Content -->
   <div class="p-6 md:p-10 lg:p-12 max-w-7xl mx-auto space-y-12">
@@ -370,6 +373,7 @@
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/router.js"></script>
+<script src="../assets/js/member-parish.js"></script>
 
 <script>
 // ── Mobile Sidebar ──────────────────────────────────────────
@@ -450,12 +454,11 @@ function renderAnnouncements(items) {
 
 // ── Load contributions ───────────────────────────────────────
 async function loadContributions(userId) {
-  const { data, error } = await supabase
-    .from('contributions')
-    .select('id, amount, category, notes, contribution_date, created_at')
-    .eq('member_id', userId)
-    .order('contribution_date', { ascending: false })
-    .limit(5);
+  // the member's own (and family's) posted payments from the parish ledger
+  const { data: summary, error } = await supabase.rpc('my_member_summary');
+  const data = summary && summary.linked
+    ? (summary.recent || []).map(r => ({ amount: Number(r.net_amount), label: r.category_name + (r.campaign_name ? ' — ' + r.campaign_name : ''), contribution_date: r.txn_date }))
+    : (summary ? [] : null);
 
   // Hide skeleton, show total
   document.getElementById('total-contributions-skeleton').classList.add('hidden');
@@ -464,34 +467,27 @@ async function loadContributions(userId) {
   if (error || !data) {
     document.getElementById('total-contributions').textContent = 'TZS 0';
     document.getElementById('contributions-list').innerHTML = `
-      <p class="text-sm text-on-surface-variant text-center py-6">No contributions recorded yet.</p>`;
+      <p class="text-sm text-on-surface-variant text-center py-6">Hakuna michango iliyorekodiwa bado.</p>`;
     return;
   }
 
-  const total = data.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const total = summary && summary.linked ? Number(summary.family_year || 0) : 0;   // this year, me + family
   document.getElementById('total-contributions').textContent = formatTZS(total);
 
   if (data.length > 0) {
     document.getElementById('contributions-trend').classList.remove('hidden');
-    document.getElementById('trend-text').textContent = `${data.length} contribution${data.length > 1 ? 's' : ''} recorded`;
+    document.getElementById('trend-text').textContent = `Mwaka ${new Date().getFullYear()} · mimi na familia`;
   }
 
-  const CONTRIBUTION_ICONS = {
-    'tithe':         { icon: 'volunteer_activism', label: 'Tithe' },
-    'offering':      { icon: 'church',             label: 'Offering' },
-    'building_fund': { icon: 'domain',             label: 'Building Fund' },
-    'thanksgiving':  { icon: 'favorite',           label: 'Thanksgiving' },
-    'special':       { icon: 'star',               label: 'Special' },
-  };
 
   if (data.length === 0) {
     document.getElementById('contributions-list').innerHTML = `
-      <p class="text-sm text-on-surface-variant text-center py-6">No contributions recorded yet.</p>`;
+      <p class="text-sm text-on-surface-variant text-center py-6">Hakuna michango iliyorekodiwa bado.</p>`;
     return;
   }
 
   document.getElementById('contributions-list').innerHTML = data.slice(0, 3).map(c => {
-    const meta = CONTRIBUTION_ICONS[c.category] || { icon: 'payments', label: c.category || 'Contribution' };
+    const meta = { icon: 'volunteer_activism', label: c.label || 'Mchango' };
     return `
       <div class="contribution-row flex items-center justify-between p-4 bg-surface-container-low rounded-xl cursor-default">
         <div class="flex items-center gap-4">
@@ -612,6 +608,7 @@ function setHeaderAvatar(profile) {
 (async () => {
   const profile = await initPageGuard();
   if (!profile) return;
+  renderMemberParish(document.getElementById('member-parish'), 'card');
 
   setHeaderAvatar(profile);
 

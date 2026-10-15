@@ -259,7 +259,7 @@
         <span id="members-badge" class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded">—</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Total Members</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Waumini (Rejista)</p>
         <h3 id="stat-total-members" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -273,7 +273,7 @@
         <span id="admins-badge" class="text-xs font-bold bg-yellow-50 text-yellow-700 px-2 py-1 rounded">—</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Total Admins</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Wasimamizi</p>
         <h3 id="stat-total-admins" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -287,7 +287,7 @@
         <span id="giving-badge" class="text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded">—</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Total Contributions</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Makusanyo ya Mwaka</p>
         <h3 id="stat-total-contribs" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -301,7 +301,7 @@
         <span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded">Active</span>
       </div>
       <div>
-        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Departments</p>
+        <p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-1">Vikundi na Jumuiya</p>
         <h3 id="stat-depts" class="font-headline font-extrabold text-3xl text-primary">—</h3>
       </div>
     </div>
@@ -678,7 +678,7 @@ async function loadStats() {
     supabase.from('profiles').select('*', { count: 'exact', head: true })
       .in('role', ['admin', 'super_admin']),
 
-    supabase.from('contributions').select('amount'),
+    supabase.rpc('church_overview').then(r => ({ data: r.data || {} })),
 
     supabase.from('departments').select('*', { count: 'exact', head: true }),
 
@@ -692,9 +692,12 @@ async function loadStats() {
       .or(`expires_at.is.null,expires_at.gte.${today}`),
   ]);
 
-  const totalContribAmount = (allContribs || []).reduce((s, c) => s + (c.amount || 0), 0);
+  // allContribs is the parish overview (register + ledger), not the legacy contributions table
+  const ov = allContribs || {};
+  window.__overview = ov;
+  const totalContribAmount = Number(ov.income_year) || 0;
 
-  document.getElementById('stat-total-members').textContent = (totalMembers || 0).toLocaleString();
+  document.getElementById('stat-total-members').textContent = Number(ov.parishioners || 0).toLocaleString();
   document.getElementById('stat-total-admins').textContent = (totalAdmins || 0).toLocaleString();
   document.getElementById('stat-total-contribs').textContent = formatTZS(totalContribAmount);
   document.getElementById('stat-depts').textContent = (deptCount || 0).toLocaleString();
@@ -704,13 +707,13 @@ async function loadStats() {
   document.getElementById('stat-new-members').textContent = String(newThisMonth || 0);
 
   // Badges
-  document.getElementById('members-badge').textContent = (totalMembers || 0) + ' registered';
+  document.getElementById('members-badge').textContent = `${Number(ov.families || 0).toLocaleString()} familia · ${(totalMembers || 0)} akaunti`;
   document.getElementById('admins-badge').textContent = (totalAdmins || 0) + ' active';
 
   // Giving badge
   const givingBadge = document.getElementById('giving-badge');
-  const contribCount = (allContribs || []).length;
-  givingBadge.textContent = contribCount + ' records';
+  const contribCount = 0;
+  givingBadge.textContent = 'Mwaka ' + new Date().getFullYear();
 
   // System info extras
   document.getElementById('sys-upcoming').textContent = String(upcomingEvents || 0);
@@ -771,37 +774,13 @@ async function loadGrowthChart() {
   container.classList.remove('hidden');
 }
 
-/* ─── Contribution Trend Chart ─── */
+/* ─── Contribution Trend Chart: posted parish income, last 6 months ─── */
 async function loadContribChart() {
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-  sixMonthsAgo.setDate(1);
-
-  const { data: contribs } = await supabase
-    .from('contributions')
-    .select('amount, contribution_date')
-    .gte('contribution_date', sixMonthsAgo.toISOString().split('T')[0]);
-
-  const buckets = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    buckets.push({
-      label: d.toLocaleString('en', { month: 'short' }).toUpperCase(),
-      year: d.getFullYear(),
-      month: d.getMonth(),
-      total: 0
-    });
-  }
-  (contribs || []).forEach(c => {
-    const d = new Date(c.contribution_date);
-    const bucket = buckets.find(b => b.year === d.getFullYear() && b.month === d.getMonth());
-    if (bucket) bucket.total += (c.amount || 0);
-  });
-
+  const ov = window.__overview || (await supabase.rpc('church_overview')).data || {};
+  const buckets = (ov.monthly || []).map(m => { const d = new Date(m.month);
+    return { label: d.toLocaleString('en', { month: 'short' }).toUpperCase(), month: d.getMonth(), total: Number(m.total) || 0 }; });
   const maxVal = Math.max(...buckets.map(b => b.total), 1);
   const currentMonth = new Date().getMonth();
-
   const container = document.getElementById('contrib-chart-content');
   container.innerHTML = buckets.map(b => {
     const pct = Math.max((b.total / maxVal) * 90, 6);
@@ -818,7 +797,6 @@ async function loadContribChart() {
         <span class="text-[10px] font-bold ${active ? 'text-secondary' : 'text-slate-400'}">${b.label}</span>
       </div>`;
   }).join('');
-
   document.getElementById('contrib-chart-skeleton').classList.add('hidden');
   container.classList.remove('hidden');
 }
@@ -932,11 +910,10 @@ async function loadAdminRegistry() {
 
 /* ─── Recent Activity ─── */
 async function loadActivity() {
-  const { data: contribs } = await supabase
-    .from('contributions')
-    .select('id, amount, category, contribution_date, member_id')
-    .order('contribution_date', { ascending: false })
-    .limit(5);
+  // latest posted parish payments (ledger), shaped like the old contribution rows
+  const ov = window.__overview || (await supabase.rpc('church_overview')).data || {};
+  const contribs = (ov.recent || []).slice(0, 5).map((c, i) => ({ id: 'tx' + i, amount: c.amount, category: c.category,
+    contribution_date: c.txn_date, member_id: null, payer_name: c.payer_name }));
 
   const { data: newMembers } = await supabase
     .from('profiles')
@@ -961,9 +938,9 @@ async function loadActivity() {
     const p = profileMap[c.member_id] || {};
     items.push({
       kind:      'contribution',
-      name:      p.full_name || 'Member',
+      name:      c.payer_name || p.full_name || 'Mlipaji',
       avatar:    p.avatar_url || null,
-      subtitle:  capitalize(c.category?.replace(/_/g, ' ') || 'Contribution'),
+      subtitle:  c.category || 'Mchango',
       amount:    c.amount,
       timestamp: c.contribution_date,
     });
@@ -974,7 +951,7 @@ async function loadActivity() {
       kind:      'member',
       name:      m.full_name || 'New Member',
       avatar:    m.avatar_url || null,
-      subtitle:  'Registered',
+      subtitle:  'Amejisajili',
       amount:    null,
       timestamp: m.created_at,
     });

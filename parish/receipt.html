@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risiti | Mfumo wa Parokia</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,700;6..12,900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/css/parish.css"/>
+</head>
+<body class="pm-receipt-page" data-required-role="member">
+  <div class="pm-receipt-tools"><button class="pm-btn pm-btn--primary" id="print"><span class="material-symbols-outlined">print</span> Chapa / PDF</button>
+    <button class="pm-btn" onclick="window.close()">Funga</button></div>
+  <article id="receipt" class="pm-receipt"><p class="pm-muted">Inapakia risiti…</p></article>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
+<script src="../assets/js/supabase-client.js"></script>
+<script src="../assets/js/parish/core.js"></script>
+<script>
+(async () => {
+  const P = window.Parish, box = document.getElementById('receipt');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { location.href = '../public/login.html'; return; }
+  const params = new URLSearchParams(location.search);
+  try {
+    let q = P.from('receipts').select('*');
+    q = params.get('id') ? q.eq('id', params.get('id')) : q.eq('transaction_id', params.get('tx'));
+    const r = await P.q(q.maybeSingle());
+    if (!r) { box.innerHTML = '<p>Risiti haipatikani, au huna ruhusa ya kuiona.</p>'; return; }
+    const [t] = await P.q(P.from('v_ledger').select('*').eq('id', r.transaction_id));
+    const p = (await P.q(P.from('parishes').select('*').eq('id', r.parish_id)))[0] || {};
+    const row = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
+    box.innerHTML = `
+      ${r.status === 'void' ? `<div class="pm-void">IMEBATILISHWA<small>${P.esc(r.void_reason || '')}</small></div>` : ''}
+      <header>${p.logo_url ? `<img src="${P.esc(p.logo_url)}" alt="">` : '<span class="material-symbols-outlined">church</span>'}
+        <div><p>${P.esc(p.diocese || '')}</p><h1>${P.esc(p.official_name || '')}</h1><p>${P.esc(p.postal_address || '')}${p.phone ? ' · ' + P.esc(p.phone) : ''}</p></div></header>
+      <h2>${P.esc(p.receipt_title || 'STAKABADHI YA MALIPO')}</h2>
+      <p class="pm-receipt__no">Na. <b>${P.esc(r.receipt_no)}</b></p>
+      <table>
+        ${row('Tarehe', P.date(t?.txn_date) + ' · ' + new Date(r.issued_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}
+        ${row('Nimepokea kutoka kwa', P.esc(r.payer_name || ''))}
+        ${row('Kigango / Jumuiya', P.esc([t?.kigango_name, t?.jumuiya_name || t?.org_unit_name].filter(Boolean).join(' · ') || '—'))}
+        ${row('Kwa ajili ya', P.esc(t?.category_name || '') + (t?.campaign_name ? ` — ${P.esc(t.campaign_name)}` : '') + (t?.period_month ? ` (mwezi ${t.period_month.slice(0, 7)})` : ''))}
+        ${row('Kiasi', `<b class="pm-receipt__amt">${P.tzs(r.amount)}</b>`)}
+        ${row('Kiasi kwa maneno', P.esc(r.amount_words_sw || ''))}
+        ${row('Amount in words', P.esc(r.amount_words_en || ''))}
+        ${row('Njia ya malipo', P.esc(P.METHODS[t?.payment_method] || t?.payment_method || '') + (t?.reference_no ? ` · Kumb. ${P.esc(t.reference_no)}` : ''))}
+        ${row('Aliyepokea', P.esc(r.receiving_officer || ''))}
+      </table>
+      <footer><p>Namba ya uhakiki: <b>${P.esc(r.verification_code)}</b> · Muamala Na. ${P.esc(t?.txn_no || '')}</p>
+        <p>${P.esc(p.receipt_footer || 'Asante kwa mchango wako. Mungu akubariki.')}</p>
+        <p class="pm-muted">Mfumo wa Usimamizi wa Parokia · Kanisa Hub by FocusTec</p></footer>`;
+    document.title = `Risiti ${r.receipt_no}`;
+    document.getElementById('print').addEventListener('click', async () => {
+      await supabase.rpc('mark_receipt_printed', { p_receipt: r.id }); window.print();
+    });
+  } catch (e) { box.innerHTML = `<p>${P.esc(e.message)}</p>`; }
+})();
+</script>
+</body>
+</html>

@@ -187,6 +187,18 @@
     'Back to Contribution History': 'Rudi Historia ya Michango', 'Checking Payment…': 'Inakagua Malipo…',
     'Demo Accounts · Click to sign in · Password: Demo@2026': 'Akaunti za Demo · Bonyeza kuingia · Password: Demo@2026',
     'Church Schedule': 'Ratiba za Ibada', 'Visit the church website': 'Tembelea tovuti ya kanisa',
+    // parish management system (parish/index.html is written in Kiswahili; these give the English view)
+    'Parish System': 'Mfumo wa Parokia', 'Parish Profile': 'Taarifa za Parokia', 'Outstations and Communities': 'Vigango na Jumuiya',
+    'Families and Parishioners': 'Familia na Waumini', 'Leaders': 'Viongozi', 'Harvest': 'Mavuno',
+    'Special Contributions': 'Michango Maalumu', 'Pledges and Balances': 'Ahadi na Madeni', 'Envelopes': 'Bahasha',
+    'Expenses': 'Matumizi', 'Accounting': 'Uhasibu', 'Receipts': 'Risiti', 'Financial Reconciliation': 'Uhakiki wa Fedha',
+    'Users': 'Watumiaji', 'Main Portal': 'Lango Kuu', 'Record Payment': 'Rekodi Malipo', 'Confirm and Save': 'Thibitisha na Hifadhi',
+    'New Pledge': 'Ahadi mpya', 'Filter': 'Chuja', 'From': 'Kuanzia', 'To': 'Hadi', 'Print': 'Chapa', 'Generate': 'Tengeneza',
+    'Parishioners': 'Waumini', 'Families': 'Familia', 'Communities': 'Jumuiya', 'Outstations': 'Vigango',
+    'Collections this month': 'Makusanyo ya mwezi huu', 'Funds available': 'Fedha zilizopo', 'Outstanding pledges': 'Ahadi ambazo hazijalipwa',
+    'Recent transactions': 'Miamala ya karibuni', 'See all': 'Ona yote', 'Payer': 'Mlipaji', 'Amount': 'Kiasi', 'Status': 'Hali',
+    'Pledged': 'Ahadi', 'Paid': 'Amelipa', 'Balance due': 'Deni', 'Excess': 'Ziada', 'Collected': 'Walichotoa',
+    'Remaining': 'Kiasi bado', 'Reverse': 'Rudisha', 'Approve': 'Idhinisha', 'Reject': 'Kataa', 'Close': 'Funga', 'Save': 'Hifadhi',
   };
 
   /* dynamic strings rendered by page scripts */
@@ -208,7 +220,7 @@
   function readLang() {
     try { return localStorage.getItem(STORE_KEY); } catch (e) { return null; }
   }
-  let lang = readLang() === 'sw' ? 'sw' : 'en';
+  let lang = readLang() === 'en' ? 'en' : 'sw';   // Kiswahili by default; English only when chosen
 
   function translateCore(text) {
     const map = lang === 'sw' ? EN2SW : SW2EN;
