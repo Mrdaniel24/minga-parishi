@@ -161,6 +161,15 @@
     (sidebar.querySelector('.mt-auto') || sidebar).appendChild(brand);
   }
 
+  // an action that fails (e.g. "this type has payments, it cannot be deleted") must
+  // tell the user why, even when the button handler does not catch the error itself
+  window.addEventListener('unhandledrejection', e => {
+    const err = e.reason;
+    if (!err || err.__shown) return;
+    const P = window.Parish;
+    Toast.error(P && P.friendlyError ? P.friendlyError(err) : String(err.message || err));
+  });
+
   document.addEventListener('click', e => {
     const out = e.target.closest('[data-action="logout"]');
     if (out) { e.preventDefault(); PM.logout(); }

@@ -200,3 +200,6 @@
 button.kh-topbar__btn { border: 0; cursor: pointer; }
 .pm-avatar-sm { width: 2.25rem; height: 2.25rem; border-radius: 999px; background: var(--pm-primary); color: #fff; display: flex; align-items: center; justify-content: center;
   font-weight: 900; font-size: .85rem; border: 2px solid var(--pm-gold-soft); flex-shrink: 0; }
+.pm-btn--danger { color: var(--pm-rose); border-color: #f1c9d0; }
+.pm-btn--danger:hover { background: #fdf2f4; }
+.pm-nowrap { display: inline-flex; gap: .35rem; white-space: nowrap; }

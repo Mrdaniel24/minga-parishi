@@ -301,31 +301,115 @@
     title: 'Mipangilio', perm: 'parish.configure',
     async render(el) {
       const r = P.ref;
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Mipangilio ya Fedha</h1><p class="pm-muted">Aina za michango, akaunti na mifuko. Taarifa za parokia ziko kwenye "Taarifa za Parokia".</p></div>
-        <div class="pm-actions"><button class="pm-btn" data-newcat><span class="material-symbols-outlined">add</span>Aina ya mchango</button><button class="pm-btn" data-newfy>Mwaka wa fedha</button></div></div>
-        <section class="pm-card"><h3 class="pm-h3">Aina za michango na matumizi</h3>${P.table(r.cats, [{ key: 'code', label: 'Code' }, { key: 'name_sw', label: 'Jina' },
-          { key: 'kind', label: 'Kundi' }, { key: 'is_pledgeable', label: 'Ahadi', fmt: v => v ? 'Ndiyo' : '' }, { key: 'uses_period_month', label: 'Kwa mwezi', fmt: v => v ? 'Ndiyo' : '' },
-          { key: 'fund_id', label: 'Mfuko', fmt: v => P.esc(r.funds.find(f => f.id === v)?.name || '') },
-          { key: 'legacy_labels', label: 'Majina ya Excel', fmt: v => `<small class="pm-muted">${P.esc((v || []).slice(0, 4).join(' · '))}${(v || []).length > 4 ? ' …' : ''}</small>` }])}</section>
-        <section class="pm-grid2"><div class="pm-card"><h3 class="pm-h3">Mifuko</h3>${P.table(r.funds, [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Jina' }, { key: 'is_restricted', label: 'Maalumu', fmt: v => v ? 'Ndiyo' : '' }])}</div>
+      const can = P.can('finance.configure');
+      // "Kundi" = the report group a contribution type is totalled under (dashboard tiles, reports)
+      const KINDS = { zaka: 'Zaka (kwa mwezi)', mavuno: 'Mavuno', ujenzi: 'Ujenzi', sadaka: 'Sadaka', shukrani: 'Shukrani',
+        special: 'Michango maalumu', income_other: 'Mapato mengine', expense: 'Matumizi' };
+      const fundName = id => r.funds.find(f => f.id === id)?.name || '';
+      const status = on => on ? '' : ' ' + P.badge('Haitumiki', 'muted');
+      const actions = (type, id) => can ? `<span class="pm-nowrap"><button class="pm-btn pm-btn--sm" data-edit-${type}="${id}">Hariri</button>
+          <button class="pm-btn pm-btn--sm pm-btn--danger" data-del-${type}="${id}">Futa</button></span>` : '';
+      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Mipangilio ya Fedha</h1><p class="pm-muted">Aina za michango, mifuko na miaka ya fedha. Taarifa za parokia ziko kwenye "Taarifa za Parokia".</p></div>
+        <div class="pm-actions">${can ? `<button class="pm-btn pm-btn--primary" data-newcat><span class="material-symbols-outlined">add</span>Aina ya mchango</button>
+          <button class="pm-btn" data-newfund><span class="material-symbols-outlined">add</span>Mfuko</button>
+          <button class="pm-btn" data-newfy><span class="material-symbols-outlined">add</span>Mwaka wa fedha</button>` : ''}</div></div>
+        <section class="pm-card"><h3 class="pm-h3">Aina za michango na matumizi</h3>
+          <p class="pm-muted pm-small">Aina yenye malipo haiwezi kufutwa (historia na ripoti zingeharibika) — izime kwa "Hariri → Haitumiki" ili isionekane kwenye malipo mapya.</p>
+          ${P.table(r.cats.filter(c => c.code !== 'TRANSFER'), [{ key: 'name_sw', label: 'Jina', html: c => P.esc(c.name_sw) + status(c.is_active) + `<br><small class="pm-muted">${P.esc(c.code)}</small>` },
+          { key: 'kind', label: 'Kundi', fmt: v => P.esc(KINDS[v] || v) }, { key: 'is_pledgeable', label: 'Ahadi', fmt: v => v ? 'Ndiyo' : '' }, { key: 'uses_period_month', label: 'Kwa mwezi', fmt: v => v ? 'Ndiyo' : '' },
+          { key: 'fund_id', label: 'Mfuko', fmt: v => P.esc(fundName(v)) },
+          { key: 'legacy_labels', label: 'Majina ya Excel', fmt: v => `<small class="pm-muted">${P.esc((v || []).slice(0, 3).join(' · '))}${(v || []).length > 3 ? ' …' : ''}</small>` },
+          { key: 'id', label: '', html: c => actions('cat', c.id) }])}</section>
+        <section class="pm-grid2"><div class="pm-card"><h3 class="pm-h3">Mifuko</h3>
+          <p class="pm-muted pm-small">Mfuko ni "mfuko wa fedha" ambao aina ya mchango huingiza fedha zake (mf. Mfuko wa Ujenzi). Mfuko "maalumu" hutumika kwa kazi yake tu.</p>
+          ${P.table(r.funds, [{ key: 'name', label: 'Jina', html: f => P.esc(f.name) + status(f.is_active !== false) + `<br><small class="pm-muted">${P.esc(f.code)}</small>` },
+            { key: 'is_restricted', label: 'Maalumu', fmt: v => v ? 'Ndiyo' : '' }, { key: 'id', label: '', html: f => actions('fund', f.id) }])}</div>
         <div class="pm-card"><h3 class="pm-h3">Miaka ya fedha</h3>${P.table(r.years, [{ key: 'label', label: 'Mwaka' }, { key: 'starts_on', label: 'Kuanzia', fmt: P.date }, { key: 'ends_on', label: 'Hadi', fmt: P.date }, { key: 'status', label: 'Hali' }])}</div></section>
         <section class="pm-card"><h3 class="pm-h3">Akaunti (chart of accounts)</h3>${P.table(r.accounts, [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Jina' }, { key: 'account_type', label: 'Aina' }, { key: 'money_kind', label: 'Fedha' }])}</section>`;
+      if (!can) return;
+
+      const codeFrom = name => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+      const fundSelect = (selected, withNew) => `<select name="fund_id">${r.funds.filter(f => f.is_active !== false || f.id === selected)
+        .map(f => `<option value="${f.id}" ${f.id === selected ? 'selected' : ''}>${P.esc(f.name)}</option>`).join('')}
+        ${withNew ? '<option value="__new">+ Mfuko mpya…</option>' : ''}</select>`;
+      const newFundFields = `<label class="pm-span2" data-newfund-fields hidden>Jina la mfuko mpya<input name="new_fund_name" placeholder="mf. Mfuko wa Elimu"></label>`;
+      const wireNewFund = m => {
+        const sel = m.querySelector('[name=fund_id]'), box = m.querySelector('[data-newfund-fields]');
+        const sync = () => { box.hidden = sel.value !== '__new'; box.querySelector('input').required = sel.value === '__new'; };
+        sel.addEventListener('change', sync); sync();
+      };
+      const ensureFund = async v => {
+        if (v.fund_id !== '__new') return v.fund_id || null;
+        const name = v.new_fund_name.trim();
+        const f = await P.q(P.from('funds').insert({ parish_id: r.parish.id, name, code: codeFrom(name) || 'MFUKO' }).select().single());
+        return f.id;
+      };
+      const catForm = c => `<div class="pm-form">
+          <label>Jina<input name="name_sw" required value="${P.esc(c?.name_sw || '')}" placeholder="mf. Mchango wa Kwaya"></label>
+          <label>Code <small class="pm-muted">(acha wazi: itatengenezwa)</small><input name="code" pattern="[A-Z0-9_]*" value="${P.esc(c?.code || '')}" ${c ? 'readonly' : ''}></label>
+          <label>Kundi la ripoti<select name="kind" ${c ? 'disabled' : ''}>${Object.entries(KINDS).map(([k, l]) => `<option value="${k}" ${(c?.kind || 'special') === k ? 'selected' : ''}>${P.esc(l)}</option>`).join('')}</select></label>
+          <label>Mfuko${fundSelect(c?.fund_id || r.funds.find(f => f.code === 'GENERAL')?.id, true)}</label>
+          ${newFundFields}
+          <label>Ina ahadi/malengo (kampeni)<select name="is_pledgeable"><option value="false">Hapana</option><option value="true" ${c?.is_pledgeable ? 'selected' : ''}>Ndiyo</option></select></label>
+          <label>Inalipwa kwa mwezi (kama Zaka)<select name="uses_period_month"><option value="false">Hapana</option><option value="true" ${c?.uses_period_month ? 'selected' : ''}>Ndiyo</option></select></label>
+          ${c ? `<label>Hali<select name="is_active"><option value="true">Inatumika</option><option value="false" ${c.is_active ? '' : 'selected'}>Haitumiki</option></select></label>` : ''}
+          ${c ? '<p class="pm-muted pm-small pm-span2">Kundi la ripoti haliwezi kubadilishwa baada ya kuundwa, kwa sababu ripoti za zamani zimejengwa juu yake.</p>' : ''}</div>`;
+      const done = async msg => { Toast.success(msg); await P.loadRef(true); P.reload(); };
+
       el.querySelector('[data-newcat]').addEventListener('click', async () => {
-        const v = await P.modal({ title: 'Aina mpya ya mchango', body: `<div class="pm-form">
-          <label>Code (herufi kubwa)<input name="code" required pattern="[A-Z0-9_]+"></label><label>Jina<input name="name_sw" required></label>
-          <label>Kundi<select name="kind">${['special', 'sadaka', 'shukrani', 'income_other', 'expense', 'zaka', 'mavuno', 'ujenzi'].map(k => `<option>${k}</option>`).join('')}</select></label>
-          <label>Mfuko<select name="fund_id">${P.options(r.funds)}</select></label>
-          <label>Ina ahadi/malengo<select name="is_pledgeable"><option value="false">Hapana</option><option value="true">Ndiyo</option></select></label></div>` });
+        const v = await P.modal({ title: 'Aina mpya ya mchango', body: catForm(null), onOpen: wireNewFund });
         if (!v) return;
-        await P.q(P.from('contribution_categories').insert({ ...v, is_pledgeable: v.is_pledgeable === 'true', parish_id: r.parish.id }));
-        await P.loadRef(true); P.reload();
+        const fund_id = await ensureFund(v);
+        await P.q(P.from('contribution_categories').insert({ parish_id: r.parish.id, code: v.code || codeFrom(v.name_sw), name_sw: v.name_sw.trim(),
+          kind: v.kind, fund_id, is_pledgeable: v.is_pledgeable === 'true', uses_period_month: v.uses_period_month === 'true' }));
+        await done('Aina ya mchango imeongezwa.');
       });
+      el.querySelectorAll('[data-edit-cat]').forEach(b => b.addEventListener('click', async () => {
+        const c = r.catsById[b.dataset.editCat];
+        const v = await P.modal({ title: `Hariri — ${c.name_sw}`, body: catForm(c), onOpen: wireNewFund });
+        if (!v) return;
+        const fund_id = await ensureFund(v);
+        await P.q(P.from('contribution_categories').update({ name_sw: v.name_sw.trim(), fund_id, is_pledgeable: v.is_pledgeable === 'true',
+          uses_period_month: v.uses_period_month === 'true', is_active: v.is_active === 'true' }).eq('id', c.id));
+        await done('Mabadiliko yamehifadhiwa.');
+      }));
+      el.querySelectorAll('[data-del-cat]').forEach(b => b.addEventListener('click', async () => {
+        const c = r.catsById[b.dataset.delCat];
+        if (!await P.confirm(`Futa "${c.name_sw}"?`, 'Inafutwa tu kama haijawahi kutumika. Kama ina malipo, mfumo utakataa — izime badala yake.', 'Futa')) return;
+        await P.rpc('delete_contribution_category', { p_id: c.id });
+        await done('Aina ya mchango imefutwa.');
+      }));
+
+      const fundForm = f => `<div class="pm-form">
+          <label class="pm-span2">Jina<input name="name" required value="${P.esc(f?.name || '')}" placeholder="mf. Mfuko wa Elimu"></label>
+          <label>Ni mfuko maalumu (fedha zake kwa kazi yake tu)<select name="is_restricted"><option value="false">Hapana</option><option value="true" ${f?.is_restricted ? 'selected' : ''}>Ndiyo</option></select></label>
+          ${f ? `<label>Hali<select name="is_active"><option value="true">Unatumika</option><option value="false" ${f.is_active === false ? 'selected' : ''}>Hautumiki</option></select></label>` : ''}</div>`;
+      el.querySelector('[data-newfund]').addEventListener('click', async () => {
+        const v = await P.modal({ title: 'Mfuko mpya', body: fundForm(null) });
+        if (!v) return;
+        await P.q(P.from('funds').insert({ parish_id: r.parish.id, name: v.name.trim(), code: codeFrom(v.name) || 'MFUKO', is_restricted: v.is_restricted === 'true' }));
+        await done('Mfuko umeongezwa.');
+      });
+      el.querySelectorAll('[data-edit-fund]').forEach(b => b.addEventListener('click', async () => {
+        const f = r.funds.find(x => x.id === b.dataset.editFund);
+        const v = await P.modal({ title: `Hariri — ${f.name}`, body: fundForm(f) });
+        if (!v) return;
+        await P.q(P.from('funds').update({ name: v.name.trim(), is_restricted: v.is_restricted === 'true', is_active: v.is_active === 'true' }).eq('id', f.id));
+        await done('Mabadiliko yamehifadhiwa.');
+      }));
+      el.querySelectorAll('[data-del-fund]').forEach(b => b.addEventListener('click', async () => {
+        const f = r.funds.find(x => x.id === b.dataset.delFund);
+        if (!await P.confirm(`Futa "${f.name}"?`, 'Unafutwa tu kama hakuna aina ya mchango wala malipo yanayoutumia.', 'Futa')) return;
+        await P.rpc('delete_fund', { p_id: f.id });
+        await done('Mfuko umefutwa.');
+      }));
+
       el.querySelector('[data-newfy]').addEventListener('click', async () => {
         const v = await P.modal({ title: 'Mwaka mpya wa fedha', body: `<div class="pm-form"><label>Jina<input name="label" required value="${P.year() + 1}"></label>
           <label>Kuanzia<input type="date" name="starts_on" required value="${P.year() + 1}-01-01"></label><label>Hadi<input type="date" name="ends_on" required value="${P.year() + 1}-12-31"></label></div>` });
         if (!v) return;
         await P.q(P.from('financial_years').insert({ ...v, parish_id: r.parish.id }));
-        await P.loadRef(true); P.reload();
+        await done('Mwaka wa fedha umeongezwa.');
       });
     },
   };

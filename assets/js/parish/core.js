@@ -139,7 +139,7 @@
     const old = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined pm-spin">progress_activity</span> Subiri…'; }
     try { return await fn(); }
-    catch (e) { Toast.error(P.friendlyError(e)); throw e; }
+    catch (e) { Toast.error(P.friendlyError(e)); try { e.__shown = true; } catch (x) { /* frozen */ } throw e; }
     finally { if (btn) { btn.disabled = false; btn.innerHTML = old; } }
   };
 
