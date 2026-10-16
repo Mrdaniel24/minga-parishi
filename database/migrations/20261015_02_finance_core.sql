@@ -98,7 +98,7 @@ create table if not exists public.campaigns (
   status              text not null default 'active' check (status in ('draft','active','closed')),
   recurs_annually     boolean not null default false,
   previous_campaign_id uuid references public.campaigns(id),
-  event_id            uuid,                 -- optional link to public.events (Kanisa Hub)
+  event_id            uuid,                 -- reserved for a future events module (no foreign key)
   created_at          timestamptz not null default now(),
   unique (parish_id, category_id, campaign_year, name)
 );

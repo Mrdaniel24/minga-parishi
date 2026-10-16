@@ -1,42 +1,37 @@
-# Minga Parish Management System — Kanisa Hub by FocusTec
+# Minga Parish Management System
 
-Mfumo wa Usimamizi wa **Parokia ya Mt. Aloyce Gonzaga – Minga** (Jimbo Katoliki Singida), uliojengwa juu ya Kanisa Hub.
-Unachukua nafasi ya workbook ya Excel "MIAMALA & RIPOTI ZOTE": malipo yanaingizwa mara moja, na ripoti zote (familia, jumuiya, kigango, parokia, kampeni, ahadi, zaka, risiti, uhasibu) zinahesabiwa na PostgreSQL.
+Mfumo wa Usimamizi wa **Parokia ya Mt. Aloyce Gonzaga – Minga** (Jimbo Katoliki Singida).
+Unachukua nafasi ya workbook ya Excel "MIAMALA & RIPOTI ZOTE": malipo yanaingizwa mara moja, na ripoti zote
+(familia, jumuiya, kigango, parokia, kampeni, ahadi, zaka, risiti, uhasibu) zinahesabiwa na PostgreSQL.
 
-- Skrini za parokia: `parish/index.html` (kiungo **Mfumo wa Parokia** kwenye kila lango)
-- Database: `database/migrations/20261015_0*.sql` (endesha kwa mpangilio)
-- Uingizaji wa workbook: `tools/migration/` (matokeo ni ya siri — hayaingii git)
-- Majaribio: `npm test`
-- Nyaraka: `docs/` — anza na `IMPLEMENTATION_STATUS.md`, `DEPLOYMENT.md`, `ADMIN_GUIDE.md`, `MIGRATION_RISKS.md`
+Mfumo unajitegemea: HTML/CSS/JS tupu + Supabase (Postgres, Auth, RLS). Hautegemei Kanisa Hub wala mfumo mwingine.
 
-> Data halisi ya parokia iwekwe kwenye project mpya ya Supabase, si kwenye project ya demo hapa chini.
-
----
-
-# Kanisa Hub by FocusTec — Demo
-
-Mfumo wa usimamizi wa kanisa (Church Management System) — toleo la **demo** kwa ajili ya wateja wa FocusTec.
-Kanisa ndani ya demo ni la mfano: **Kanisa la Neema**. Data zote ni za kubuni.
-
-## Akaunti za demo
-Password ya zote: `Demo@2026`
-
-| Nafasi | Email |
+| Sehemu | Mahali |
 |---|---|
-| Super Admin | superadmin@kanisahub.demo |
-| Admin (Kwaya Kuu) | admin@kanisahub.demo |
-| Mshirika (Vijana) | member@kanisahub.demo |
+| Kuingia | `login.html` (na `reset.html` ya kubadilisha nenosiri) |
+| Mfumo wenyewe | `parish/index.html`, risiti `parish/receipt.html` |
+| Mipangilio ya Supabase (URL + anon key) | `assets/js/config.js` |
+| Database (kwa mpangilio) | `database/migrations/20261015_*.sql` |
+| SQL moja ya kubandika kwenye Supabase | `database/supabase_setup.sql` (hutengenezwa: `npm run setup:sql`) |
+| Uhamishaji wa Excel | `tools/migration/` (matokeo ni ya siri — hayaingii git) |
+| Majaribio | `npm test` |
+| Nyaraka | `docs/` — anza na `DEPLOYMENT.md`, `ADMIN_GUIDE.md`, `IMPLEMENTATION_STATUS.md`, `MIGRATION_RISKS.md` |
 
-## Muundo
-- Frontend: HTML/CSS/JS tupu — `public/`, `member/`, `admin/`, `super-admin/`. Vercel haijengi chochote.
-- CSS ya Tailwind imejengwa tayari: `assets/css/tailwind.css` (imo kwenye git). Ukibadilisha au kuongeza class za Tailwind kwenye ukurasa wowote, au rangi kwenye `assets/js/admin-tw-config.js`, ijenge upya kisha u-commit:
-  ```
-  npm install
-  npm run build:css
-  ```
-- Lugha (SW/EN): `assets/js/i18n.js` — ongeza maneno mapya kwenye kamusi `EN2SW`.
-- Backend: Supabase project `kanisa-hub-demo` (ref `ztafklfgtsaolyvaybop`) — tofauti kabisa na project ya BLB
-- Hosting: Vercel (`vercel.json`)
+## Kuanza haraka (Supabase)
+1. Supabase → project ya parokia → **SQL Editor** → bandika `database/supabase_setup.sql` → **Run**.
+2. **Authentication → Users → Add user** → weka barua pepe na nenosiri lako (weka tiki *Auto Confirm User*).
+3. SQL Editor:
+   ```sql
+   update public.profiles set role = 'super_admin', full_name = 'JINA LAKO' where email = 'BARUA_PEPE_YAKO';
+   ```
+4. Fungua `login.html` (au tovuti ya Vercel) na uingie.
 
-## Haifanyi kazi kwenye demo
-- Malipo ya mtandaoni (Snippe) na chatbot ya AI — zinahitaji edge functions na API keys ambazo hazijawekwa kwenye demo.
+Maelezo kamili: `docs/DEPLOYMENT.md`.
+
+## Kuendesha kwenye kompyuta (bila Supabase)
+```bash
+npm install
+npm run dev
+```
+Fungua `http://localhost:5600/login.html` — watumiaji wa majaribio wanaonyeshwa kwenye terminal (nenosiri `Minga@2026`).
+Data ni ya mfano; ukifunga server inapotea.

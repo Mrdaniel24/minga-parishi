@@ -8,19 +8,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0..1&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../assets/css/parish.css"/>
 </head>
-<body class="pm-receipt-page" data-required-role="member">
+<body class="pm-receipt-page">
   <div class="pm-receipt-tools"><button class="pm-btn pm-btn--primary" id="print"><span class="material-symbols-outlined">print</span> Chapa / PDF</button>
     <button class="pm-btn" onclick="window.close()">Funga</button></div>
   <article id="receipt" class="pm-receipt"><p class="pm-muted">Inapakia risiti…</p></article>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
+<script src="../assets/js/config.js"></script>
 <script src="../assets/js/supabase-client.js"></script>
 <script src="../assets/js/parish/core.js"></script>
 <script>
 (async () => {
   const P = window.Parish, box = document.getElementById('receipt');
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { location.href = '../public/login.html'; return; }
+  if (!session) { location.href = '../login.html'; return; }
   const params = new URLSearchParams(location.search);
   try {
     let q = P.from('receipts').select('*');
@@ -49,7 +50,7 @@
       </table>
       <footer><p>Namba ya uhakiki: <b>${P.esc(r.verification_code)}</b> · Muamala Na. ${P.esc(t?.txn_no || '')}</p>
         <p>${P.esc(p.receipt_footer || 'Asante kwa mchango wako. Mungu akubariki.')}</p>
-        <p class="pm-muted">Mfumo wa Usimamizi wa Parokia · Kanisa Hub by FocusTec</p></footer>`;
+        <p class="pm-muted">Mfumo wa Usimamizi wa Parokia</p></footer>`;
     document.title = `Risiti ${r.receipt_no}`;
     document.getElementById('print').addEventListener('click', async () => {
       await supabase.rpc('mark_receipt_printed', { p_receipt: r.id }); window.print();

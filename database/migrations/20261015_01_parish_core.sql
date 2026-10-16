@@ -4,9 +4,8 @@
 --   families, parishioners (waumini), leadership, parish roles & permissions,
 --   audit log.
 --
--- Safe to run on an existing Kanisa Hub database: only creates new objects
--- (create ... if not exists / create or replace) and never drops data.
--- Requires the Kanisa Hub base tables auth.users and public.profiles.
+-- Only creates new objects (create ... if not exists / create or replace) and
+-- never drops data. Requires auth.users (Supabase) and public.profiles (migration 00).
 -- ============================================================================
 
 -- gen_random_uuid() is built into PostgreSQL 13+, no extension needed.
@@ -258,8 +257,8 @@ create index if not exists leadership_org_idx on public.leadership_assignments (
 
 -- ---------------------------------------------------------------------------
 -- Parish application roles & permissions (granular, scoped to an org unit)
---   Existing Kanisa Hub profiles.role (member/admin/super_admin) is kept;
---   profiles.role = 'super_admin' is treated as Platform Super Admin.
+--   profiles.role = 'super_admin' (migration 00) is the system administrator;
+--   everyone else gets access only through parish_user_roles.
 -- ---------------------------------------------------------------------------
 create table if not exists public.parish_roles (
   code        text primary key,

@@ -193,7 +193,7 @@
         foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
       } else if (r === 'zaka') { P.go(`#/zaka?year=${year}&level=${level === 'parish' ? 'kigango' : level}&scope=${scope}`); return; }
       out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
-        `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia · Kanisa Hub by FocusTec')}</p>`;
+        `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
       el.querySelector('[data-print]').addEventListener('click', () => P.print(title));
       el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel(title.slice(0, 40), { Ripoti: rows.map(x => Object.fromEntries(cols.map(c => [c.label, typeof x[c.key] === 'string' && !isNaN(x[c.key]) && x[c.key] !== '' ? Number(x[c.key]) : x[c.key]]))) }));
     },

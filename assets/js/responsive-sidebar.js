@@ -1,5 +1,5 @@
 /* ============================================
-   Kanisa Hub — Responsive Sidebar Controller
+   Minga Parish — Responsive Sidebar Controller
    
    Vanilla JS to handle mobile sidebar toggle,
    overlay, swipe-to-close, and auto-close.

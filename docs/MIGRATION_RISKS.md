@@ -45,8 +45,8 @@ Nothing below was changed silently. Each item is either held as *pending* in **U
 
 | # | Risk | Mitigation |
 |---|---|---|
-| T-01 | The repository has no base Kanisa Hub schema (profiles, departments, contributions, events …) — it exists only in the demo Supabase project | Dump it once from the demo project (`DEPLOYMENT.md` step 2) before creating the Minga project. **Do not load parish data into the public demo project** (its accounts and passwords are published in the README) |
-| T-02 | `assets/js/supabase-client.js` points at the demo project | Change URL + anon key to the Minga project at deployment |
+| T-01 | Resolved (2026-10-16): the system no longer depends on Kanisa Hub; `00_base.sql` provides the only base table (`profiles`). | — |
+| T-02 | Resolved (2026-10-16): `assets/js/config.js` points at the parish's own Supabase project | — |
 | T-03 | Personal data in the workbook | Workbook, extraction JSON and import SQL live outside the repo (`.gitignore` covers `private/`, `*.xlsm`, `minga_import.sql`, `workbook.json`); the import script runs only in the SQL editor |
 | T-04 | Running the import twice | Refused by the import script and a unique index on the workbook hash |
 | T-05 | Online payments (Snippe) and AI chatbot from the demo | Unchanged and still not configured |

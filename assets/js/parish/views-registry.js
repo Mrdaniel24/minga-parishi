@@ -201,53 +201,6 @@
     },
   };
 
-  /* ================= MAOMBI YA KUUNGANISHWA ================= */
-  V.links = {
-    title: 'Maombi ya Kuunganishwa', perm: 'registry.read',
-    async render(el, params) {
-      const status = params.status || 'pending';
-      const rows = await P.q(P.from('parish_link_requests').select('*').eq('status', status).order('created_at', { ascending: false }).limit(300));
-      const ids = [...new Set(rows.map(r => r.profile_id))];
-      const profs = ids.length ? await P.q(P.from('profiles').select('id,email,full_name,phone').in('id', ids)) : [];
-      const pb = Object.fromEntries(profs.map(p => [p.id, p]));
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Maombi ya Kuunganishwa</h1>
-          <p class="pm-muted">Waumini waliojisajili kwenye mfumo wanaomba kuunganishwa na rejista ya parokia. Ukithibitisha, wataona michango, ahadi, zaka na risiti zao, na watapata matangazo na mazungumzo ya jumuiya yao.</p></div></div>
-        <nav class="pm-tabs">${[['pending', 'Yanayosubiri'], ['approved', 'Yaliyothibitishwa'], ['rejected', 'Yaliyokataliwa']].map(([k, v]) => `<a href="#/links?status=${k}" class="${k === status ? 'on' : ''}">${v}</a>`).join('')}</nav>
-        <section class="pm-card">${P.table(rows, [
-          { key: 'full_name', label: 'Jina', html: r => `${P.esc(r.full_name)}<br><small class="pm-muted">${P.esc(pb[r.profile_id]?.email || '')}</small>` },
-          { key: 'phone', label: 'Simu', html: r => P.esc(r.phone || pb[r.profile_id]?.phone || '—') },
-          { key: 'jumuiya_id', label: 'Jumuiya aliyochagua', html: r => P.esc(P.ref.unitsById[r.jumuiya_id]?.label || '—') },
-          { key: 'family_name', label: 'Familia', html: r => P.esc(r.family_name || '—') },
-          { key: 'created_at', label: 'Tarehe', fmt: P.date },
-          { key: 'id', label: '', html: r => r.status === 'pending' ? `<button class="pm-btn pm-btn--sm pm-btn--primary" data-decide="${r.id}">Amua</button>` : P.esc(r.decision_note || '') }],
-          { empty: 'Hakuna maombi.' })}</section>`;
-      el.querySelectorAll('[data-decide]').forEach(b => b.addEventListener('click', async () => {
-        const r = rows.find(x => x.id === b.dataset.decide);
-        // suggest register entries with a similar name in the chosen jumuiya
-        const first = (r.full_name || '').split(/\s+/)[0] || '';
-        let q = P.from('parishioners').select('id,full_name,family_id,profile_id,families(family_name)').is('profile_id', null).ilike('full_name', `%${first}%`).limit(20);
-        if (r.jumuiya_id) q = q.eq('jumuiya_id', r.jumuiya_id);
-        const cands = await P.q(q);
-        const fams = r.jumuiya_id ? await P.q(P.from('families').select('id,family_name').eq('jumuiya_id', r.jumuiya_id).order('family_name').limit(500)) : [];
-        const v = await P.modal({ title: `Ombi la ${r.full_name}`, wide: true, submit: 'Tekeleza', body: `
-          <p class="pm-muted">Jumuiya: <b>${P.esc(P.ref.unitsById[r.jumuiya_id]?.label || 'haijachaguliwa')}</b> · Familia aliyoandika: <b>${P.esc(r.family_name || '—')}</b></p>
-          <div class="pm-form">
-            <label class="pm-span2">Uamuzi<select name="action">
-              <option value="link">Muunganishe na muumini aliyepo kwenye rejista</option>
-              <option value="new">Muongeze kama muumini mpya kwenye rejista</option>
-              <option value="reject">Kataa ombi</option></select></label>
-            <label class="pm-span2">Muumini aliyepo (majina yanayofanana)<select name="parishioner">${P.options(cands, { label: c => `${c.full_name} — ${c.families?.family_name || 'bila familia'}`, blank: cands.length ? 'Chagua…' : 'Hakuna anayefanana' })}</select></label>
-            <label class="pm-span2">Familia (kwa muumini mpya)<select name="family">${P.options(fams, { label: 'family_name', blank: '— Bila familia —' })}</select></label>
-            <label class="pm-span2">Maelezo<input name="note"></label></div>` });
-        if (!v) return;
-        if (v.action === 'link' && !v.parishioner) { Toast.error('Chagua muumini kutoka kwenye rejista.'); return; }
-        await P.rpc('decide_parish_link', { p_request: r.id, p_approve: v.action !== 'reject',
-          p_parishioner: v.action === 'link' ? v.parishioner : null, p_family: v.action === 'new' ? (v.family || null) : null, p_note: v.note || null });
-        Toast.success(v.action === 'reject' ? 'Ombi limekataliwa.' : 'Muumini ameunganishwa na rejista.'); P.reload();
-      }));
-    },
-  };
-
   /* ================= VIONGOZI ================= */
   V.leaders = {
     title: 'Viongozi', perm: 'registry.read',
@@ -298,7 +251,7 @@
       const profs = uids.length ? await P.q(P.from('profiles').select('id,full_name,email').in('id', uids)) : [];
       const pById = Object.fromEntries(profs.map(p => [p.id, p]));
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Watumiaji na Ruhusa</h1>
-        <p class="pm-muted">Mtu hujisajili kwenye Kanisa Hub kwanza (akaunti), kisha hapa unampa nafasi. Ruhusa zinatekelezwa na database (RLS), si kwa kuficha vitufe tu.</p></div>
+        <p class="pm-muted">Akaunti ya mtumiaji inaundwa kwanza (Supabase → Authentication → Add user), kisha hapa unampa nafasi kwa barua pepe yake. Ruhusa zinatekelezwa na database (RLS), si kwa kuficha vitufe tu.</p></div>
         <div class="pm-actions"><button class="pm-btn pm-btn--primary" data-grant><span class="material-symbols-outlined">add</span>Toa nafasi</button></div></div>
         <section class="pm-card">${P.table(grants, [{ key: 'u', label: 'Mtumiaji', html: g => `${P.esc(pById[g.user_id]?.full_name || '')}<br><small class="pm-muted">${P.esc(pById[g.user_id]?.email || g.user_id)}</small>` },
           { key: 'role_code', label: 'Nafasi', html: g => P.esc(roles.find(r => r.code === g.role_code)?.name_sw || g.role_code) },

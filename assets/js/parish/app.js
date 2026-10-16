@@ -24,7 +24,7 @@
       main.innerHTML = P.empty('Huna ruhusa ya kuona ukurasa huu.');
       return;
     }
-    document.title = `${view.title} | ${P.ref.parish.short_name || 'Parokia'} — Kanisa Hub`;
+    document.title = `${view.title} | ${P.ref.parish.short_name || 'Parokia'}`;
     const crumb = document.querySelector('.kh-topbar__crumbs b');
     if (crumb) crumb.textContent = view.title;
     main.innerHTML = P.loading();
@@ -40,10 +40,9 @@
   P.reload = route;
 
   P.start = async function () {
-    const profile = await initPageGuard();
+    const profile = await PM.guard();
     if (!profile) return;
     P.profile = profile;
-    P.homeHref = profile.role === 'super_admin' ? '../super-admin/dashboard.html' : profile.role === 'admin' ? '../admin/dashboard.html' : '../member/dashboard.html';
     try {
       [P.access] = await Promise.all([P.rpc('my_parish_access'), P.loadRef()]);
     } catch (e) {
@@ -53,17 +52,14 @@
     const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0;
     if (!hasRole) {
       document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Huna nafasi kwenye mfumo wa parokia</h2>
-        <p class="pm-muted">Akaunti yako haijapewa nafasi (mf. Mhasibu, Kiongozi wa Jumuiya). Wasiliana na Msimamizi wa Mfumo wa Parokia.</p>
-        <p class="mt-4"><a class="pm-btn" href="${P.homeHref}">Rudi kwenye lango lako</a></p></div>`;
+        <p class="pm-muted">Akaunti yako (${P.esc(profile.email)}) haijapewa nafasi bado (mf. Mhasibu, Katibu, Kiongozi wa Jumuiya). Mwombe Msimamizi wa Mfumo akupe nafasi, kisha ingia tena.</p>
+        <p class="mt-4"><button class="pm-btn" data-action="logout">Toka</button></p></div>`;
+      if (PM.applyAccess) PM.applyAccess(P.access);
       return;
     }
     const p = P.ref.parish;
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
-    const role = (P.access.roles || [])[0];
-    const roleEl = document.querySelector('.kh-profile__role');
-    if (roleEl && role) roleEl.textContent = role.org_unit ? `${role.role.replace('_', ' ')} · ${role.org_unit}` : role.role.replace('_', ' ');
-    // the sidebar menu is the shared one from admin-layout.js; refresh its parish items
-    if (window.khApplyParishAccess) window.khApplyParishAccess(P.access);
+    if (PM.applyAccess) PM.applyAccess(P.access);
     window.addEventListener('hashchange', route);
     route();
   };

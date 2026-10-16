@@ -6,8 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
-  <script>try{var c=JSON.parse(sessionStorage.getItem('kh-guard-cache')||'null');if(c&&Date.now()-c.at<6e5)document.documentElement.classList.add('kh-ready')}catch(e){}</script>
-  <title>Dashibodi | Mfumo wa Parokia — Kanisa Hub</title>
+  <title>Dashibodi | Mfumo wa Parokia</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0..1&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../assets/css/responsive-sidebar.css"/>
@@ -15,15 +14,13 @@
   <link rel="stylesheet" href="../assets/css/tailwind.css"/>
   <link rel="stylesheet" href="../assets/css/parish.css"/>
 </head>
-<body class="bg-slate-50 text-slate-900" data-required-role="member" style="opacity:0; transition: opacity 0.3s ease;">
+<body class="bg-slate-50 text-slate-900" style="opacity:0; transition: opacity 0.3s ease;">
 
 <div id="sidebar-overlay" class="sidebar-overlay"></div>
 <div class="mobile-header">
   <button data-sidebar-toggle class="hamburger-btn"><span class="material-symbols-outlined">menu</span></button>
   <div><h1 data-parish-name>Parokia</h1><p>Mfumo wa Parokia</p></div>
-  <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center overflow-hidden border-2 border-secondary-container">
-    <span class="text-white text-sm font-bold">?</span>
-  </div>
+  <div class="pm-avatar-sm"><span data-user-initials>?</span></div>
 </div>
 
 <aside id="sidebar" class="sidebar-responsive bg-slate-50 flex flex-col py-8 border-r border-slate-200/50">
@@ -37,7 +34,7 @@
     <a href="#" data-action="logout" class="nav-item"><span class="material-symbols-outlined">logout</span><span>Toka</span></a>
   </div>
 </aside>
-<script src="../assets/js/admin-layout.js"></script>
+<script src="../assets/js/parish/shell.js"></script>
 
 <main class="main-responsive p-4 md:p-10">
   <div id="pm-view"></div>
@@ -54,10 +51,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="../assets/js/config.js"></script>
 <script src="../assets/js/supabase-client.js"></script>
-<script src="../assets/js/common.js"></script>
-<script src="../assets/js/auth.js"></script>
-<script src="../assets/js/router.js"></script>
 <script src="../assets/js/parish/core.js"></script>
 <script src="../assets/js/parish/app.js"></script>
 <script src="../assets/js/parish/views-finance.js"></script>
@@ -65,6 +60,5 @@
 <script src="../assets/js/parish/views-accounting.js"></script>
 <script>Parish.start();</script>
 <script src="../assets/js/responsive-sidebar.js"></script>
-<script src="../assets/js/i18n.js"></script>
 </body>
 </html>

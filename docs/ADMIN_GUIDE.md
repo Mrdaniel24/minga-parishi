@@ -1,6 +1,6 @@
 # Mwongozo wa Msimamizi — Mfumo wa Usimamizi wa Parokia ya Minga
 
-Ingia kwenye Kanisa Hub, kisha bonyeza **Mfumo wa Parokia** kwenye menyu ya pembeni.
+Fungua `login.html` ya mfumo na uingie kwa barua pepe na nenosiri ulilopewa. Menyu ya pembeni inaonyesha tu sehemu ambazo nafasi yako inaruhusu.
 
 ## Kanuni tatu muhimu
 1. **Malipo huingizwa mara moja tu.** Ripoti za familia, jumuiya, kigango, parokia, kampeni na dashibodi zote husasishwa kutoka kwenye muamala huo mmoja. Hakuna kunakili kwenye karatasi nyingine.

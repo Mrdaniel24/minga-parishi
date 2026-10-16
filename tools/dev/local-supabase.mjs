@@ -8,7 +8,7 @@
 // enforced exactly as in Supabase: each request runs as role `authenticated`
 // with request.jwt.claim.sub set to the signed-in user.
 //
-// Sign in with any of the users printed at start-up (password: Minga@2026).
+// Sign in at /login.html with any of the users printed at start-up (password: Minga@2026).
 // With --import, the private workbook import is loaded (stays on this machine).
 import http from 'node:http';
 import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -30,11 +30,9 @@ for (const [email, role, scope] of [
   ['muumini@minga.test', null]]) {
   const org = scope ? (await pg.query(`select id from public.org_units where unit_type = $1 and name = $2`, scope.split('|'))).rows[0].id : null;
   USERS[email] = await db.user(email, { parishRole: role, org });
-  // parish roles already made the profile an admin (trigger); only the platform super admin is set here
   await pg.query(`update public.profiles set full_name = $2, role = case when $3 then 'super_admin' else role end where id = $1`,
     [USERS[email], email.split('@')[0].replace(/^./, c => c.toUpperCase()), email.startsWith('superadmin')]);
 }
-await seedChurchContent();
 if (args.import) {
   console.log('loading private import…');
   await pg.exec(readFileSync(join(args.import, 'import', 'minga_import.sql'), 'utf8'));
@@ -280,7 +278,7 @@ function serveStatic(url, res) {
   const file = join(ROOT, p);
   if (!file.startsWith(ROOT) || /[\\/](private|node_modules|\.git)[\\/]/.test(file) || !existsSync(file) || statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   let buf = readFileSync(file);
-  if (extname(file) === '.html') buf = Buffer.from(buf.toString('utf8').replace('<head>', `<head><script>window.KH_SUPABASE_URL=location.origin;window.KH_LOCAL_DEV=true;</script>`));
+  if (extname(file) === '.html') buf = Buffer.from(buf.toString('utf8').replace('<head>', `<head><script>window.PM_LOCAL_URL=location.origin;</script>`));
   res.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   res.end(buf);
 }
@@ -319,40 +317,10 @@ http.createServer(async (req, res) => {
     send(res, status, { code: e.code || 'P0001', message: e.message, details: e.detail || null, hint: e.hint || null });
   }
 }).listen(PORT, () => {
-  console.log(`Minga Parish local server: http://localhost:${PORT}/public/login.html`);
+  console.log(`Minga Parish local server: http://localhost:${PORT}/login.html`);
   console.log(`password for all users: ${PASSWORD}`);
   Object.keys(USERS).forEach(e => console.log('  ' + e));
 });
-
-/* ---------- Kanisa Hub content (events, announcements, sermons …) — sample, clearly marked ---------- */
-async function seedChurchContent() {
-  const q = (s, p) => pg.query(s, p);
-  const su = USERS['superadmin@minga.test'];
-  await q(`insert into public.system_settings (church_name, church_address, church_phone, church_email, tagline, hero_badge_text, hero_subtext,
-            about_label, about_heading, about_body, ministries_label, ministries_heading)
-           values ('Parokia ya Mt. Aloyce Gonzaga - Minga', 'S.L.P. 54, Singida', null, null, 'Jimbo Katoliki Singida',
-            'Karibu Parokiani', 'Pamoja katika imani, sala na huduma — Minga, Mughanga, Mangua na vigango vyetu.',
-            'Kuhusu Parokia', 'Parokia ya Mt. Aloyce Gonzaga - Minga', 'Maandishi ya mfano — msimamizi ataweka historia halisi ya parokia.',
-            'Jumuiya na Vyama', 'Jumuiya Ndogo Ndogo za Kikristo')`);
-  for (const [o, ic, day, t, d, tl] of [[1, 'church', 'Jumapili', 'Misa ya Kwanza', 'Misa ya asubuhi (mfano)', '1:00 asubuhi'],
-      [2, 'light_mode', 'Jumapili', 'Misa ya Pili', 'Misa ya familia (mfano)', '3:30 asubuhi'], [3, 'auto_awesome', 'Jumatano', 'Misa ya Jioni', 'Mfano', '12:00 jioni']])
-    await q(`insert into public.service_times (display_order, icon, day_label, title, description, time_label) values ($1,$2,$3,$4,$5,$6)`, [o, ic, day, t, d, tl]);
-  const clara = (await q(`select id from public.departments where name = 'Jumuiya ya Clara'`)).rows[0].id;
-  const mavuno = (await q(`select cp.id from public.campaigns cp join public.contribution_categories c on c.id = cp.category_id where c.code = 'MAVUNO' and cp.campaign_year = extract(year from current_date)`)).rows[0]?.id;
-  const day = n => new Date(Date.now() + n * 864e5).toISOString();
-  for (const [t, d, when, loc, cat, camp] of [
-      ['Sikukuu ya Mavuno (mfano)', 'Mavuno ya parokia — jumuiya zote zinaleta michango yao.', day(10), 'Kanisani Minga', 'fundraising', mavuno],
-      ['Kikao cha Halmashauri ya Parokia (mfano)', 'Viongozi wa vigango na jumuiya.', day(4), 'Ukumbi wa Parokia', 'meeting', null],
-      ['Kongamano la Utoto Mtakatifu (mfano)', 'Watoto wa jumuiya zote.', day(21), 'Kigango cha Mughanga', 'youth', null]])
-    await q(`insert into public.events (title, description, event_date, location, category, status, campaign_id, created_by) values ($1,$2,$3,$4,$5,'upcoming',$6,$7)`, [t, d, when, loc, cat, camp, su]);
-  await q(`insert into public.announcements (title, content, priority, target_type, created_by) values
-    ('Karibu kwenye mfumo mpya wa parokia (mfano)', 'Michango yako, ahadi na risiti sasa zinaonekana kwenye "Michango Yangu".', 'high', 'all', $1)`, [su]);
-  await q(`insert into public.announcements (title, content, priority, target_type, department_id, created_by) values
-    ('Kikao cha Jumuiya ya Clara (mfano)', 'Jumatano saa 10 jioni nyumbani kwa mwenyekiti.', 'normal', 'department', $1, $2)`, [clara, su]);
-  await q(`insert into public.sermons (title, speaker, description, scripture_reference, sermon_date, created_by) values
-    ('Mahubiri ya Jumapili (mfano)', 'Paroko', 'Mfano wa mahubiri.', 'Yoh 15:1-8', current_date - 3, $1)`, [su]);
-  await q(`insert into public.messages (department_id, sender_id, content) values ($1, $2, 'Karibuni wanajumuiya wa Clara (mfano)')`, [clara, USERS['clara@minga.test']]);
-}
 
 /* ---------- synthetic sample data (clearly fictitious) when no import is given ---------- */
 async function seedSample() {
@@ -383,8 +351,6 @@ async function seedSample() {
   await asUser(USERS['mhasibu@minga.test'], tx => tx.query(`select public.post_payment($1::jsonb)`, [JSON.stringify({ idempotency_key: crypto.randomUUID(), amount: 450000, category_id: cat.SADAKA_JUMAPILI, payer_name: 'Sadaka ya Jumapili (mfano)', payment_method: 'cash' })]));
   const p = (await q(`select id from public.parishioners where full_name like 'Baba Mfano Aloyce 1%' limit 1`)).rows[0].id;
   await q(`update public.parishioners set profile_id = $1 where id = $2`, [USERS['muumini@minga.test'], p]);
-  const req = await db.user('mpya@minga.test');
-  USERS['mpya@minga.test'] = req;
-  await asUser(req, tx => tx.query(`select public.request_parish_link($1::jsonb)`, [JSON.stringify({ jumuiya_id: units[1].id, full_name: 'Mama Mfano Mpya', phone: '0700000000' })]));
+  USERS['mpya@minga.test'] = await db.user('mpya@minga.test');   // an account with no parish role yet
   console.log(`sample data: ${units.length * 4} families, ${n + 1} payments (fictitious names "Mfano")`);
 }

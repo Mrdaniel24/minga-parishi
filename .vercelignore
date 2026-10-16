@@ -1,6 +1,7 @@
-# Build tooling for assets/css/tailwind.css — not part of the website
+# Not part of the website
 node_modules/
 package.json
 package-lock.json
-tailwind.config.js
-assets/css/tailwind.src.css
+tests/
+tools/
+private/

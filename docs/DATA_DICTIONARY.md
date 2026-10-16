@@ -1,6 +1,6 @@
 # Data dictionary
 
-New objects added by `database/migrations/20261015_0*.sql`. Existing Kanisa Hub tables (`profiles`, `departments`, `events`, `announcements`, `contributions`, `sermons`, `media_*`, `messages`, …) are unchanged. Money is `numeric(14,2)` in TZS.
+New objects added by `database/migrations/20261015_0*.sql`. `public.profiles` (migration 00) holds one row per login account (role `user` or `super_admin`); everything else a user may do comes from `parish_user_roles`.
 
 ## Parish and register (01)
 

@@ -1,30 +1,33 @@
 # Deployment, import, backup
 
-> Real parish data must go to a **new, private Supabase project** — never to the public demo project.
+> Real parish data goes only to the parish's own private Supabase project.
 
 ## 1. Create the project
 1. Supabase → New project (region close to Tanzania, e.g. eu-central / af-south when available). Note the URL and anon key.
 2. Authentication → Email: keep e-mail confirmation on; set Site URL to the production domain.
 
-## 2. Base Kanisa Hub schema
-Run `database/000_kanisa_hub_base.sql` (profiles, departments, events, announcements, sermons, media, chat, settings …). It was reconstructed from the pages because the demo never committed its schema; if you have owner access to the demo project you can compare it with a real dump (`supabase db dump --project-ref ztafklfgtsaolyvaybop --schema public`). Do **not** run `database/demo-seed.sql` or `demo-protect.sql`.
+## 2. Database (one file)
+Supabase → **SQL Editor** → New query → paste the whole of `database/supabase_setup.sql` → **Run**.
+It is every file of `database/migrations/` in order (`00_base` … `10_profiles_rls`), contains no personal data and can be run again safely.
+After changing a migration, rebuild it with `npm run setup:sql` (a test fails if it is out of date).
+For scheduled report snapshots enable **pg_cron** (Database → Extensions) *before* running it.
 
-## 3. Parish migrations (in order)
-Run each file from `database/migrations/` in the SQL editor:
-`20261015_01_parish_core` → `02_finance_core` → `03_finance_functions` → `04_finance_views` → `05_rls` → `06_reference_seed` → `07_legacy_import` → `08_scheduled_reports` → `09_integration`.
-All are re-runnable. For scheduled snapshots enable **pg_cron** (Database → Extensions) *before* running 08.
-
-## 4. First administrator
-1. Register the administrator's account on the site.
-2. SQL editor:
+## 3. First administrator (super admin)
+1. Authentication → Users → **Add user** → e-mail + password, tick *Auto Confirm User*. A row in `public.profiles` is created automatically.
+2. SQL Editor:
 ```sql
-insert into public.parish_user_roles (user_id, parish_id, role_code)
-select id, public.default_parish_id(), 'parish_admin' from auth.users where email = 'ADMIN_EMAIL_HERE';
+update public.profiles set role = 'super_admin', full_name = 'FULL NAME' where email = 'ADMIN_EMAIL_HERE';
 ```
-Further roles are granted in the app (*Watumiaji*).
+The super admin sees everything. Everyone else gets access only through parish roles.
 
-## 5. Point the frontend at the project
-Edit `assets/js/supabase-client.js`: `SUPABASE_URL` and `SUPABASE_ANON_KEY` → the new project. Deploy (Vercel project from this repository, branch of your choice).
+## 4. Other users
+1. Authentication → Users → **Add user** (one account per person).
+2. In the app: **Mfumo → Watumiaji na Nafasi → Toa nafasi** → their e-mail → role (Paroko, Mhasibu, Karani, Kiongozi wa Jumuiya …) and, for leaders, their kigango/jumuiya.
+An account without a role can sign in but sees nothing.
+
+## 5. Point the frontend at the project and deploy
+`assets/js/config.js` → `SUPABASE_URL` and `SUPABASE_ANON_KEY` (Project Settings → API: Project URL and the *anon public* key — never the service_role key).
+Deploy: Vercel → New project from this repository (static, no build). In Supabase → Authentication → URL Configuration set **Site URL** to the Vercel address and add `<site>/reset.html` to the redirect URLs (password reset links).
 
 ## 6. Import the workbook (once)
 On the office computer (Python 3.12 + `pip install openpyxl`):
@@ -50,13 +53,13 @@ npm install
 ```bash
 npm test
 ```
-Runs every migration in an in-process PostgreSQL and the 19 financial/RLS tests. Run before every deployment.
+Runs every migration in an in-process PostgreSQL plus the financial, security (RLS) and setup-file tests. Run before every deployment.
 
 ## 8. Local training copy
 ```bash
-node tools/dev/local-supabase.mjs --port 5600
+npm run dev
 ```
-Open `http://localhost:5600/public/login.html` (users printed in the console, password `Minga@2026`). Add `--import C:\minga-private` to explore the real imported data locally. Not for production.
+Open `http://localhost:5600/login.html` (users printed in the console, password `Minga@2026`). Add `--import C:\minga-private` to explore the real imported data locally. Not for production.
 
 ## 9. Backups and recovery
 - Supabase Pro: daily backups + Point-in-Time Recovery — enable PITR for the parish project.

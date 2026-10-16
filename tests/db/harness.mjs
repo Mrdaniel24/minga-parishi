@@ -10,11 +10,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATIONS = join(ROOT, 'database', 'migrations');
 
 // What Supabase provides before any SQL of ours runs (auth schema and API roles).
-// The Kanisa Hub base tables come from database/000_kanisa_hub_base.sql.
-const SUPABASE_STUB = `
+export const SUPABASE_STUB = `
 create schema if not exists auth;
 create schema if not exists extensions;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb);
 create function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create role anon nologin;
@@ -29,7 +28,6 @@ alter default privileges in schema public grant execute on functions to anon, au
 export async function createDb() {
   const db = new PGlite();
   await db.exec(SUPABASE_STUB);
-  await db.exec(readFileSync(join(ROOT, 'database', '000_kanisa_hub_base.sql'), 'utf8'));
   for (const f of readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()) {
     try {
       await db.exec(readFileSync(join(MIGRATIONS, f), 'utf8'));
@@ -65,11 +63,11 @@ function wrap(db) {
       return r.rows[0].r;
     },
     // create an auth user + profile, optionally with a parish role
-    async user(email, { role = 'member', parishRole = null, org = null } = {}) {
+    async user(email, { role = 'user', parishRole = null, org = null } = {}) {
       const id = randomUUID();
       const prev = current; current = null;
-      await db.query('insert into auth.users (id, email) values ($1, $2)', [id, email]);
-      await db.query('insert into public.profiles (id, email, full_name, role) values ($1, $2, $2, $3)', [id, email, role]);
+      await db.query('insert into auth.users (id, email) values ($1, $2)', [id, email]);  // trigger creates the profile
+      await db.query('update public.profiles set full_name = $2, role = $3 where id = $1', [id, email, role]);
       if (parishRole) {
         await db.query(`insert into public.parish_user_roles (user_id, parish_id, role_code, org_unit_id)
                         values ($1, public.default_parish_id(), $2, $3)`, [id, parishRole, org]);

@@ -1,6 +1,6 @@
 /* ============================================
    Minga Parish — components for parish/*.html
-   Built on the Kanisa Hub theme tokens (--kh-*)
+   Built on the theme tokens (--kh-*)
    from admin-theme.css; standalone fallbacks for
    receipt.html which does not load the theme.
    ============================================ */
@@ -188,3 +188,15 @@
   .pm-filters input, .pm-filters select { width: 100%; max-width: 100%; }
   .pm-head .pm-actions { width: 100%; }
 }
+
+/* toasts (shell.js) */
+.pm-toasts { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; flex-direction: column; gap: .6rem; max-width: min(420px, calc(100vw - 2.5rem)); }
+.pm-toast { display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem; border-radius: 14px; font-weight: 700; font-size: .9rem;
+  background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; box-shadow: var(--pm-shadow); cursor: pointer; animation: pm-toast-in .25s ease-out; }
+.pm-toast--success { background: #ecfdf5; color: #166534; border-color: #a7f3d0; }
+.pm-toast--error { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.pm-toast--warning { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+@keyframes pm-toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+button.kh-topbar__btn { border: 0; cursor: pointer; }
+.pm-avatar-sm { width: 2.25rem; height: 2.25rem; border-radius: 999px; background: var(--pm-primary); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: .85rem; border: 2px solid var(--pm-gold-soft); flex-shrink: 0; }
