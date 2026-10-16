@@ -16,6 +16,7 @@
 
   P.selfOnly = () => !P.access.platform_admin && !(P.access.permissions || []).length && !!P.access.parishioner_id;
 
+  let routeSeq = 0;
   async function route() {
     let raw = (location.hash || '#/dashboard').slice(2);
     // a member (no staff permissions) sees only their own giving
@@ -25,19 +26,27 @@
     const view = P.views[name] || P.views.dashboard;
     const main = document.getElementById('pm-view');
     if (view.perm && !P.can(view.perm)) {
+      routeSeq++;
       main.innerHTML = P.empty('Huna ruhusa ya kuona ukurasa huu.');
       return;
     }
     document.title = `${view.title} | ${P.ref.parish.short_name || 'Parokia'}`;
     const crumb = document.querySelector('.kh-topbar__crumbs b');
     if (crumb) crumb.textContent = view.title;
-    main.innerHTML = P.loading();
+    // each visit renders into its own box: if the user moves on (or the page is
+    // re-routed) while data is still loading, the late render writes into a box
+    // that is no longer on screen instead of failing on the new page
+    const token = ++routeSeq;
+    const box = document.createElement('div');
+    box.innerHTML = P.loading();
+    main.replaceChildren(box);
     try {
-      await view.render(main, params);
+      await view.render(box, params);
     } catch (e) {
       console.error(e);
-      main.innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
+      if (token === routeSeq) box.innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
     }
+    if (token !== routeSeq) return;
     window.scrollTo(0, 0);
   }
   P.go = (hash) => { if (location.hash === hash) route(); else location.hash = hash; };
