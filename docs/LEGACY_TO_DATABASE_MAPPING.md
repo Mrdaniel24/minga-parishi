@@ -7,7 +7,7 @@ The importer is `tools/migration/extract_workbook.py` (reads the workbook) → `
 | Workbook | Database |
 |---|---|
 | `HOMEBOOK!D4:D7` (Jimbo Katoliki Singida, Parokia ya Mt. Aloyce Gonzaga – Minga, S.L.P. 54 Singida, "Stakabadhi ya Malipo") | `parishes` (code `MNG`), `verified_fields` lists what came from the workbook |
-| `HOMEDATA!C34:E85` groups MUGHANGA, MINGA, MANGUA, SONGA, KISASIDA, NTUNDUU, KINYETO | `org_units` type `kigango` (parent = parish), `zone` parokiani / vigangoni |
+| `HOMEDATA!C34:E85` groups MUGHANGA, MINGA, MANGUA, SONGA, KISASIDA, NTUNDUU, KINYETO | `org_units` type `kigango` (parent = parish); all seven are vigango (decision R-02) |
 | 51 jumuiya names (`HOMEDATA!E35:E85`) | `org_units` type `jumuiya`, `legacy_names` = every spelling + named-range names |
 | Parish-level groups in the parish block / HOMEBOOK H72:H96 (Kanda, WAWATA, Kwaya, Kamati …) | `org_units` type `group` |
 | Named ranges `CLARA_` … `SONGA` (ledger) and `CLARA` … `BIKIRA_MARIA_WA_AMANI` (register) | used to attribute rows to jumuiya; stored in `legacy_ref.block` |

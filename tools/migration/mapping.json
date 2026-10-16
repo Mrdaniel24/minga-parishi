@@ -11,13 +11,13 @@
     "verified_from": "HOMEBOOK!D4:D7, MICHANGO-2026!C6:C7"
   },
   "kigango": [
-    {"name": "Minga",    "zone": "parokiani", "aliases": ["MINGA"]},
-    {"name": "Mughanga", "zone": "parokiani", "aliases": ["MUGHANGA"]},
-    {"name": "Mangua",   "zone": "parokiani", "aliases": ["MANGUA", "MT.EDWARD MANGUA"]},
-    {"name": "Ntunduu",  "zone": "vigangoni", "aliases": ["NTUNDUU"]},
-    {"name": "Kinyeto",  "zone": "vigangoni", "aliases": ["KINYETO"]},
-    {"name": "Kisasida", "zone": "vigangoni", "aliases": ["KISASIDA"]},
-    {"name": "Songa",    "zone": "vigangoni", "aliases": ["SONGA"], "note": "Called 'KISINAGOGI CHA SONGA' in MICHANGO-2026"}
+    {"name": "Minga",    "zone": null, "aliases": ["MINGA"]},
+    {"name": "Mughanga", "zone": null, "aliases": ["MUGHANGA"]},
+    {"name": "Mangua",   "zone": null, "aliases": ["MANGUA", "MT.EDWARD MANGUA"]},
+    {"name": "Ntunduu",  "zone": null, "aliases": ["NTUNDUU"]},
+    {"name": "Kinyeto",  "zone": null, "aliases": ["KINYETO"]},
+    {"name": "Kisasida", "zone": null, "aliases": ["KISASIDA"]},
+    {"name": "Songa",    "zone": null, "aliases": ["SONGA"], "note": "Called 'KISINAGOGI CHA SONGA' in MICHANGO-2026"}
   ],
   "jumuiya": [
     {"kigango": "Mughanga", "n": 1,  "name": "Clara",                          "aliases": ["CLARA"], "ledger": "CLARA_", "register": "CLARA"},

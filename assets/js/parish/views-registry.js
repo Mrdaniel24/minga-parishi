@@ -57,11 +57,10 @@
       el.innerHTML = `
         <div class="pm-head"><div><h1 class="pm-h1">Vigango na Jumuiya</h1><p class="pm-muted">Parokia → Kigango → Jumuiya → Familia → Muumini. Majina yametoka kwenye workbook (HOMEDATA na named ranges).</p></div>
           <div class="pm-actions">${can ? '<button class="pm-btn pm-btn--primary" data-add><span class="material-symbols-outlined">add</span>Ongeza</button>' : ''}</div></div>
-        <div class="pm-alert pm-alert--info">Minga, Mughanga na Mangua zinaonekana kwenye workbook kama "Parokiani" (kituo cha parokia) na pia zinaitwa "Kigango cha …". Zimewekwa kama vigango vyenye eneo "parokiani" — thibitisha au badilisha.</div>
         <section class="pm-tree">${kig.map(k => {
           const js = P.unitsOf('jumuiya').filter(j => j.parent_id === k.id);
           const tf = js.reduce((s, j) => s + count(fams.data || fams, j.id), 0), tp = js.reduce((s, j) => s + count(people, j.id), 0);
-          return `<div class="pm-card"><div class="pm-row"><h3 class="pm-h3">${P.esc(k.name)} ${P.badge(k.zone || 'kigango', k.zone === 'parokiani' ? 'gold' : 'teal')}</h3>
+          return `<div class="pm-card"><div class="pm-row"><h3 class="pm-h3">${P.esc(k.name)} ${P.badge('kigango', 'teal')}</h3>
             <small class="pm-muted">${js.length} jumuiya · ${tf} familia · ${tp} waumini</small>
             ${can ? `<button class="pm-icon-btn" data-edit="${k.id}" title="Hariri"><span class="material-symbols-outlined">edit</span></button>` : ''}</div>
             <ul class="pm-list">${js.map(j => `<li><a class="pm-link" href="#/registry?jumuiya=${j.id}">${P.esc(j.name)}</a><small>${count(fams.data || fams, j.id)} familia · ${count(people, j.id)} waumini</small>
@@ -74,11 +73,10 @@
           <label>Aina<select name="unit_type" ${u ? 'disabled' : ''}>${['kigango', 'jumuiya', 'group'].map(t => `<option ${u && u.unit_type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
           <label>Jina<input name="name" required value="${P.esc(u?.name || '')}"></label>
           <label>Ndani ya (kwa jumuiya: kigango)<select name="parent_id">${P.unitOptions(['kigango'], { blank: '— Parokia —', selected: u?.parent_id })}</select></label>
-          <label>Eneo<select name="zone"><option value="">—</option><option ${u?.zone === 'parokiani' ? 'selected' : ''}>parokiani</option><option ${u?.zone === 'vigangoni' ? 'selected' : ''}>vigangoni</option></select></label>
           <label>Hali<select name="is_active"><option value="true">Hai</option><option value="false" ${u && !u.is_active ? 'selected' : ''}>Haitumiki</option></select></label></div>` });
         if (!v) return;
         const root = P.ref.units.find(x => x.unit_type === 'parish');
-        const row = { name: v.name, zone: v.zone || null, is_active: v.is_active === 'true', parent_id: v.parent_id || root.id };
+        const row = { name: v.name, is_active: v.is_active === 'true', parent_id: v.parent_id || root.id };
         if (u) await P.q(P.from('org_units').update(row).eq('id', u.id));
         else await P.q(P.from('org_units').insert({ ...row, parish_id: P.ref.parish.id, unit_type: v.unit_type }));
         await P.loadRef(true); Toast.success('Imehifadhiwa. Historia ya miamala ya zamani inabaki kama ilivyo.'); P.reload();

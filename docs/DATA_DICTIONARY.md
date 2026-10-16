@@ -7,7 +7,7 @@ New objects added by `database/migrations/20261015_0*.sql`. `public.profiles` (m
 | Table | Purpose | Key columns |
 |---|---|---|
 | `parishes` | Parish profile shown on every report and receipt | `code` (receipt prefix), `official_name`, `patron_saint`, `diocese`, address/phone/email, `logo_url`, `parish_priest`, `assistant_priests[]`, `fy_start_month`, `receipt_title/footer`, `report_header/footer`, `payment_accounts` jsonb, `verified_fields[]` |
-| `org_units` | Tree: parish → kigango → jumuiya, plus parish `group`s | `parent_id`, `unit_type`, `name`, `zone` (parokiani/vigangoni), `legacy_names[]`, `is_active` |
+| `org_units` | Tree: parish → kigango → jumuiya, plus parish `group`s | `parent_id`, `unit_type`, `name`, `zone` (unused: all vigango are equal), `legacy_names[]`, `is_active` |
 | `org_unit_closure` (view) | ancestor/descendant pairs | — |
 | `families` | Family | `family_code`, `family_name`, `jumuiya_id`, `head_parishioner_id`, `status`, `legacy_ref` |
 | `parishioners` | Person in the parish register (not a login) | `full_name`, `gender`, `birth_year`, `phone`, `family_id`, `relationship`, `jumuiya_id`, `is_zaka_payer`, `membership_status`, `profile_id` (verified link to a login), `legacy_ref` |
