@@ -37,7 +37,11 @@ python -I tools/migration/extract_workbook.py "C:\path\MINGA-PARISH ... .xlsm" C
 ```bash
 python -I tools/migration/build_import.py C:\minga-private
 ```
-Read `C:\minga-private\import\PREVIEW.md` with the parish accountant. When approved, open `C:\minga-private\import\minga_import.sql` in the SQL editor and run it (≈7 MB; psql is faster: `psql "$DB_URL" -f minga_import.sql`). Then in the app: **Uhakiki wa Fedha** → *Excel dhidi ya mfumo* (should show 2,070 equal + 4 explained) and *Kumbukumbu za zamani* (pending rows to correct and approve).
+Read `C:\minga-private\import\PREVIEW.md` with the parish accountant. When approved, split it for the SQL editor (one 7 MB statement is too big for the browser editor):
+```bash
+python -I tools/migration/split_import.py C:\minga-private
+```
+Then run `C:\minga-private\import\parts\sehemu_01.sql`, `sehemu_02.sql` … **in order**, each one on its own (SQL Editor → paste → Run). Each part is one transaction; part 1 refuses a workbook that was already imported, a later part refuses to run before part 1, and the last part checks the Excel subtotals. (With psql the whole file can be run at once: `psql "$DB_URL" -f minga_import.sql`.) Then in the app: **Uhakiki wa Fedha** → *Excel dhidi ya mfumo* (should show 2,070 equal + 4 explained) and *Kumbukumbu za zamani* (pending rows to correct and approve).
 
 Optional check before running it in production:
 ```bash
@@ -59,9 +63,13 @@ Runs every migration in an in-process PostgreSQL plus the financial, security (R
 ```bash
 npm run dev
 ```
-Open `http://localhost:5600/login.html` (users printed in the console, password `Minga@2026`). Add `--import C:\minga-private` to explore the real imported data locally. Not for production.
+Open `http://localhost:5600/login.html` (users printed in the console, password `Demo@2026`). Add `--import C:\minga-private` to explore the real imported data locally. Not for production.
 
-## 9. Backups and recovery
+## 9. Demo accounts (before the parish takes over)
+`database/demo/demo_accounts.sql` creates one sign-in per role (`superadmin@minga.demo`, `admin@`, `paroko@`, `mhasibu@`, `mhazini@`, `karani@`, `mkaguzi@`, `kigango@` (Mughanga), `jumuiya@` (Clara), `muumini@`), all with password `Demo@2026`. It adds no records — reviewers see the imported data — and links `muumini@` to the register person with most payments. With `DEMO: true` in `assets/js/config.js` the login page shows one-click buttons for them.
+**Before handing over:** run `database/demo/demo_remove.sql` and set `DEMO: false` — anyone who knows the demo password can read the parish data.
+
+## 10. Backups and recovery
 - Supabase Pro: daily backups + Point-in-Time Recovery — enable PITR for the parish project.
 - Weekly logical backup kept off-site:
 ```bash

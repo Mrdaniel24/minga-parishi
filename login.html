@@ -42,6 +42,14 @@
     .msg.ok { background: #ecfdf5; color: #166534; border-color: #a7f3d0; }
     .link { display: inline-block; margin-top: 1.1rem; font-size: .85rem; font-weight: 800; color: var(--primary); background: none; border: 0; cursor: pointer; padding: 0; }
     .help { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); line-height: 1.5; }
+    .demo { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px dashed var(--line); }
+    .demo h3 { margin: 0 0 .25rem; font-size: .8rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+    .demo p { margin: 0 0 .8rem; font-size: .8rem; color: var(--muted); }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
+    .demo-grid button { display: flex; align-items: center; gap: .45rem; text-align: left; font: inherit; font-size: .78rem; font-weight: 800; color: var(--primary);
+      background: #f4f8f6; border: 1px solid var(--line); border-radius: 10px; padding: .55rem .6rem; cursor: pointer; line-height: 1.2; }
+    .demo-grid button:hover { border-color: var(--primary); background: #fff; }
+    .demo-grid .material-symbols-outlined { font-size: 1.1rem; color: var(--gold); flex-shrink: 0; }
     @media (max-width: 860px) {
       body { grid-template-columns: 1fr; }
       .side { padding: 1.75rem 1.25rem 2.25rem; }
@@ -83,6 +91,11 @@
       </label>
       <button type="submit" id="go"><span class="material-symbols-outlined">login</span><span id="go-label">Ingia</span></button>
       <button type="button" class="link" id="forgot">Umesahau nenosiri?</button>
+      <div class="demo" id="demo" hidden>
+        <h3>Demo</h3>
+        <p>Bonyeza nafasi uingie kama mtu huyo (nenosiri <b id="demo-pw"></b>). Kila nafasi inaona sehemu yake tu.</p>
+        <div class="demo-grid" id="demo-grid"></div>
+      </div>
       <p class="help">Huna akaunti? Akaunti zinaundwa na Msimamizi wa Mfumo wa Parokia. Wasiliana naye akupe akaunti na nafasi yako.</p>
     </form>
   </section>
@@ -112,6 +125,26 @@
   document.getElementById('show').addEventListener('click', () => {
     const i = form.password; i.type = i.type === 'password' ? 'text' : 'password';
   });
+
+  const cfg = window.PM_CONFIG || {};
+  if (cfg.DEMO && (cfg.DEMO_ACCOUNTS || []).length) {
+    document.getElementById('demo').hidden = false;
+    document.getElementById('demo-pw').textContent = cfg.DEMO_PASSWORD || '';
+    const grid = document.getElementById('demo-grid');
+    cfg.DEMO_ACCOUNTS.forEach(([email, label, icon]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = `<span class="material-symbols-outlined">${icon || 'person'}</span><span></span>`;
+      b.lastChild.textContent = label;
+      b.title = email;
+      b.addEventListener('click', () => {
+        form.email.value = email; form.password.value = cfg.DEMO_PASSWORD || '';
+        if (resetMode) document.getElementById('forgot').click();
+        form.requestSubmit();
+      });
+      grid.appendChild(b);
+    });
+  }
 
   let resetMode = false;
   document.getElementById('forgot').addEventListener('click', () => {

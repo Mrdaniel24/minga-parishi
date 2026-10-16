@@ -8,7 +8,7 @@
 // enforced exactly as in Supabase: each request runs as role `authenticated`
 // with request.jwt.claim.sub set to the signed-in user.
 //
-// Sign in at /login.html with any of the users printed at start-up (password: Minga@2026).
+// Sign in at /login.html with any of the users printed at start-up (password: Demo@2026).
 // With --import, the private workbook import is loaded (stays on this machine).
 import http from 'node:http';
 import { readFileSync, existsSync, statSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -18,16 +18,16 @@ import { createDb } from '../../tests/db/harness.mjs';
 const ROOT = join(import.meta.dirname, '..', '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, arr) => (v.startsWith('--') ? a.concat([[v.slice(2), arr[i + 1]]]) : a), []));
 const PORT = Number(args.port || 5600);
-const PASSWORD = 'Minga@2026';
+const PASSWORD = 'Demo@2026';   // same accounts and password as database/demo/demo_accounts.sql
 
 const db = await createDb();
 const pg = db.raw;
 const USERS = {};
 for (const [email, role, scope] of [
-  ['superadmin@minga.test', null], ['admin@minga.test', 'parish_admin'], ['mhasibu@minga.test', 'accountant'], ['mhazini@minga.test', 'treasurer'],
-  ['karani@minga.test', 'data_entry'], ['mkaguzi@minga.test', 'auditor'], ['paroko@minga.test', 'parish_priest'],
-  ['clara@minga.test', 'jumuiya_leader', 'jumuiya|Clara'], ['mughanga@minga.test', 'kigango_leader', 'kigango|Mughanga'],
-  ['muumini@minga.test', null]]) {
+  ['superadmin@minga.demo', null], ['admin@minga.demo', 'parish_admin'], ['mhasibu@minga.demo', 'accountant'], ['mhazini@minga.demo', 'treasurer'],
+  ['karani@minga.demo', 'data_entry'], ['mkaguzi@minga.demo', 'auditor'], ['paroko@minga.demo', 'parish_priest'],
+  ['jumuiya@minga.demo', 'jumuiya_leader', 'jumuiya|Clara'], ['kigango@minga.demo', 'kigango_leader', 'kigango|Mughanga'],
+  ['muumini@minga.demo', 'member']]) {
   const org = scope ? (await pg.query(`select id from public.org_units where unit_type = $1 and name = $2`, scope.split('|'))).rows[0].id : null;
   USERS[email] = await db.user(email, { parishRole: role, org });
   await pg.query(`update public.profiles set full_name = $2, role = case when $3 then 'super_admin' else role end where id = $1`,
@@ -40,7 +40,7 @@ if (args.import) {
   // let the test member see a real record: the register person with the most payments
   const top = (await pg.query(`select parishioner_id from public.finance_transactions where parishioner_id is not null
                                 group by 1 order by count(*) desc limit 1`)).rows[0];
-  if (top) await pg.query(`update public.parishioners set profile_id = $1 where id = $2`, [USERS['muumini@minga.test'], top.parishioner_id]);
+  if (top) await pg.query(`update public.parishioners set profile_id = $1 where id = $2`, [USERS['muumini@minga.demo'], top.parishioner_id]);
 } else {
   await seedSample();
 }
@@ -342,15 +342,15 @@ async function seedSample() {
       if (camp) await q(`insert into public.pledges (parish_id, campaign_id, family_id, amount, jumuiya_id, kigango_id) values (public.default_parish_id(), $1, $2, $3, $4, public.org_ancestor_of_type($4, 'kigango'))`,
         [camp, fam, 100000 * f, u.id]);
       // a few payments, posted through the real engine as the accountant
-      const mh = USERS['mhasibu@minga.test'];
+      const mh = USERS['mhasibu@minga.demo'];
       await asUser(mh, tx => tx.query(`select public.post_payment($1::jsonb)`, [JSON.stringify({ idempotency_key: crypto.randomUUID(), amount: 50000 * f, category_id: cat.MAVUNO, campaign_id: camp, family_id: fam, payment_method: 'cash', receiving_officer: 'Mhasibu' })]));
       await asUser(mh, tx => tx.query(`select public.post_payment($1::jsonb)`, [JSON.stringify({ idempotency_key: crypto.randomUUID(), amount: 3000, category_id: cat.ZAKA, family_id: fam, payment_method: 'cash', period_month: new Date().toISOString().slice(0, 8) + '01' })]));
       n += 2;
     }
   }
-  await asUser(USERS['mhasibu@minga.test'], tx => tx.query(`select public.post_payment($1::jsonb)`, [JSON.stringify({ idempotency_key: crypto.randomUUID(), amount: 450000, category_id: cat.SADAKA_JUMAPILI, payer_name: 'Sadaka ya Jumapili (mfano)', payment_method: 'cash' })]));
+  await asUser(USERS['mhasibu@minga.demo'], tx => tx.query(`select public.post_payment($1::jsonb)`, [JSON.stringify({ idempotency_key: crypto.randomUUID(), amount: 450000, category_id: cat.SADAKA_JUMAPILI, payer_name: 'Sadaka ya Jumapili (mfano)', payment_method: 'cash' })]));
   const p = (await q(`select id from public.parishioners where full_name like 'Baba Mfano Aloyce 1%' limit 1`)).rows[0].id;
-  await q(`update public.parishioners set profile_id = $1 where id = $2`, [USERS['muumini@minga.test'], p]);
-  USERS['mpya@minga.test'] = await db.user('mpya@minga.test');   // an account with no parish role yet
+  await q(`update public.parishioners set profile_id = $1 where id = $2`, [USERS['muumini@minga.demo'], p]);
+  USERS['mpya@minga.demo'] = await db.user('mpya@minga.demo');   // an account with no parish role yet
   console.log(`sample data: ${units.length * 4} families, ${n + 1} payments (fictitious names "Mfano")`);
 }

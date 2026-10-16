@@ -44,3 +44,5 @@ private/
 **/minga_import.sql
 **/workbook.json
 tools/dev/.storage/
+**/import/parts/
+**/sehemu_*.sql

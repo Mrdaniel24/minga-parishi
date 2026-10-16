@@ -181,14 +181,20 @@
                         : await P.q(P.from('parishioners').select('full_name,jumuiya_id,family_id').eq('id', id).single());
       const name = isFam ? who.family_name : who.full_name;
       const col = isFam ? 'family_id' : 'parishioner_id';
-      const [tx, pl] = await Promise.all([
+      // a person's statement also shows what was paid and pledged by their family (Mavuno/Ujenzi are family pledges)
+      const fam = !isFam && who.family_id;
+      const [tx0, pl0, ftx, fpl] = await Promise.all([
         P.q(P.from('v_ledger').select('*').eq(col, id).eq('status', 'posted').order('txn_date', { ascending: false }).limit(1000)),
         P.q(P.from('v_pledge_balances').select('*').eq(col, id).order('campaign_year', { ascending: false })),
+        fam ? P.q(P.from('v_ledger').select('*').eq('family_id', who.family_id).is('parishioner_id', null).eq('status', 'posted').order('txn_date', { ascending: false }).limit(1000)) : [],
+        fam ? P.q(P.from('v_pledge_balances').select('*').eq('family_id', who.family_id).order('campaign_year', { ascending: false })) : [],
       ]);
+      const tx = [...tx0, ...ftx].sort((a, b) => String(b.txn_date).localeCompare(String(a.txn_date)));
+      const pl = [...pl0, ...fpl];
       const byCat = {};
       tx.forEach(t => { const k = `${t.category_name} ${t.campaign_year || t.financial_year}`; byCat[k] = (byCat[k] || 0) + Number(t.net_amount); });
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">${P.esc(name)}</h1><p class="pm-muted">${P.esc(P.ref.unitsById[who.jumuiya_id]?.label || '')}</p></div>
-        <div class="pm-actions"><button class="pm-btn" onclick="history.back()">Rudi</button><button class="pm-btn" data-print>Chapa</button></div></div>
+        <div class="pm-actions">${P.selfOnly && P.selfOnly() ? '' : '<button class="pm-btn" onclick="history.back()">Rudi</button>'}<button class="pm-btn" data-print>Chapa</button></div></div>
         ${P.reportHeader('Taarifa ya michango', name)}
         <section class="pm-card"><h3 class="pm-h3">Ahadi</h3>${P.table(pl, [{ key: 'campaign_name', label: 'Kampeni' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
           { key: 'paid', label: 'Amelipa', fmt: P.tzs, cls: 'pm-num' }, { key: 'outstanding', label: 'Deni', fmt: P.tzs, cls: 'pm-num pm-strong' },

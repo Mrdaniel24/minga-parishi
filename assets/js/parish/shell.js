@@ -52,12 +52,23 @@
       return null;
     }
     PM.profile = profile;
-    document.querySelectorAll('[data-user-name]').forEach(el => { el.textContent = profile.full_name || profile.email; });
-    document.querySelectorAll('[data-user-email]').forEach(el => { el.textContent = profile.email || ''; });
-    document.querySelectorAll('[data-user-initials]').forEach(el => { el.textContent = initialsOf(profile.full_name || profile.email); });
+    PM.paintUser();
     document.body.style.opacity = '1';
     return profile;
   };
+
+  // fills every [data-user-*] slot (the top bar may be built after the guard ran)
+  PM.paintUser = function () {
+    const p = PM.profile;
+    if (p) {
+      document.querySelectorAll('[data-user-name]').forEach(el => { el.textContent = p.full_name || p.email; });
+      document.querySelectorAll('[data-user-email]').forEach(el => { el.textContent = p.email || ''; });
+      document.querySelectorAll('[data-user-initials]').forEach(el => { el.textContent = initialsOf(p.full_name || p.email); });
+    }
+    if (PM.roleLabel) document.querySelectorAll('[data-user-role]').forEach(el => { el.textContent = PM.roleLabel; });
+  };
+  const ROLE_SW = { parish_admin: 'Msimamizi wa Parokia', parish_priest: 'Paroko', accountant: 'Mhasibu', treasurer: 'Mtunza Hazina',
+    kigango_leader: 'Kiongozi wa Kigango', jumuiya_leader: 'Kiongozi wa Jumuiya', data_entry: 'Karani', auditor: 'Mkaguzi', member: 'Muumini' };
 
   PM.logout = async function () {
     try { await supabase.auth.signOut(); } catch (e) { /* offline: still leave */ }
@@ -83,6 +94,8 @@
     const items = [];
     const h = t => items.push({ h: t });
     const a = (label, icon, href, perm) => items.push({ label, icon, href: R + href, perm });
+    h('Yangu');
+    a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
     a('Dashibodi', 'church', 'dashboard', '*');
     a('Familia na Waumini', 'family_restroom', 'registry', 'registry.read');
@@ -123,7 +136,8 @@
       const any = acc && (acc.platform_admin || (acc.roles || []).length);
       nav.querySelectorAll('[data-pperm]').forEach(el => {
         const p = el.dataset.pperm;
-        el.hidden = !(acc && (acc.platform_admin || (p === '*' ? any : perms.has(p))));
+        const self = acc && !acc.platform_admin && !perms.size && !!acc.parishioner_id;
+        el.hidden = p === 'self' ? !self : !(acc && !self && (acc.platform_admin || (p === '*' ? any : perms.has(p))));
       });
       nav.querySelectorAll('[data-psection]').forEach(hd => {
         let n = hd.nextElementSibling, show = false;
@@ -132,8 +146,10 @@
       });
       const role = (acc && acc.roles || [])[0];
       const label = acc && acc.platform_admin ? 'Msimamizi wa Mfumo'
-        : role ? (role.org_unit ? `${role.role.replace(/_/g, ' ')} · ${role.org_unit}` : role.role.replace(/_/g, ' ')) : 'Hana nafasi';
-      document.querySelectorAll('[data-user-role]').forEach(el => { el.textContent = label; });
+        : acc && !(acc.permissions || []).length && acc.parishioner_id ? 'Muumini'
+        : role ? (ROLE_SW[role.role] || role.role.replace(/_/g, ' ')) + (role.org_unit ? ` · ${role.org_unit}` : '') : 'Hana nafasi';
+      PM.roleLabel = label;
+      PM.paintUser();
     };
     window.addEventListener('hashchange', () => {
       nav.querySelectorAll('a.nav-item').forEach(el => el.classList.toggle('nav-item-active', isActive(el.getAttribute('href'))));
@@ -172,6 +188,7 @@
     footer.className = 'kh-footer';
     footer.innerHTML = `<span>© ${new Date().getFullYear()} <b data-parish-name>Parokia</b></span><span><span class="kh-footer__dot"></span>Mfumo wa Usimamizi wa Parokia</span>`;
     main.appendChild(footer);
+    PM.paintUser();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMainChrome);
   else buildMainChrome();

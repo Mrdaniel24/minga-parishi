@@ -28,10 +28,15 @@ Mfumo unajitegemea: HTML/CSS/JS tupu + Supabase (Postgres, Auth, RLS). Hautegeme
 
 Maelezo kamili: `docs/DEPLOYMENT.md`.
 
+## Demo (kabla ya kumkabidhi mteja)
+- `database/demo/demo_accounts.sql` → akaunti 10, moja kwa kila nafasi, nenosiri `Demo@2026`. Haiongezi data; zinaona data iliyoingizwa kutoka Excel.
+- Ukurasa wa login unaonyesha vitufe vya kuingia kama kila nafasi (`DEMO: true` kwenye `assets/js/config.js`).
+- Kabla ya kukabidhi: endesha `database/demo/demo_remove.sql` na weka `DEMO: false`.
+
 ## Kuendesha kwenye kompyuta (bila Supabase)
 ```bash
 npm install
 npm run dev
 ```
-Fungua `http://localhost:5600/login.html` — watumiaji wa majaribio wanaonyeshwa kwenye terminal (nenosiri `Minga@2026`).
+Fungua `http://localhost:5600/login.html` — watumiaji wa majaribio wanaonyeshwa kwenye terminal (nenosiri `Demo@2026`).
 Data ni ya mfano; ukifunga server inapotea.

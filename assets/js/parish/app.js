@@ -14,8 +14,12 @@
     return !P.access.platform_admin && !wide && r.length === 1 ? r[0].org_unit_id : null;
   };
 
+  P.selfOnly = () => !P.access.platform_admin && !(P.access.permissions || []).length && !!P.access.parishioner_id;
+
   async function route() {
-    const raw = (location.hash || '#/dashboard').slice(2);
+    let raw = (location.hash || '#/dashboard').slice(2);
+    // a member (no staff permissions) sees only their own giving
+    if (P.selfOnly()) raw = `statement?parishioner=${P.access.parishioner_id}`;
     const [name, qs] = raw.split('?');
     const params = Object.fromEntries(new URLSearchParams(qs || ''));
     const view = P.views[name] || P.views.dashboard;
@@ -49,7 +53,7 @@
       document.getElementById('pm-view').innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
       return;
     }
-    const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0;
+    const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0 || !!P.access.parishioner_id;
     if (!hasRole) {
       document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Huna nafasi kwenye mfumo wa parokia</h2>
         <p class="pm-muted">Akaunti yako (${P.esc(profile.email)}) haijapewa nafasi bado (mf. Mhasibu, Katibu, Kiongozi wa Jumuiya). Mwombe Msimamizi wa Mfumo akupe nafasi, kisha ingia tena.</p>
