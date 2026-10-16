@@ -53,6 +53,14 @@
       document.getElementById('pm-view').innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
       return;
     }
+    const staff = P.access.platform_admin || (P.access.permissions || []).length > 0;
+    if (!staff && (P.access.roles || []).length && !P.access.parishioner_id) {
+      document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Akaunti yako bado haijaunganishwa na jina lako</h2>
+        <p class="pm-muted">Ukiunganishwa na jina lako kwenye rejista ya parokia, hapa utaona zaka, ahadi na risiti zako. Mwombe Katibu wa Parokia akuunganishe (Watumiaji na Nafasi → Unganisha akaunti).</p>
+        <p class="mt-4"><button class="pm-btn" data-action="logout">Toka</button></p></div>`;
+      if (PM.applyAccess) PM.applyAccess(P.access);
+      return;
+    }
     const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0 || !!P.access.parishioner_id;
     if (!hasRole) {
       document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Huna nafasi kwenye mfumo wa parokia</h2>

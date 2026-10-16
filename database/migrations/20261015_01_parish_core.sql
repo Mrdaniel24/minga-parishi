@@ -134,6 +134,17 @@ returns boolean language sql stable set search_path = public as $$
   select p_scope is null or exists (select 1 from up where id = p_scope)
 $$;
 
+-- p_scope and every unit below it (computed once per query; use with "= any")
+create or replace function public.units_within(p_scope uuid)
+returns uuid[] language sql stable set search_path = public as $$
+  with recursive down as (
+    select id from public.org_units where id = p_scope
+    union
+    select o.id from public.org_units o join down d on o.parent_id = d.id
+  )
+  select coalesce(array_agg(id), '{}'::uuid[]) from down
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Families and parishioners (parish register — independent of login accounts)
 -- ---------------------------------------------------------------------------
