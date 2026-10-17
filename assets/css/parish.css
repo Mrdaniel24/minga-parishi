@@ -260,3 +260,6 @@ button.pm-cell:hover, button.pm-cell:focus-visible { border-style: solid; border
   .pm-keep-table { min-width: 56rem; }
   .pm-keep-table th:first-child, .pm-keep-table td:first-child { max-width: 9rem; white-space: normal; box-shadow: 4px 0 6px -4px rgba(0,0,0,.15); }
 }
+
+/* anything marked hidden stays hidden, whatever display the form styles give labels */
+[hidden] { display: none !important; }

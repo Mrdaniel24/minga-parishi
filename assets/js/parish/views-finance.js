@@ -91,7 +91,8 @@
           <div data-payer-results class="pm-search__results"></div></div>
           <small data-payer-kind class="pm-muted">${payer ? 'Amechaguliwa kutoka kwenye rejista' : 'Jina huru (halijaunganishwa na rejista)'}</small></label>
         <label>Jumuiya / Kigango (kama mlipaji si muumini aliyesajiliwa)<select name="org_unit_id">${P.unitOptions(['jumuiya', 'kigango', 'group'], { blank: '— Parokia —', selected: prefill.org_unit_id || prefill.jumuiya })}</select></label>
-        <label>Aina ya mchango<select name="category_id" required>${P.catOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
+        <label>Aina ya mchango<select name="category_id" required>${P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
+        ${P.newTypeHtml()}
         <label>Kampeni / Mwaka<select name="campaign_id"><option value="">—</option></select></label>
         <label data-period hidden>Malipo ya mwezi<input type="month" name="period_month" value="${prefill.period_month || periodDefault}"></label>
         <label>Kiasi (TZS)<input name="amount" type="number" min="1" step="1" required inputmode="numeric"></label>
@@ -117,15 +118,17 @@
           syncPeriod();
         };
         cat.addEventListener('change', syncCat); camp.addEventListener('change', syncPeriod); syncCat();
+        P.wireNewType(m, cat);
         P.payerPicker(m, { jumuiya: prefill.jumuiya, onPick: p => { payer = p; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
         m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
         if (zakaCat && prefill.category_id === zakaCat.id) syncCat();
       },
     });
     if (!result) return null;
+    const categoryId = await P.resolveType(result);
     const args = {
-      idempotency_key: key, amount: Number(result.amount), txn_date: result.txn_date, category_id: result.category_id,
-      campaign_id: result.campaign_id || null, payment_method: result.payment_method,
+      idempotency_key: key, amount: Number(result.amount), txn_date: result.txn_date, category_id: categoryId,
+      campaign_id: result.category_id === '__new' ? null : result.campaign_id || null, payment_method: result.payment_method,
       reference_no: result.reference_no || null, description: result.description || null,
       period_month: result.period_month ? result.period_month + '-01' : null,
       payer_name: result.payer_name, org_unit_id: result.org_unit_id || null,
@@ -478,15 +481,18 @@
       const nc = el.querySelector('[data-newcamp]');
       nc && nc.addEventListener('click', async () => {
         const v = await P.modal({ title: `Mchango mpya — ${year}`, wide: true, body: `<div class="pm-form">
-          <label>Aina<select name="category_id" required>${P.catOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+          <label>Aina<select name="category_id" required>${P.typeOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+          ${P.newTypeHtml()}
           <label>Mwaka<input name="year" type="number" value="${year}" required></label>
           <label class="pm-span2">Jina<input name="name" required placeholder="mf. Mavuno ${year}"></label>
           ${rulesForm({})}
           <label>Lengo la jumla (hiari)<input name="target" type="number" min="0"></label>
           <label>Kila mwaka<select name="recurs"><option value="1">Ndiyo, unarudiwa kila mwaka</option><option value="">Hapana, mara moja</option></select></label>
           <label class="pm-span2">Maelezo<input name="description"></label></div>
-          <p class="pm-small pm-muted">Aina mpya ya mchango (isiyokuwepo kwenye orodha) inaongezwa kwenye Mipangilio → Aina za michango.</p>` });
+          <p class="pm-small pm-muted">Kama aina ya mchango haipo kwenye orodha, chagua "+ Aina mpya ya mchango…" na uandike jina lake.</p>`,
+          onOpen: m => P.wireNewType(m, m.querySelector('[name=category_id]')) });
         if (!v) return;
+        v.category_id = await P.resolveType(v);
         await P.q(P.from('campaigns').insert({ parish_id: P.ref.parish.id, category_id: v.category_id, campaign_year: Number(v.year), name: v.name,
           financial_year_id: fyId(v.year), target_amount: v.target ? Number(v.target) : null, starts_on: `${v.year}-01-01`, ends_on: `${v.year}-12-31`,
           description: v.description || null, recurs_annually: !!v.recurs, ...rulesRow(v) }));

@@ -98,7 +98,7 @@
       <div class="pm-form">
         ${row ? `<input type="hidden" name="campaign_id" value="${row.campaign_id}">` : `
         <label class="pm-span2">Ni pesa ya nini<select name="campaign_id" data-camp>${P.options(camps, { blank: '— Mchango mpya (andika jina chini) —' })}</select></label>
-        <label data-new>Aina<select name="category_id">${P.catOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+        <label data-new>Aina<select name="category_id"><option value="__new">+ Aina mpya ya mchango (jina hapo pembeni)</option>${P.catOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'])}</select></label>
         <label data-new>Jina la mchango<input name="name" placeholder="mf. Ujenzi wa choo ${year}"></label>`}
         <label>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="0" required value="${row ? Number(row.target) || '' : ''}"></label>
         <label>Kuanzia<input name="starts_on" type="date" value="${row?.starts_on ? String(row.starts_on).slice(0, 10) : `${year}-01-01`}"></label>
@@ -106,9 +106,16 @@
         <label class="pm-span2">Maelezo (hiari)<input name="notes" value="${P.esc(note(row?.notes))}"></label>
       </div>${row ? '<p class="pm-small pm-muted">Weka kiasi 0 kuondoa mgao huu.</p>' : ''}`,
       onOpen: m => { const s = m.querySelector('[data-camp]'); if (!s) return;
-        const sync = () => m.querySelectorAll('[data-new]').forEach(x => { x.hidden = !!s.value; }); s.addEventListener('change', sync); sync(); } });
+        const sync = () => m.querySelectorAll('[data-new]').forEach(x => { x.hidden = !!s.value; x.querySelectorAll('input').forEach(i => { i.required = !s.value; }); });
+        s.addEventListener('change', sync); sync(); } });
     if (!v) return;
-    if (!v.campaign_id && !v.category_id) { Toast.error('Chagua mchango, au aina ya mchango mpya.'); return; }
+    if (!v.campaign_id && v.category_id === '__new') {
+      // a brand-new contribution: its type takes the name given (without the year)
+      v.new_type_name = String(v.name || '').replace(/\s*\b(19|20)\d\d\b\s*$/, '').trim();
+      v.new_type_kind = 'special';
+      v.category_id = await P.resolveType(v);
+    }
+    if (!v.campaign_id && !v.category_id) { Toast.error('Chagua mchango, au andika jina la mchango mpya.'); return; }
     await P.rpc('set_unit_target', { p: { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: v.category_id || null, name: v.name || null, year,
       amount: Number(v.amount) || 0, starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null } });
     if (!v.campaign_id) await P.loadRef(true);

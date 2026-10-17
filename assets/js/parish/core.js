@@ -95,6 +95,28 @@
   };
   P.catOptions = (kinds, opts = {}) => P.options(P.ref.cats.filter(c => c.is_active && (!kinds || kinds.includes(c.kind)) && c.code !== 'TRANSFER'),
     { label: 'name_sw', ...opts });
+  /* a new contribution type can be added right where a type is chosen */
+  P.typeOptions = (kinds, opts = {}) => P.catOptions(kinds, opts) + `<option value="__new">+ Aina mpya ya mchango…</option>`;
+  P.newTypeHtml = () => `<label class="pm-span2" data-newtype hidden>Jina la aina mpya ya mchango<input name="new_type_name" placeholder="mf. Harambee ya Kengele ya Kanisa"></label>
+    <label data-newtype hidden>Kundi lake<select name="new_type_kind"><option value="special">Mchango maalumu</option><option value="ujenzi">Ujenzi</option>
+      <option value="mavuno">Mavuno</option><option value="shukrani">Shukrani</option><option value="sadaka">Sadaka</option><option value="income_other">Mapato mengine</option></select></label>`;
+  P.wireNewType = (root, sel, after) => {
+    const sync = () => {
+      const on = sel.value === '__new';
+      root.querySelectorAll('[data-newtype]').forEach(x => { x.hidden = !on; x.querySelectorAll('input').forEach(i => { i.required = on; }); });
+      if (on) setTimeout(() => root.querySelector('[name=new_type_name]')?.focus(), 30);
+      after && after(on);
+    };
+    sel.addEventListener('change', sync); sync();
+  };
+  // form values → the type id, creating the new type first when "+ Aina mpya" was chosen
+  P.resolveType = async (v, field = 'category_id') => {
+    if (v[field] !== '__new') return v[field] || null;
+    const r = await P.rpc('create_contribution_type', { p: { name: v.new_type_name, kind: v.new_type_kind } });
+    await P.loadRef(true);
+    if (r.created) Toast.success(`Aina mpya ya mchango "${r.name}" imeongezwa.`); else Toast.info(`"${r.name}" ilikuwepo tayari — imetumika hiyo.`);
+    return r.id;
+  };
   P.campOptions = (catId, opts = {}) => P.options(P.ref.camps.filter(c => (!catId || c.category_id === catId) && c.status !== 'closed'),
     { label: c => `${c.name}`, ...opts });
 
