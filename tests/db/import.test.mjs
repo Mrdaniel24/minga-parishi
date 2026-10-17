@@ -37,6 +37,12 @@ test('legacy workbook import: completeness, formula parity and integrity', { ski
   // the workbook's PANGIWA amounts arrive as assigned amounts, not promises
   assert.equal(Number(await db.val(`select count(*) from public.pledges where legacy_ref is not null and source <> 'assigned'`)), 0);
 
+  // contributions the workbook assigned to every jumuiya (MALENGO) are "kila jumuiya · kupangiwa"
+  const wrong = await db.q(`select cp.name from public.campaigns cp where exists (select 1 from public.campaign_targets ct where ct.campaign_id = cp.id)
+     and not exists (select 1 from public.pledges p where p.campaign_id = cp.id) and (cp.giver_level is distinct from 'jumuiya' or cp.amount_mode <> 'assigned')
+     and cp.giver_level is distinct from 'parishioner'`);
+  assert.deepEqual(wrong, []);
+
   // integrity of the imported ledger
   const checks = await db.q(`select * from public.finance_integrity_checks()`);
   for (const c of checks) assert.ok(c.ok, `${c.check_code}: ${c.problem_count}`);

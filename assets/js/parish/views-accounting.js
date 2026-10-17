@@ -191,7 +191,7 @@
         rows = await P.q(P.from('v_receipt_register').select('*').gte('issued_at', from).lte('issued_at', to + 'T23:59:59').order('seq'));
         cols = [{ key: 'receipt_no', label: 'Risiti' }, { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'status', label: 'Hali' }];
         foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
-      } else if (r === 'zaka') { if (year !== P.year()) P.setYear(year); const su = scope && P.ref.unitsById[scope]; P.go(`#/zaka?level=${level === 'parish' ? 'kigango' : level}${su ? `&${su.unit_type === 'jumuiya' ? 'jumuiya' : 'kigango'}=${scope}` : ''}`); return; }
+      } else if (r === 'zaka') { if (year !== P.year()) P.setYear(year); const su = scope && P.ref.unitsById[scope]; P.go(`#/zaka${su ? (su.unit_type === 'jumuiya' ? `?k=${P.kigangoOf(su.id)?.id || ''}&j=${su.id}` : `?k=${su.id}`) : ''}`); return; }
       out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
         `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
       el.querySelector('[data-print]').addEventListener('click', () => P.print(title));
