@@ -456,7 +456,8 @@
     ab && ab.addEventListener('click', async () => {
       const per = camp.giver_level === 'parishioner' && Object.keys(camp.relation_rates || {}).length;
       const v = await P.modal({ title: `Pangia wote — ${camp.name}`, submit: 'Pangia', body: `<p class="pm-muted">${LEVEL[camp.giver_level]} wa Jumuiya ya ${P.esc(j.name)} ambaye bado hajapangiwa atapangiwa kiasi hiki. Waliokwisha pangiwa hawabadilishwi.</p>
-        <div class="pm-form"><label>Kiasi<input name="amount" type="number" min="1" value="${camp.default_amount || ''}" ${per ? 'placeholder="Kwa uhusiano (Baba/Mama/Mtoto…)"' : 'required'}></label></div>` });
+        <div class="pm-form">${per ? `<p class="pm-span2"><b>Kwa kanuni:</b> ${P.esc(P.ratesText(camp.relation_rates))}</p>`
+          : `<label>Kiasi<input name="amount" type="number" min="1" value="${camp.default_amount || ''}" required></label>`}</div>` });
       if (!v) return;
       const r = await P.rpc('assign_campaign', { p_campaign: camp.id, p_amount: v.amount ? Number(v.amount) : null, p_scope: j.id });
       Toast.success(`Wamepangiwa: ${r.created}`); P.refresh();

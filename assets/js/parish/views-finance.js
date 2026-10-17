@@ -363,22 +363,97 @@
   /* ================= MICHANGO NA KAMPENI (kanuni za kila mwaka) ================= */
   const KTABS = [['', 'Zote'], ['mavuno', 'Mavuno'], ['ujenzi', 'Ujenzi'], ['special', 'Maalumu'], ['other', 'Mingine']];
   const kindOf = k => ['mavuno', 'ujenzi', 'special'].includes(k) ? k : 'other';
-  const parseRates = t => Object.fromEntries(String(t || '').split(/[,;\n]/).map(x => x.split(/[=:]/).map(y => y.trim())).filter(x => x[0] && Number(x[1]) > 0).map(([k, v]) => [k.toUpperCase(), Number(v)]));
-  const ratesText = r => Object.entries(r || {}).map(([k, v]) => `${k}=${v}`).join(', ');
-  // the form for a campaign's rules (who gives, how the amount is set, how often)
-  const rulesForm = (c = {}) => {
-    const R = P.RULES;
-    const opt = (map, sel) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
-    return `<fieldset class="pm-form pm-span2"><legend class="pm-small pm-muted">Kanuni za mchango huu kwa mwaka huu</legend>
-      <label>Nani anatoa<select name="giver_level"><option value="">Yeyote (hakuna mpangilio)</option>${opt(R.LEVEL, c.giver_level)}</select></label>
-      <label>Kiasi kinapatikanaje<select name="amount_mode">${opt(R.MODE, c.amount_mode || 'pledge')}</select></label>
-      <label>Mara ngapi<select name="frequency">${opt(R.FREQ, c.frequency || 'yearly')}</select></label>
-      <label>Kiasi cha kawaida (kupangiwa)<input name="default_amount" type="number" min="0" value="${c.default_amount ?? ''}" placeholder="mf. 100000"></label>
-      <label class="pm-span2">Viwango kwa uhusiano (kila muumini, hiari)<input name="relation_rates" value="${P.esc(ratesText(c.relation_rates))}" placeholder="BABA=5000, MAMA=5000, MTOTO=2000"></label>
-      <p class="pm-small pm-muted pm-span2">Kupangiwa = parokia inaweka kiasi kwa kila mmoja (tumia "Pangia wote"). Ahadi = kila mmoja anaahidi kiasi chake. Hiari = anatoa anachoweza, hakuna deni.</p></fieldset>`;
+  /* ---- contribution rules form: shows only what the choices need ----
+     who gives → how the amount is set → (only for "kupangiwa") the amount, or for
+     "kila muumini" a tick per relationship with its own amount.
+     "How often" and the rarely used fields sit under "Mipangilio zaidi". */
+  const RELS = [['BABA', 'Baba'], ['MAMA', 'Mama'], ['MTOTO', 'Mtoto'], ['MJUKUU', 'Mjukuu'], ['WENGINE', 'Wengine']];
+  const relLabel = k => (RELS.find(r => r[0] === k) || [k, k.charAt(0) + k.slice(1).toLowerCase()])[1];
+  P.ratesText = r => Object.entries(r || {}).map(([k, v]) => `${relLabel(k)} ${P.num(v)}`).join(' · ');
+  const relValues = rates => {
+    const r = { ...(rates || {}) };
+    if (r.WENGINE == null) { const other = Object.keys(r).find(k => !RELS.some(x => x[0] === k)); if (other) r.WENGINE = r[other]; }
+    return r;
   };
-  const rulesRow = v => ({ giver_level: v.giver_level || null, amount_mode: v.amount_mode || 'pledge', frequency: v.frequency || 'yearly',
-    default_amount: v.default_amount ? Number(v.default_amount) : null, relation_rates: parseRates(v.relation_rates) });
+  const rulesForm = (c = {}, more = '') => {
+    const giver = c.giver_level === undefined ? 'family' : (c.giver_level || '');
+    const mode = c.amount_mode || 'assigned';
+    const rv = relValues(c.relation_rates);
+    const opt = (list, sel) => list.map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
+    return `<div class="pm-span2 pm-rulesform" data-rules>
+      <div class="pm-form">
+        <label>Nani anatoa<select name="giver_level" data-r-giver>${opt([['family', 'Kila familia'], ['parishioner', 'Kila muumini'], ['jumuiya', 'Kila jumuiya'], ['kigango', 'Kila kigango'], ['', 'Yeyote anayetaka (kama sadaka)']], giver)}</select></label>
+        <label data-r-modewrap>Kiasi kinapatikanaje<select name="amount_mode" data-r-mode>${opt([['assigned', 'Kupangiwa — parokia inaweka kiasi'], ['pledge', 'Ahadi — kila mmoja anaahidi chake'], ['free', 'Hiari — anatoa anachoweza']], mode)}</select></label>
+        <label class="pm-span2" data-r-flat><span data-r-flatlabel>Kiasi kwa kila familia (TZS)</span><input name="default_amount" type="number" min="1" inputmode="numeric" value="${c.default_amount ?? ''}" placeholder="mf. 100000"></label>
+      </div>
+      <div class="pm-relbox" data-r-rel>
+        <p class="pm-small"><b>Nani kwenye familia analipa, na kiasi gani?</b> Weka alama ✓ kwa wanaolipa.</p>
+        <label class="pm-relrow pm-relall"><input type="checkbox" data-r-all> <b>Wote</b></label>
+        ${RELS.map(([k, l]) => `<div class="pm-relrow"><label><input type="checkbox" name="rel_${k}" value="1" data-r-tick ${rv[k] != null ? 'checked' : ''}> ${l}</label>
+          <input type="number" name="amt_${k}" min="1" inputmode="numeric" placeholder="Kiasi (TZS)" data-r-amt value="${rv[k] ?? ''}"></div>`).join('')}
+        <small class="pm-muted">Wengine = bibi, babu, kaka, dada… na wasioandikwa uhusiano kwenye rejista.</small>
+      </div>
+      <p class="pm-small pm-muted" data-r-hint></p>
+      <details class="pm-more"><summary>Mipangilio zaidi</summary><div class="pm-form">
+        <label>Mara ngapi<select name="frequency">${opt([['yearly', 'Kwa mwaka (kawaida)'], ['monthly', 'Kila mwezi']], c.frequency || 'yearly')}</select></label>
+        ${more}</div></details>
+    </div>`;
+  };
+  const wireRules = root => {
+    const g = root.querySelector('[data-r-giver]'), m = root.querySelector('[data-r-mode]');
+    if (!g) return;
+    const ticks = [...root.querySelectorAll('[data-r-tick]')], all = root.querySelector('[data-r-all]');
+    const amt = t => root.querySelector(`[name="amt_${t.name.slice(4)}"]`);
+    const show = (sel, on) => root.querySelectorAll(sel).forEach(x => { x.hidden = !on; });
+    const HINT = {
+      assigned: { family: 'Kila familia itapangiwa kiasi hiki. Tumia "Pangia wote", au pangia familia moja moja ndani ya familia yake.',
+        parishioner: 'Kila muumini aliyewekewa alama atapangiwa kiasi chake. Wasiowekewa alama hawapangiwi.',
+        jumuiya: 'Kila jumuiya itapangiwa kiasi hiki; asilimia inahesabiwa jumuiya inapolipa.', kigango: 'Kila kigango kitapangiwa kiasi hiki.' },
+      pledge: 'Kila mmoja ataahidi kiasi chake; mfumo utahesabu alicholipa na kilichobaki.',
+      free: 'Hakuna deni — mfumo unarekodi tu kilichotolewa.', none: 'Mtu yeyote anatoa anachoweza, kama sadaka — hakuna kupangiwa wala deni.' };
+    const sync = () => {
+      const giver = g.value, assigned = !!giver && m.value === 'assigned';
+      show('[data-r-modewrap]', !!giver);
+      show('[data-r-flat]', assigned && giver !== 'parishioner');
+      show('[data-r-rel]', assigned && giver === 'parishioner');
+      const lbl = root.querySelector('[data-r-flatlabel]');
+      if (lbl) lbl.textContent = `Kiasi kwa ${({ family: 'kila familia', jumuiya: 'kila jumuiya', kigango: 'kila kigango' })[giver] || 'kila mmoja'} (TZS)`;
+      ticks.forEach(t => { amt(t).disabled = !t.checked; });
+      if (all) all.checked = ticks.every(t => t.checked);
+      root.querySelector('[data-r-hint]').textContent = !giver ? HINT.none : m.value === 'assigned' ? HINT.assigned[giver] : HINT[m.value];
+    };
+    g.addEventListener('change', sync); m.addEventListener('change', sync);
+    ticks.forEach(t => t.addEventListener('change', () => { if (t.checked) { const a = amt(t); setTimeout(() => a.focus(), 20); } sync(); }));
+    all && all.addEventListener('change', () => {
+      const first = ticks.map(amt).find(a => a.value)?.value || '';
+      ticks.forEach(t => { t.checked = all.checked; if (all.checked && !amt(t).value) amt(t).value = first; });
+      sync();
+    });
+    sync();
+  };
+  const rulesRow = v => {
+    const giver = v.giver_level || null;
+    const mode = giver ? (v.amount_mode || 'pledge') : 'free';
+    const rates = {};
+    if (mode === 'assigned' && giver === 'parishioner') RELS.forEach(([k]) => { if (v[`rel_${k}`] && Number(v[`amt_${k}`]) > 0) rates[k] = Number(v[`amt_${k}`]); });
+    return { giver_level: giver, amount_mode: mode, frequency: v.frequency || 'yearly', relation_rates: rates,
+      default_amount: mode === 'assigned' && giver && giver !== 'parishioner' && Number(v.default_amount) > 0 ? Number(v.default_amount) : null };
+  };
+  const rulesProblem = v => {
+    const r = rulesRow(v);
+    if (r.amount_mode === 'assigned' && r.giver_level === 'parishioner' && !Object.keys(r.relation_rates).length) return 'Weka alama ✓ kwa angalau mmoja (mf. Baba) na uandike kiasi chake.';
+    return null;
+  };
+  // ask again until the rules make sense
+  const rulesModal = async opts => {
+    for (;;) {
+      const v = await P.modal({ ...opts, onOpen: m => { wireRules(m); opts.onOpen && opts.onOpen(m); } });
+      if (!v) return null;
+      const err = rulesProblem(v);
+      if (!err) return v;
+      Toast.error(err);
+    }
+  };
 
   V.campaigns = {
     title: 'Michango na Kampeni', perm: 'finance.read',
@@ -419,7 +494,7 @@
 `;
       el.querySelectorAll('[data-rules]').forEach(b => b.addEventListener('click', async () => {
         const c = rules[b.dataset.rules];
-        const v = await P.modal({ title: `Kanuni — ${c.name}`, body: `<div class="pm-form">${rulesForm(c)}</div>` });
+        const v = await rulesModal({ title: `Kanuni — ${c.name}`, body: `<div class="pm-form">${rulesForm(c)}</div>` });
         if (!v) return;
         await P.q(P.from('campaigns').update(rulesRow(v)).eq('id', c.id));
         await P.loadRef(true); Toast.success('Kanuni zimehifadhiwa.'); P.reload();
@@ -445,10 +520,11 @@
         el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel(sel.name, { [lvl]: rows.map(r => ({ Kigango: r.kigango_name, Jina: r.org_unit_name, Lengo: Number(r.target), Pangiwa_Ahadi: Number(r.pledged), Walichotoa: Number(r.collected), Bado: Number(r.balance), Ziada: Number(r.excess), Asilimia: r.pct })) }));
         const ab = el.querySelector('[data-assign]');
         ab && ab.addEventListener('click', async () => {
-          const v = await P.modal({ title: `Pangia wote — ${sel.name}`, submit: 'Pangia', body: `<p class="pm-muted">${P.RULES.LEVEL[sel.giver_level]} wa parokia nzima ambaye bado hajapangiwa wala kuahidi atapangiwa kiasi hiki${sel.frequency === 'monthly' ? ' (× miezi 12)' : ''}. Waliokwisha pangiwa hawabadilishwi.</p>
-            <div class="pm-form"><label>Kiasi<input name="amount" type="number" min="1" value="${sel.default_amount || ''}"></label>
-            <label>Ndani ya<select name="scope">${P.unitOptions(['kigango', 'jumuiya'], { blank: 'Parokia nzima' })}</select></label></div>
-            ${Object.keys(sel.relation_rates || {}).length ? `<p class="pm-small pm-muted">Ukiacha kiasi wazi: ${P.esc(ratesText(sel.relation_rates))}</p>` : ''}` });
+          const v = await P.modal({ title: `Pangia wote — ${sel.name}`, submit: 'Pangia', body: `<p class="pm-muted">${P.RULES.LEVEL[sel.giver_level]} wa parokia nzima ambaye bado hajapangiwa wala kuahidi atapangiwa kiasi hiki${sel.frequency === 'monthly' ? ' (kila mwezi × 12)' : ''}. Waliokwisha pangiwa hawabadilishwi.</p>
+            <div class="pm-form">${Object.keys(sel.relation_rates || {}).length
+              ? `<p class="pm-span2"><b>Kwa kanuni:</b> ${P.esc(P.ratesText(sel.relation_rates))}</p>`
+              : `<label>Kiasi<input name="amount" type="number" min="1" required value="${sel.default_amount || ''}"></label>`}
+            <label>Ndani ya<select name="scope">${P.unitOptions(['kigango', 'jumuiya'], { blank: 'Parokia nzima' })}</select></label></div>` });
           if (!v) return;
           const r = await P.rpc('assign_campaign', { p_campaign: sel.campaign_id, p_amount: v.amount ? Number(v.amount) : null, p_scope: v.scope || null });
           Toast.success(`Wamepangiwa: ${r.created}${r.skipped_no_rate ? ` · bila kiwango: ${r.skipped_no_rate}` : ''}`); P.reload();
@@ -480,16 +556,14 @@
       });
       const nc = el.querySelector('[data-newcamp]');
       nc && nc.addEventListener('click', async () => {
-        const v = await P.modal({ title: `Mchango mpya — ${year}`, wide: true, body: `<div class="pm-form">
-          <label>Aina<select name="category_id" required>${P.typeOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+        const v = await rulesModal({ title: `Mchango mpya — ${year}`, wide: true, body: `<div class="pm-form">
+          <label>Aina ya mchango<select name="category_id" required>${P.typeOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+          <label>Jina<input name="name" required placeholder="mf. Mavuno ${year}"></label>
           ${P.newTypeHtml()}
-          <label>Mwaka<input name="year" type="number" value="${year}" required></label>
-          <label class="pm-span2">Jina<input name="name" required placeholder="mf. Mavuno ${year}"></label>
-          ${rulesForm({})}
-          <label>Lengo la jumla (hiari)<input name="target" type="number" min="0"></label>
-          <label>Kila mwaka<select name="recurs"><option value="1">Ndiyo, unarudiwa kila mwaka</option><option value="">Hapana, mara moja</option></select></label>
-          <label class="pm-span2">Maelezo<input name="description"></label></div>
-          <p class="pm-small pm-muted">Kama aina ya mchango haipo kwenye orodha, chagua "+ Aina mpya ya mchango…" na uandike jina lake.</p>`,
+          ${rulesForm({}, `<label>Mwaka<input name="year" type="number" value="${year}" required></label>
+            <label>Lengo la jumla la parokia (hiari)<input name="target" type="number" min="0"></label>
+            <label>Unarudiwa kila mwaka?<select name="recurs"><option value="1">Ndiyo</option><option value="">Hapana, mara moja tu</option></select></label>
+            <label class="pm-span2">Maelezo<input name="description"></label>`)}</div>`,
           onOpen: m => P.wireNewType(m, m.querySelector('[name=category_id]')) });
         if (!v) return;
         v.category_id = await P.resolveType(v);

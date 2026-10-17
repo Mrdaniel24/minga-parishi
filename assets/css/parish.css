@@ -263,3 +263,15 @@ button.pm-cell:hover, button.pm-cell:focus-visible { border-style: solid; border
 
 /* anything marked hidden stays hidden, whatever display the form styles give labels */
 [hidden] { display: none !important; }
+
+/* contribution rules form */
+.pm-rulesform { display: grid; gap: .8rem; }
+.pm-relbox { border: 1px solid var(--pm-line); border-radius: 14px; padding: .8rem 1rem; background: #fbfdfc; display: grid; gap: .45rem; }
+.pm-relrow { display: grid; grid-template-columns: minmax(7rem, 1fr) 1.4fr; align-items: center; gap: .6rem; }
+.pm-relrow > label, .pm-relall { display: flex !important; flex-direction: row !important; align-items: center; gap: .5rem; font-weight: 700; font-size: .9rem; color: var(--pm-ink); text-transform: none; letter-spacing: 0; }
+.pm-relrow input[type=checkbox], .pm-relall input[type=checkbox] { width: 1.15rem; height: 1.15rem; min-width: 0; accent-color: var(--pm-primary); }
+.pm-relrow input:disabled { opacity: .45; }
+.pm-relall { border-bottom: 1px dashed var(--pm-line); padding-bottom: .45rem; }
+.pm-more { border-top: 1px dashed var(--pm-line); padding-top: .5rem; }
+.pm-more summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--pm-muted); }
+.pm-more[open] summary { margin-bottom: .6rem; }

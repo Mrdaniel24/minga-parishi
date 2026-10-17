@@ -110,3 +110,20 @@ test('zaka grid carries the jumuiya, kigango and family of each row', async () =
   const k = await db.q(`select group_id, kigango_id from public.zaka_grid_tree(2026, 'kigango', null)`);
   assert.ok(k.every(x => x.group_id === x.kigango_id));
 });
+
+test('ticked relationships only: Baba and Mama ticked → the child is not assigned; "Wengine" covers the rest', async () => {
+  db.asAdmin();
+  const cat = await db.val(`insert into public.contribution_categories (parish_id, code, name_sw, kind, is_pledgeable) values (public.default_parish_id(), 'TICK_T', 'Mchango wa Wazazi', 'special', true) returning id`);
+  const camp = await db.val(`insert into public.campaigns (parish_id, category_id, campaign_year, name, giver_level, amount_mode, relation_rates)
+    values (public.default_parish_id(), $1, 2026, 'Wazazi 2026', 'parishioner', 'assigned', '{"BABA":4000,"MAMA":3000}') returning id`, [cat]);
+  const r = await db.as(U.admin).val(`select public.assign_campaign($1, null, $2)`, [camp, I['org:jumuiya:Clara']]);
+  assert.equal(r.created, 2); assert.equal(r.skipped_no_rate, 1);
+  db.asAdmin();
+  const rows = await db.q(`select parishioner_name, pledged::int from public.v_pledge_balances where campaign_id = $1 order by 1`, [camp]);
+  assert.deepEqual(rows.map(x => [x.parishioner_name, x.pledged]), [['Baba A', 4000], ['Mama A', 3000]]);
+  await db.q(`update public.campaigns set relation_rates = '{"BABA":4000,"MAMA":3000,"WENGINE":1000}' where id = $1`, [camp]);
+  const r2 = await db.as(U.admin).val(`select public.assign_campaign($1, null, $2)`, [camp, I['org:jumuiya:Clara']]);
+  assert.equal(r2.created, 1);
+  db.asAdmin();
+  assert.equal(Number(await db.val(`select amount from public.pledges where campaign_id = $1 and parishioner_id = $2`, [camp, U.mtotoA])), 1000);
+});
