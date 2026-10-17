@@ -40,6 +40,8 @@
     const m = (e && (e.message || e.details || e.hint)) || String(e);
     if (/permission denied|42501|row-level security/i.test(m) && !/Huna/.test(m)) return 'Huna ruhusa ya kufanya kitendo hiki.';
     if (/duplicate key.*ft_unique_external_ref/i.test(m)) return 'Namba hii ya kumbukumbu ya malipo imeshatumika — malipo haya yamesharekodiwa.';
+    // the page is newer than the database: a patch has not been run yet
+    if (/Could not find the function|schema cache|PGRST202/i.test(m)) return 'Database bado haijasasishwa kwa toleo hili la mfumo. Msimamizi aendeshe patch ya karibuni (database/patches) kwenye Supabase → SQL Editor, kisha jaribu tena.';
     if (/Failed to fetch|NetworkError/i.test(m)) return 'Hakuna mtandao. Jaribu tena — malipo hayatarudiwa mara mbili.';
     return m.replace(/^.*?ERROR:\s*/, '');
   };

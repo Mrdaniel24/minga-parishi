@@ -3584,6 +3584,9 @@ end $$;
 revoke execute on function public.create_contribution_type(jsonb) from public, anon;
 grant execute on function public.create_contribution_type(jsonb) to authenticated;
 
+-- ask Supabase (PostgREST) to see the new functions right away
+notify pgrst, 'reload schema';
+
 
 -- >>>>>>>>>>>>>>>>>>>> check >>>>>>>>>>>>>>>>>>>>
 select 'Database ya parokia iko tayari' as hali,
