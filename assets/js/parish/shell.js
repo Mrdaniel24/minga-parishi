@@ -136,6 +136,7 @@
       const route = location.hash || '#/dashboard';
       // the pages inside a kigango / jumuiya / familia belong to "Vigango na Jumuiya"
       if (href === '#/units' && /^#\/(kigango|jumuiya|family)\b/.test(route)) return true;
+      if (href === '#/campaigns' && /^#\/mchango\b/.test(route)) return true;
       return route === href || (!href.includes('?') && route.split('?')[0] === href);
     };
     const nav = sidebar.querySelector('#pm-nav');

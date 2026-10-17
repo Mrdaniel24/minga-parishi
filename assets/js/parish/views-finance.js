@@ -458,6 +458,7 @@
   V.campaigns = {
     title: 'Michango na Kampeni', perm: 'finance.read',
     async render(el, params) {
+      if (params.id) { P.go(`#/mchango?id=${params.id}${params.k ? '&k=' + params.k : ''}`); return; }
       const year = P.year(), kind = params.kind || '';
       const cfg = P.can('finance.configure');
       const prog = await P.q(P.from('v_campaign_progress').select('*').eq('campaign_year', year).neq('category_kind', 'zaka').order('name'));
@@ -480,9 +481,9 @@
           <div class="pm-actions">${P.can('finance.pledge') && sel.giver_level && sel.amount_mode === 'assigned' ? '<button class="pm-btn pm-btn--sm" data-assign>Pangia wote (parokia nzima)</button>' : ''}
           ${cfg ? `<button class="pm-btn pm-btn--sm" data-target="${sel.campaign_id}">Weka lengo</button>` : ''}
           <button class="pm-btn pm-btn--sm" data-print>Chapa</button><button class="pm-btn pm-btn--sm" data-xls>Excel</button></div></div>
-          <div data-org>${P.loading()}</div></section>` : `<p class="pm-muted pm-small">Bonyeza jina la mchango kuona vigango → jumuiya → familia.</p>`}
+          <div data-org>${P.loading()}</div></section>` : `<p class="pm-muted pm-small">Bonyeza jina la mchango kuufungua: vigango → jumuiya → familia → muumini, kwa mchango huo tu.</p>`}
         ${sel ? '<h3 class="pm-h3 mt-4">Michango yote ya mwaka</h3>' : ''}<section class="pm-card">${P.table(list, [
-          { key: 'name', label: 'Mchango', html: r => `<a class="pm-link" href="#/campaigns?kind=${kind}&id=${r.campaign_id}">${P.esc(r.name)}</a><br><small class="pm-muted">${P.esc(r.category_name)}</small>` },
+          { key: 'name', label: 'Mchango', html: r => `<a class="pm-link" href="#/mchango?id=${r.campaign_id}">${P.esc(r.name)}</a><br><small class="pm-muted">${P.esc(r.category_name)}</small>` },
           { key: 'rules', label: 'Kanuni', html: r => P.rulesBadges(r) },
           { key: 'target', label: 'Lengo', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' },
           { key: 'pledged', label: 'Pangiwa/Ahadi', fmt: P.tzs, cls: 'pm-num' }, { key: 'collected', label: 'Imekusanywa', fmt: P.tzs, cls: 'pm-num pm-strong' },

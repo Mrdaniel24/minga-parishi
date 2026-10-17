@@ -122,11 +122,12 @@
     Toast.success('Imehifadhiwa.'); P.refresh();
   };
 
+  P.targetForm = (...a) => targetForm(...a);
   // table of contributions for one unit (used on the jumuiya and kigango pages)
   const contribTable = (rows, unit, opts = {}) => {
     const foot = { campaign_name: '<b>JUMLA</b>', obligation: P.tzs(P.sum(rows, 'obligation')), gave: `<b>${P.tzs(rows.reduce((s, r) => s + gave(r), 0))}</b>`, balance: P.tzs(P.sum(rows, 'balance')) };
     return P.table(rows, [
-      { key: 'campaign_name', label: 'Mchango (pesa ya nini)', html: r => `<b>${P.esc(r.campaign_name)}</b>${note(r.notes) ? `<br><small class="pm-muted">${P.esc(note(r.notes))}</small>` : ''}` },
+      { key: 'campaign_name', label: 'Mchango (pesa ya nini)', html: r => `<a class="pm-link" href="${opts.link ? opts.link(r) : '#/mchango?id=' + r.campaign_id}"><b>${P.esc(r.campaign_name)}</b></a>${note(r.notes) ? `<br><small class="pm-muted">${P.esc(note(r.notes))}</small>` : ''}` },
       { key: 'who', label: 'Nani analipa', html: whoPays },
       { key: 'period', label: 'Muda', html: period },
       { key: 'obligation', label: 'Kiasi', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' },
@@ -218,7 +219,7 @@
             { key: 'pct', label: '%', html: r => Number(r.pledged) ? `${P.pct(Number(r.paid) / Number(r.pledged) * 100)} ${P.progress(Number(r.paid) / Number(r.pledged) * 100)}` : '—' }],
             { foot, empty: 'Kigango hiki hakina jumuiya bado.' })}</section>
         <section class="pm-card"><h3 class="pm-h3">Michango ${year} — kigango chote</h3>
-          ${contribTable(contrib, k, { actions: r => r.own_target && canPledge() ? `<button class="pm-btn pm-btn--sm" data-edit="${r.campaign_id}">Badilisha</button>` : '' })}</section>
+          ${contribTable(contrib, k, { link: r => `#/mchango?id=${r.campaign_id}&k=${k.id}`, actions: r => r.own_target && canPledge() ? `<button class="pm-btn pm-btn--sm" data-edit="${r.campaign_id}">Badilisha</button>` : '' })}</section>
         <section class="pm-card"><div class="pm-row"><h3 class="pm-h3">Malipo ya kigango chenyewe ${year}</h3><small class="pm-muted">${P.tzs(own)}</small></div>
           ${P.table(recent, [{ key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' },
             { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'receipt_no', label: 'Risiti', html: r => r.receipt_no ? `<a class="pm-link" target="_blank" href="receipt.html?tx=${r.id}">${P.esc(r.receipt_no)}</a>` : (r.legacy_receipt_no ? `Excel #${P.esc(r.legacy_receipt_no)}` : '—') }],
@@ -350,18 +351,20 @@
 
     /* what the jumuiya was assigned (what money, how much, by when) and the % paid */
     async michango(box, j, year, params) {
+      const mlink = r => `#/mchango?id=${r.campaign_id}&k=${P.kigangoOf(j.id)?.id || ''}&j=${j.id}`;
+      if (params.campaign) { P.go(mlink({ campaign_id: params.campaign })); return; }
       const rows = await P.rpc('unit_contributions', { p_year: year, p_unit: j.id });
       const sel = params.campaign ? rows.find(r => r.campaign_id === params.campaign) || { campaign_id: params.campaign, ...(P.ref.camps.find(c => c.id === params.campaign) || {}) } : null;
       const actions = r => {
         const b = [];
         if (canRecord() && (Number(r.target) > 0 || !Number(r.pledged))) b.push(`<button class="pm-btn pm-btn--sm pm-btn--primary" data-lipa="${r.campaign_id}">Lipa</button>`);
-        if (Number(r.pledged) > 0) b.push(`<a class="pm-btn pm-btn--sm" href="#/jumuiya?id=${j.id}&tab=michango&campaign=${r.campaign_id}">${r.giver_level === 'parishioner' ? 'Waumini' : 'Familia'}</a>`);
+        b.push(`<a class="pm-btn pm-btn--sm" href="${mlink(r)}">Fungua</a>`);
         if (canPledge() && r.own_target) b.push(`<button class="pm-btn pm-btn--sm" data-edit="${r.campaign_id}">Badilisha</button>`);
         return `<span class="pm-nowrap">${b.join(' ')}</span>`;
       };
-      box.innerHTML = `<div class="pm-row"><p class="pm-muted pm-small">Michango ambayo jumuiya hii imepangiwa au imelipa mwaka ${year}. Asilimia inahesabiwa kiotomatiki.</p>
+      box.innerHTML = `<div class="pm-row"><p class="pm-muted pm-small">Michango ambayo jumuiya hii imepangiwa au imelipa mwaka ${year}. Bonyeza mchango kuona familia na wanaolipa wake tu.</p>
           <div class="pm-actions">${canPledge() ? '<button class="pm-btn pm-btn--primary" data-target><span class="material-symbols-outlined">assignment_add</span>Pangia mchango</button>' : ''}</div></div>
-        <section class="pm-card">${contribTable(rows, j, { actions, empty: 'Jumuiya hii haijapangiwa mchango wowote mwaka huu. Bonyeza "Pangia mchango".' })}</section>
+        <section class="pm-card">${contribTable(rows, j, { link: mlink, actions, empty: 'Jumuiya hii haijapangiwa mchango wowote mwaka huu. Bonyeza "Pangia mchango".' })}</section>
         <div data-detail></div>`;
       const tb = box.querySelector('[data-target]');
       tb && tb.addEventListener('click', () => targetForm(j, year));
@@ -418,7 +421,7 @@
         </section>
         <section class="pm-grid2">
           <div class="pm-card"><h3 class="pm-h3">Michango ${year}</h3>
-            ${P.table(contrib, [{ key: 'campaign_name', label: 'Mchango', html: r => `<a class="pm-link" href="#/jumuiya?id=${j.id}&tab=michango">${P.esc(r.campaign_name)}</a>` },
+            ${P.table(contrib, [{ key: 'campaign_name', label: 'Mchango', html: r => `<a class="pm-link" href="#/mchango?id=${r.campaign_id}&k=${P.kigangoOf(j.id)?.id || ''}&j=${j.id}">${P.esc(r.campaign_name)}</a>` },
               { key: 'obligation', label: 'Kiasi', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' },
               { key: 'gave', label: 'Ametoa', html: r => P.tzs(gave(r)), cls: 'pm-num' },
               { key: 'pct', label: '%', html: r => r.pct === null ? '—' : P.progress(r.pct) }], { empty: 'Hakuna michango mwaka huu.' })}</div>
@@ -468,6 +471,185 @@
   const payPledge = r => P.quickPay({ title: r.campaign_name, sub: `<b>${P.esc(r.parishioner_name || r.family_name || r.org_unit_name)}</b> · amepangiwa ${P.tzs(r.pledged)}, ametoa ${P.tzs(r.paid)}, bado ${P.tzs(r.outstanding)}`,
     payer: r.parishioner_id ? { kind: 'parishioner', id: r.parishioner_id } : r.family_id ? { kind: 'family', id: r.family_id } : { kind: 'org_unit', id: r.org_unit_id },
     payerName: r.parishioner_name || r.family_name || r.org_unit_name, category_id: r.category_id, campaign_id: r.campaign_id, amount: Number(r.outstanding) || '' });
+
+  /* ================= MCHANGO MMOJA — one contribution, level by level =================
+     Radio Maria 2026 → vigango → jumuiya → familia → muumini. Only this contribution;
+     assign (pangia) and record payments (lipa) right on the line they belong to. */
+  V.mchango = {
+    title: 'Mchango', perm: 'finance.read',
+    async render(el, params) {
+      const camp = P.ref.camps.find(c => c.id === params.id);
+      if (!camp) { el.innerHTML = P.empty('Mchango haupo. Rudi kwenye Michango uchague mchango.'); return; }
+      const cat = P.ref.catsById[camp.category_id] || {};
+      const scoped = P.scopeUnit() ? P.ref.unitsById[P.scopeUnit()] : null;
+      const at = { k: params.k || '', j: params.j || '', fa: params.fa || '' };
+      if (scoped && !params.k) {
+        if (scoped.unit_type === 'kigango') at.k = scoped.id;
+        if (scoped.unit_type === 'jumuiya') { at.k = P.kigangoOf(scoped.id)?.id || ''; at.j = scoped.id; }
+      }
+      const link = (o = {}) => '#/mchango?' + new URLSearchParams(Object.entries({ id: camp.id, ...at, ...o }).filter(([, v]) => v)).toString();
+      const fam = at.fa && at.fa !== 'none' ? await P.q(P.from('families').select('id,family_name,jumuiya_id').eq('id', at.fa).maybeSingle()) : null;
+      const leaf = at.k === 'none' || at.j === 'none' || at.fa === 'none';
+      const level = leaf ? null : !at.k ? 'kigango' : !at.j ? 'jumuiya' : !at.fa ? 'family' : 'parishioner';
+      const parent = { kigango: null, jumuiya: at.k, family: at.j, parishioner: at.fa }[level];
+      const jumuiya = at.j && at.j !== 'none' ? P.ref.unitsById[at.j] : null;
+      const crumbs = [{ label: 'Michango', href: '#/campaigns' }, { label: camp.name, href: link({ k: '', j: '', fa: '' }) }];
+      if (at.k) crumbs.push({ label: at.k === 'none' ? 'Parokiani' : `Kigango cha ${P.ref.unitsById[at.k]?.name || ''}`, href: link({ j: '', fa: '' }) });
+      if (at.j) crumbs.push({ label: at.j === 'none' ? 'Kigango chenyewe' : `Jumuiya ya ${jumuiya?.name || ''}`, href: link({ fa: '' }) });
+      if (at.fa) crumbs.push({ label: at.fa === 'none' ? 'Jumuiya yenyewe' : fam?.family_name || 'Familia', href: link({}) });
+      const LBL = { kigango: ['Kigango', 'Parokiani (si kupitia kigango)'], jumuiya: ['Jumuiya', 'Kigango chenyewe'],
+        family: ['Familia', 'Jumuiya yenyewe (jumla ya jumuiya)'], parishioner: ['Muumini', 'Familia nzima'] };
+      const giver = camp.giver_level;
+      const assigned = camp.amount_mode === 'assigned';
+      // the last level where someone gives: the family for "kila familia", the person for "kila muumini"
+      const lastLevel = giver === 'parishioner' ? 'parishioner' : 'family';
+
+      el.innerHTML = `${P.crumbs(crumbs.map((c, i) => i === crumbs.length - 1 ? { label: c.label } : c))}
+        <div class="pm-head"><div><p class="pm-eyebrow">${P.esc(cat.name_sw || 'Mchango')} · Mwaka ${camp.campaign_year}</p>
+          <h1 class="pm-h1">${P.esc(camp.name)}</h1>${P.rulesBadges(camp)}</div>
+          <div class="pm-actions" data-top></div></div>
+        <section class="pm-kpis" data-kpis></section>
+        <div data-body>${P.loading()}</div>`;
+      const top = el.querySelector('[data-top]'), body = el.querySelector('[data-body]');
+      const btn = (attr, label, icon, primary) => `<button class="pm-btn ${primary ? 'pm-btn--primary' : ''}" ${attr}>${icon ? `<span class="material-symbols-outlined">${icon}</span>` : ''}${label}</button>`;
+
+      let rows = [];
+      if (level) {
+        const [tree, members] = await Promise.all([
+          P.rpc('campaign_tree', { p_campaign: camp.id, p_level: level, p_parent: parent }),
+          level === 'parishioner'
+            ? P.q(P.from('parishioners').select('id,full_name,relationship').eq('family_id', at.fa).eq('membership_status', 'active').limit(200)).then(r => r.map(p => ({ id: p.id, name: p.full_name, rel: p.relationship })))
+            : P.levelMembers(level, parent)]);
+        const zero = { target: 0, pledged: 0, paid: 0, collected: 0, obligation: 0, gave: 0, balance: 0, pct: null, payers: 0, pledges: 0 };
+        const byId = Object.fromEntries(tree.filter(r => r.group_id).map(r => [r.group_id, r]));
+        const known = new Set(members.map(m => m.id));
+        rows = P.levelSort(level, [...members.map(m => ({ ...zero, ...(byId[m.id] || {}), group_id: m.id, group_name: m.name, code: m.code, rel: m.rel })),
+          ...tree.filter(r => r.group_id && !known.has(r.group_id))]);
+        const self = tree.find(r => !r.group_id);
+        if (self) rows.unshift({ ...self, group_name: LBL[level][1], self: true });
+      }
+      // totals of what is on screen
+      // totals: what is assigned here minus everything given here (also money handed in as a lump)
+      const T = k => k === 'balance' ? Math.max(P.sum(rows, 'obligation') - P.sum(rows, 'gave'), 0) : P.sum(rows, k);
+      el.querySelector('[data-kpis]').innerHTML = level ? `
+        ${P.kpi(assigned ? 'Waliyopangiwa' : 'Ahadi', P.tzs(T('obligation')), 'assignment')}
+        ${P.kpi('Wametoa', P.tzs(T('gave')), 'savings', 'pm-kpi--teal')}
+        ${P.kpi('Bado', P.tzs(T('balance')), 'pending_actions', 'pm-kpi--rose')}
+        ${P.kpi('Asilimia', T('obligation') ? P.pct(T('gave') / T('obligation') * 100) : '—', 'percent')}` : '';
+
+      const key = { kigango: 'k', jumuiya: 'j', family: 'fa' }[level];
+      const opens = r => level !== 'parishioner' && !(level === 'family' && lastLevel === 'family');
+      const name = r => r.self ? `<span class="pm-muted">${P.esc(r.group_name)}</span>`
+        : opens(r) ? `<a class="pm-link" href="${link({ [key]: r.group_id })}">${P.esc(r.group_name || '—')}</a>`
+        : `<b>${P.esc(r.group_name || '—')}</b>${r.rel ? ` <small class="pm-muted">${P.esc(r.rel)}</small>` : ''}`;
+      // who pays on a line: the jumuiya (its own line), a family or a person
+      const payerOf = r => level === 'family' ? (r.self ? { kind: 'org_unit', id: at.j, name: `Jumuiya ya ${jumuiya?.name || ''}` } : { kind: 'family', id: r.group_id, name: r.group_name })
+        : level === 'parishioner' ? (r.self ? { kind: 'family', id: at.fa, name: fam?.family_name } : { kind: 'parishioner', id: r.group_id, name: r.group_name }) : null;
+      const canPay = r => P.can('finance.record') && !!payerOf(r);
+      const canAssignLine = r => P.can('finance.pledge') && assigned && !r.self && !Number(r.pledged)
+        && ((level === 'family' && giver === 'family') || (level === 'parishioner' && giver === 'parishioner'));
+      const actions = r => `<span class="pm-nowrap">${canPay(r) ? `<button class="pm-btn pm-btn--sm pm-btn--primary" data-lipa="${r.group_id || 'self'}">Lipa</button> ` : ''}${
+        canAssignLine(r) ? `<button class="pm-btn pm-btn--sm" data-pangia="${r.group_id}">Pangia</button> ` : ''}${
+        !r.self && opens(r) ? `<a class="pm-btn pm-btn--sm" href="${link({ [key]: r.group_id })}">Fungua</a>` : ''}</span>`;
+      const money = v => Number(v) ? P.tzs(v) : '—';
+
+      // the jumuiya's own amount for this contribution (kupangiwa kwa jumuiya)
+      let jt = null;
+      if (level === 'family' && (giver === 'jumuiya' || rows.find(r => r.self && Number(r.target)))) {
+        const t = await P.q(P.from('campaign_targets').select('target_amount,starts_on,due_on,notes').eq('campaign_id', camp.id).eq('org_unit_id', at.j).maybeSingle()).catch(() => null);
+        const self = rows.find(r => r.self) || {};
+        jt = { campaign_id: camp.id, campaign_name: camp.name, target: t?.target_amount || 0, starts_on: t?.starts_on, due_on: t?.due_on, notes: t?.notes };
+        const all = T('gave');
+        body.insertAdjacentHTML('beforebegin', `<section class="pm-card pm-unitduty"><div class="pm-row"><div>
+            <h3 class="pm-h3">Jumuiya ya ${P.esc(jumuiya?.name || '')} imepangiwa ${jt.target ? P.tzs(jt.target) : '— (bado haijapangiwa)'}</h3>
+            <p class="pm-muted pm-small">${jt.target ? `Imetoa ${P.tzs(all)} · bado ${P.tzs(Math.max(jt.target - all, 0))} · ${P.pct(Math.min(all / jt.target, 9.99) * 100)}` : 'Weka kiasi ambacho jumuiya hii inatakiwa kutoa.'}
+            ${jt.due_on ? ` · mwisho wa kulipa ${P.date(jt.due_on)}` : ''}</p>${jt.target ? P.progress(all / jt.target * 100) : ''}</div>
+          <div class="pm-actions">${P.can('finance.pledge') ? btn('data-jt', jt.target ? 'Badilisha kiasi' : 'Pangia jumuiya', 'assignment_add') : ''}
+            ${P.can('finance.record') ? btn('data-jpay', 'Lipa (jumuiya)', 'payments', true) : ''}</div></div></section>`);
+      }
+
+      // buttons at the top for this level
+      const tops = [];
+      if (level === 'family' && assigned && P.can('finance.pledge') && ['family', 'parishioner'].includes(giver)) tops.push(btn('data-assignall', 'Pangia wote wa jumuiya hii', 'group_add'));
+      if (level === 'parishioner' && assigned && P.can('finance.pledge') && giver === 'parishioner') tops.push(btn('data-assignall', 'Pangia wote wa familia hii', 'group_add'));
+      if (P.can('finance.record')) tops.push(btn('data-other', 'Rekodi malipo', 'add', !jt));
+      top.innerHTML = tops.join('');
+
+      // the list for this level
+      const scope = q => {
+        if (at.fa === 'none') return q.eq('tree_jumuiya_id', at.j).is('family_id', null);
+        if (at.fa) return q.eq('family_id', at.fa);
+        if (at.j === 'none') return q.eq('tree_kigango_id', at.k).is('tree_jumuiya_id', null);
+        if (at.j) return q.eq('tree_jumuiya_id', at.j);
+        if (at.k === 'none') return q.is('tree_kigango_id', null);
+        if (at.k) return q.eq('tree_kigango_id', at.k);
+        return q;
+      };
+      const pays = await P.q(scope(P.from('v_ledger_tree').select('id,txn_date,payer_name,family_name,net_amount,receipt_no,legacy_receipt_no,jumuiya_name,status')
+        .eq('campaign_id', camp.id).eq('status', 'posted').eq('kind', 'income').order('txn_date', { ascending: false }).limit(level === 'kigango' ? 15 : 100)));
+      body.innerHTML = (level ? `<section class="pm-card"><h3 class="pm-h3">${LBL[level][0] === 'Muumini' ? 'Wanafamilia' : LBL[level][0] === 'Familia' ? 'Familia za jumuiya hii' : LBL[level][0] === 'Jumuiya' ? 'Jumuiya za kigango hiki' : 'Vigango'}</h3>
+          ${P.table(rows, [
+            { key: 'group_name', label: LBL[level][0], html: name },
+            { key: 'obligation', label: assigned ? 'Pangiwa' : 'Ahadi / Lengo', fmt: money, cls: 'pm-num' },
+            { key: 'gave', label: 'Ametoa', fmt: money, cls: 'pm-num pm-strong' },
+            { key: 'balance', label: 'Bado', html: r => Number(r.balance) ? `<span class="pm-due">${P.tzs(r.balance)}</span>` : '—', cls: 'pm-num' },
+            { key: 'pct', label: '%', html: r => r.pct === null || r.pct === undefined ? '—' : `${P.pct(r.pct)} ${P.progress(r.pct)}` },
+            { key: 'group_id', label: '', html: actions }],
+            { foot: { group_name: '<b>JUMLA</b>', obligation: P.tzs(T('obligation')), gave: `<b>${P.tzs(T('gave'))}</b>`, balance: P.tzs(T('balance')) } })}</section>` : '') +
+        `<section class="pm-card"><h3 class="pm-h3">Malipo ya ${P.esc(camp.name)}${level === 'kigango' ? ' — ya karibuni' : ' hapa'}</h3>
+          ${P.table(pays, [{ key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji', html: r => P.esc(r.payer_name || '—') + (r.family_name && r.family_name !== r.payer_name ? `<br><small class="pm-muted">${P.esc(r.family_name)}</small>` : '') },
+            { key: 'jumuiya_name', label: 'Jumuiya', fmt: v => P.esc(v || '—') }, { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num pm-strong' },
+            { key: 'receipt_no', label: 'Risiti', html: r => r.receipt_no ? `<a class="pm-link" target="_blank" href="receipt.html?tx=${r.id}">${P.esc(r.receipt_no)}</a>` : (r.legacy_receipt_no ? `<small class="pm-muted">Excel #${P.esc(r.legacy_receipt_no)}</small>` : '—') }],
+            { empty: 'Hakuna malipo bado.' })}</section>`;
+
+      // ---- actions ----
+      const lipa = (payer, owed) => P.quickPay({ title: camp.name, sub: `<b>${P.esc(payer.name || '')}</b>${owed ? ` · bado ${P.tzs(owed)}` : ''}`,
+        payer: { kind: payer.kind, id: payer.id }, payerName: payer.name, category_id: camp.category_id, campaign_id: camp.id, amount: owed || '' });
+      el.querySelectorAll('[data-lipa]').forEach(b => b.addEventListener('click', () => {
+        const r = rows.find(x => (x.group_id || 'self') === b.dataset.lipa || (b.dataset.lipa === 'self' && x.self));
+        lipa(payerOf(r), Number(r.balance));
+      }));
+      el.querySelectorAll('[data-pangia]').forEach(b => b.addEventListener('click', async () => {
+        const r = rows.find(x => x.group_id === b.dataset.pangia);
+        const rate = r.rel && camp.relation_rates ? (camp.relation_rates[String(r.rel).toUpperCase()] ?? camp.relation_rates.WENGINE) : null;
+        const v = await P.modal({ title: `Pangia — ${r.group_name}`, submit: 'Pangia', body: `<p class="pm-muted">${P.esc(camp.name)}</p>
+          <div class="pm-form"><label>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="1" required value="${rate || camp.default_amount || ''}"></label></div>` });
+        if (!v) return;
+        await P.rpc('create_pledge', { p: { campaign_id: camp.id, amount: Number(v.amount) * (camp.frequency === 'monthly' ? 12 : 1), source: 'assigned', [level === 'family' ? 'family_id' : 'parishioner_id']: r.group_id } });
+        Toast.success('Amepangiwa.'); P.refresh();
+      }));
+      const aa = el.querySelector('[data-assignall]');
+      aa && aa.addEventListener('click', async () => {
+        const per = giver === 'parishioner' && Object.keys(camp.relation_rates || {}).length;
+        const where = level === 'family' ? `Jumuiya ya ${jumuiya?.name || ''}` : fam?.family_name;
+        const v = await P.modal({ title: `Pangia wote — ${camp.name}`, submit: 'Pangia', body: `<p class="pm-muted">${P.RULES.LEVEL[giver]} wa ${P.esc(where)} ambaye bado hajapangiwa atapangiwa. Waliokwisha pangiwa hawabadilishwi.</p>
+          <div class="pm-form">${per ? `<p class="pm-span2"><b>Kwa kanuni:</b> ${P.esc(P.ratesText(camp.relation_rates))}</p>`
+            : `<label>Kiasi kwa kila ${giver === 'family' ? 'familia' : 'mmoja'}<input name="amount" type="number" min="1" required value="${camp.default_amount || ''}"></label>`}</div>` });
+        if (!v) return;
+        if (level === 'parishioner') {
+          // one family: assign each member without an amount yet
+          let n = 0;
+          for (const r of rows.filter(x => !x.self && !Number(x.pledged))) {
+            const amt = v.amount ? Number(v.amount) : (camp.relation_rates || {})[String(r.rel || '').toUpperCase()] ?? (camp.relation_rates || {}).WENGINE;
+            if (!amt) continue;
+            await P.rpc('create_pledge', { p: { campaign_id: camp.id, amount: Number(amt), source: 'assigned', parishioner_id: r.group_id } }); n++;
+          }
+          Toast.success(`Wamepangiwa: ${n}`);
+        } else {
+          const r = await P.rpc('assign_campaign', { p_campaign: camp.id, p_amount: v.amount ? Number(v.amount) : null, p_scope: at.j });
+          Toast.success(`Wamepangiwa: ${r.created}${r.skipped_no_rate ? ` · hawakuwekewa alama: ${r.skipped_no_rate}` : ''}`);
+        }
+        P.refresh();
+      });
+      const jtb = el.querySelector('[data-jt]'); jtb && jtb.addEventListener('click', () => P.targetForm(jumuiya, camp.campaign_year, jt));
+      const jp = el.querySelector('[data-jpay]');
+      jp && jp.addEventListener('click', () => lipa({ kind: 'org_unit', id: at.j, name: `Jumuiya ya ${jumuiya?.name || ''}` }, Math.max(Number(jt?.target || 0) - T('gave'), 0)));
+      const ot = el.querySelector('[data-other]');
+      ot && ot.addEventListener('click', () => P.recordPayment({ category_id: camp.category_id, campaign_id: camp.id,
+        ...(jumuiya ? { jumuiya: jumuiya.id } : at.k && at.k !== 'none' ? { org_unit_id: at.k } : {}),
+        ...(fam ? { payer: { kind: 'family', id: fam.id }, payerName: fam.family_name } : {}) }));
+    },
+  };
 
   /* ================= FAMILIA ================= */
   V.family = {
