@@ -20,7 +20,7 @@
 <div class="mobile-header">
   <button data-sidebar-toggle class="hamburger-btn"><span class="material-symbols-outlined">menu</span></button>
   <div><h1 data-parish-name>Parokia</h1><p>Mfumo wa Parokia</p></div>
-  <div class="pm-avatar-sm"><span data-user-initials>?</span></div>
+  <label class="pm-yearpick"><span class="material-symbols-outlined">event</span><select data-yearpick aria-label="Mwaka"></select></label>
 </div>
 
 <aside id="sidebar" class="sidebar-responsive bg-slate-50 flex flex-col py-8 border-r border-slate-200/50">
@@ -42,8 +42,8 @@
 
 <nav class="mobile-bottom-nav">
   <a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Dashibodi</span></a>
+  <a href="#/units" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Vigango</span></a>
   <a href="#/payments" class="bottom-nav-item"><span class="material-symbols-outlined">point_of_sale</span><span>Miamala</span></a>
-  <a href="#/pledges" class="bottom-nav-item"><span class="material-symbols-outlined">handshake</span><span>Ahadi</span></a>
   <a href="#/reports" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a>
   <button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>
 </nav>
@@ -58,6 +58,7 @@
 <script src="../assets/js/parish/views-finance.js"></script>
 <script src="../assets/js/parish/views-registry.js"></script>
 <script src="../assets/js/parish/views-accounting.js"></script>
+<script src="../assets/js/parish/views-units.js"></script>
 <script>Parish.start();</script>
 <script src="../assets/js/responsive-sidebar.js"></script>
 </body>

@@ -19,7 +19,17 @@
   P.date = d => d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   P.esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   P.today = () => new Date().toISOString().slice(0, 10);
-  P.year = () => new Date().getFullYear();
+  /* the working year: chosen once in the top bar, used by every page (remembered per browser) */
+  P.thisYear = () => new Date().getFullYear();
+  P.year = () => {
+    if (P._year) return P._year;
+    try { const y = Number(localStorage.getItem('pm-year')); if (y > 2000 && y < 2100) return (P._year = y); } catch (e) { /* storage blocked */ }
+    return (P._year = P.thisYear());
+  };
+  P.setYear = y => { P._year = Number(y); try { localStorage.setItem('pm-year', String(y)); } catch (e) { /* ignore */ }
+    document.querySelectorAll('[data-yearpick]').forEach(s => { s.value = String(y); }); };
+  P.yearFrom = () => `${P.year()}-01-01`;
+  P.yearTo = () => P.year() === P.thisYear() ? P.today() : `${P.year()}-12-31`;
   P.uuid = () => (crypto.randomUUID ? crypto.randomUUID() :
     'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }));
   P.MONTHS = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -112,6 +122,73 @@
   };
   P.sum = (rows, key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
 
+  /* ── Kigango → Jumuiya helpers (every page is organised the same way) ── */
+  P.kigangoOf = id => {
+    let u = P.ref.unitsById[id];
+    while (u && u.unit_type !== 'kigango') u = P.ref.unitsById[u.parent_id];
+    return u || null;
+  };
+  P.unitByName = (type, name) => P.ref.units.find(u => u.unit_type === type && u.name === name) || null;
+  P.unitOrder = id => { const u = P.ref.unitsById[id]; return u ? (u.ordinal ?? 999) * 1000 : 999999; };
+  // two linked selects: choosing a kigango limits the jumuiya list to its own
+  P.cascadeHtml = ({ kigango = '', jumuiya = '', allLabel = 'Zote' } = {}) => {
+    const kig = P.unitsOf('kigango');
+    const jum = P.unitsOf('jumuiya');
+    return `<label>Kigango<select name="kigango" data-cascade-k>${P.options(kig, { blank: allLabel, selected: kigango })}</select></label>
+      <label>Jumuiya<select name="jumuiya" data-cascade-j><option value="">${P.esc(allLabel)}</option>${jum.map(j =>
+        `<option value="${j.id}" data-k="${j.parent_id}" ${j.id === jumuiya ? 'selected' : ''}>${P.esc(j.name)}</option>`).join('')}</select></label>`;
+  };
+  P.wireCascade = root => {
+    const k = root.querySelector('[data-cascade-k]'), j = root.querySelector('[data-cascade-j]');
+    if (!k || !j) return;
+    const sync = () => {
+      [...j.options].forEach(o => { if (o.value) o.hidden = !!k.value && o.dataset.k !== k.value; });
+      if (j.selectedOptions[0] && j.selectedOptions[0].hidden) j.value = '';
+    };
+    k.addEventListener('change', sync); sync();
+    j.addEventListener('change', () => { const o = j.selectedOptions[0]; if (o && o.dataset.k && !k.value) { k.value = o.dataset.k; sync(); } });
+  };
+  // filter values → the unit to scope by (jumuiya wins over kigango)
+  P.cascadeUnit = f => f.jumuiya || f.kigango || '';
+
+  /* table grouped by levels (e.g. kigango → jumuiya) with a subtotal on every group row */
+  P.groupedTable = (rows, cols, { levels = [], sums = [], empty, fmt = P.tzs, foot } = {}) => {
+    if (!rows || !rows.length) return P.empty(empty);
+    const th = cols.map(c => `<th class="${c.cls || ''}">${P.esc(c.label)}</th>`).join('');
+    const idx = cols.map(c => c.key);
+    const firstSum = Math.min(...sums.map(k => idx.indexOf(k)).filter(i => i >= 0), cols.length);
+    const cell = (c, r) => `<td class="${c.cls || ''}">${c.html ? c.html(r) : c.fmt ? c.fmt(r[c.key], r) : P.esc(r[c.key] ?? '—')}</td>`;
+    const out = [];
+    const walk = (list, depth) => {
+      if (depth >= levels.length) { list.forEach(r => out.push(`<tr>${cols.map(c => cell(c, r)).join('')}</tr>`)); return; }
+      const L = levels[depth], groups = new Map();
+      list.forEach(r => { const k = L.key(r) ?? '—'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+      const keys = [...groups.keys()].sort((a, b) => (L.order ? L.order(a) - L.order(b) : 0) || String(L.label(a)).localeCompare(String(L.label(b))));
+      keys.forEach(k => {
+        const g = groups.get(k);
+        const span = Math.max(firstSum, 1);
+        const lab = `<span class="pm-group-label">${L.html ? L.html(k, g) : P.esc(L.label(k))}</span> <small class="pm-muted">(${g.length})</small>`;
+        const rest = cols.slice(span).map(c => `<td class="${c.cls || ''}">${sums.includes(c.key) ? fmt(P.sum(g, c.key)) : ''}</td>`).join('');
+        out.push(`<tr class="pm-group-row pm-group-row--${depth}"><td colspan="${span}">${lab}</td>${rest}</tr>`);
+        walk(g, depth + 1);
+      });
+    };
+    walk(rows, 0);
+    const tf = foot ? `<tfoot><tr>${cols.map(c => `<td class="${c.cls || ''}">${foot[c.key] ?? ''}</td>`).join('')}</tr></tfoot>` : '';
+    return `<div class="pm-table-wrap"><table class="pm-table pm-table--grouped"><thead><tr>${th}</tr></thead><tbody>${out.join('')}</tbody>${tf}</table></div>`;
+  };
+
+  /* page path: Parokia › Kigango › Jumuiya › … */
+  P.crumbs = items => `<nav class="pm-crumbs">${items.map((it, i) => i < items.length - 1 && it.href
+    ? `<a href="${it.href}">${P.esc(it.label)}</a><span class="material-symbols-outlined">chevron_right</span>` : `<b>${P.esc(it.label)}</b>`).join('')}</nav>`;
+  P.unitCrumbs = (unitId, extra = []) => {
+    const chain = [];
+    let u = P.ref.unitsById[unitId];
+    while (u && u.unit_type !== 'parish') { chain.unshift(u); u = P.ref.unitsById[u.parent_id]; }
+    return P.crumbs([{ label: 'Vigango na Jumuiya', href: '#/units' },
+      ...chain.map(x => ({ label: x.unit_type === 'kigango' ? `Kigango cha ${x.name}` : `Jumuiya ya ${x.name}`, href: `#/${x.unit_type}?id=${x.id}` })), ...extra]);
+  };
+
   /* modal with a form; resolves with FormData object or null */
   P.modal = ({ title, body, submit = 'Hifadhi', wide = false, onOpen }) => new Promise(resolve => {
     const el = P.h(`<div class="pm-modal"><div class="pm-modal__box ${wide ? 'pm-modal__box--wide' : ''}">
@@ -166,7 +243,7 @@
   };
 
   /* search box for parishioners / families / communities used by payment & pledge forms */
-  P.payerPicker = (root, { onPick } = {}) => {
+  P.payerPicker = (root, { onPick, jumuiya } = {}) => {
     const input = root.querySelector('[data-payer-search]');
     const list = root.querySelector('[data-payer-results]');
     let t;
@@ -177,10 +254,12 @@
       t = setTimeout(async () => {
         const like = `%${v}%`;
         const [people, fams] = await Promise.all([
-          P.q(P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families(family_name)').ilike('full_name', like).limit(8)),
-          P.q(P.from('families').select('id,family_name,jumuiya_id').ilike('family_name', like).limit(5)),
-        ]).catch(() => [[], []]);
-        const units = P.ref.units.filter(u => u.is_active && u.unit_type !== 'parish' && u.name.toLowerCase().includes(v.toLowerCase())).slice(0, 5);
+          (jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families(family_name)').eq('jumuiya_id', jumuiya)
+                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families(family_name)')).ilike('full_name', like).limit(jumuiya ? 15 : 8),
+          (jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
+                   : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5),
+        ].map(P.q)).catch(() => [[], []]);
+        const units = P.ref.units.filter(u => u.is_active && u.unit_type !== 'parish' && (!jumuiya || u.id === jumuiya) && u.name.toLowerCase().includes(v.toLowerCase())).slice(0, 5);
         const j = id => P.ref.unitsById[id] ? P.ref.unitsById[id].label : '';
         list.innerHTML = [
           ...people.map(p => `<button type="button" data-kind="parishioner" data-id="${p.id}" data-name="${P.esc(p.full_name)}"><span class="material-symbols-outlined">person</span>${P.esc(p.full_name)}<small>${P.esc(p.families?.family_name || '')} · ${P.esc(j(p.jumuiya_id))}</small></button>`),

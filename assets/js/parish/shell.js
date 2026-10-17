@@ -67,6 +67,21 @@
     }
     if (PM.roleLabel) document.querySelectorAll('[data-user-role]').forEach(el => { el.textContent = PM.roleLabel; });
   };
+  // the working year (top bar + phone header); changing it re-draws the current page
+  PM.fillYears = labels => {
+    const P = window.Parish;
+    const ys = [...new Set([...(labels || []).map(Number).filter(Boolean), P.thisYear(), P.year()])].sort((a, b) => b - a);
+    document.querySelectorAll('[data-yearpick]').forEach(sel => {
+      sel.innerHTML = ys.map(y => `<option ${y === P.year() ? 'selected' : ''}>${y}</option>`).join('');
+      if (sel.dataset.wired) return;
+      sel.dataset.wired = '1';
+      sel.addEventListener('change', () => {
+        P.setYear(sel.value);
+        document.querySelectorAll('[data-yearpick]').forEach(x => { x.value = sel.value; });
+        P.reload && P.reload();
+      });
+    });
+  };
   const ROLE_SW = { parish_admin: 'Msimamizi wa Parokia', parish_priest: 'Paroko', accountant: 'Mhasibu', treasurer: 'Mtunza Hazina',
     kigango_leader: 'Kiongozi wa Kigango', jumuiya_leader: 'Kiongozi wa Jumuiya', data_entry: 'Karani', auditor: 'Mkaguzi', member: 'Muumini' };
 
@@ -97,16 +112,13 @@
     h('Yangu');
     a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
-    a('Dashibodi', 'church', 'dashboard', '*');
-    a('Familia na Waumini', 'family_restroom', 'registry', 'registry.read');
-    a('Vigango na Jumuiya', 'account_tree', 'structure', 'registry.read');
-    a('Viongozi', 'badge', 'leaders', 'registry.read');
-    h('Fedha');
+    a('Dashibodi', 'dashboard', 'dashboard', '*');
+    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
+    a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
+    h('Fedha · Parokia nzima');
     a('Miamala', 'point_of_sale', 'payments', 'finance.read');
     a('Zaka', 'calendar_month', 'zaka', 'finance.read');
-    a('Mavuno', 'agriculture', 'campaigns?kind=mavuno', 'finance.read');
-    a('Ujenzi', 'construction', 'campaigns?kind=ujenzi', 'finance.read');
-    a('Michango Maalumu', 'volunteer_activism', 'campaigns?kind=special', 'finance.read');
+    a('Michango na Kampeni', 'volunteer_activism', 'campaigns', 'finance.read');
     a('Ahadi na Madeni', 'handshake', 'pledges', 'finance.read');
     a('Bahasha', 'mail', 'envelopes', 'finance.read');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
@@ -115,6 +127,8 @@
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
     a('Uhakiki wa Fedha', 'fact_check', 'reconciliation', 'finance.read');
     h('Mfumo');
+    a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
+    a('Viongozi', 'badge', 'leaders', 'registry.read');
     a('Taarifa za Parokia', 'info', 'parish', '*');
     a('Watumiaji na Nafasi', 'admin_panel_settings', 'users', 'users.manage');
     a('Mipangilio ya Fedha', 'settings', 'settings', 'parish.configure');
@@ -137,7 +151,7 @@
       nav.querySelectorAll('[data-pperm]').forEach(el => {
         const p = el.dataset.pperm;
         const self = acc && !acc.platform_admin && !perms.size && !!acc.parishioner_id;
-        el.hidden = p === 'self' ? !self : !(acc && !self && (acc.platform_admin || (p === '*' ? any : perms.has(p))));
+        el.hidden = p === 'self' ? !self : !(acc && !self && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
       });
       nav.querySelectorAll('[data-psection]').forEach(hd => {
         let n = hd.nextElementSibling, show = false;
@@ -185,6 +199,8 @@
     bar.innerHTML = `
       <div class="kh-topbar__crumbs"><span>Parokia</span><span class="material-symbols-outlined">chevron_right</span><b>Dashibodi</b></div>
       <div class="kh-topbar__right">
+        <label class="pm-yearpick" title="Mwaka wa kazi: kurasa zote zinaonyesha mwaka huu"><span class="material-symbols-outlined">event</span>Mwaka
+          <select data-yearpick></select></label>
         <span class="kh-topbar__date"><span class="material-symbols-outlined">calendar_today</span>${today}</span>
         <span class="kh-topbar__user">
           <p><span class="n" data-user-name>Inapakia…</span><br><span class="r" data-user-role></span></p>
@@ -198,6 +214,7 @@
     footer.innerHTML = `<span>© ${new Date().getFullYear()} <b data-parish-name>Parokia</b></span><span><span class="kh-footer__dot"></span>Mfumo wa Usimamizi wa Parokia</span>`;
     main.appendChild(footer);
     PM.paintUser();
+    if (window.Parish && window.Parish.ref) PM.fillYears(window.Parish.ref.years.map(y => y.label));
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMainChrome);
   else buildMainChrome();

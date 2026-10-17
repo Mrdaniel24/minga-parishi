@@ -57,7 +57,7 @@
     title: 'Uhasibu', perm: 'finance.read',
     async render(el, params) {
       const acc = params.account || (P.ref.accounts.find(a => a.money_kind) || {}).id;
-      const from = params.from || `${P.year()}-01-01`, to = params.to || P.today();
+      const from = params.from || P.yearFrom(), to = params.to || P.yearTo();
       const [bal, funds, periods, book] = await Promise.all([
         P.q(P.from('v_account_balances').select('*').order('code')),
         P.q(P.from('v_fund_balances').select('*').order('code')),
@@ -130,7 +130,7 @@
     title: 'Ripoti', perm: 'finance.read',
     async render(el, params) {
       const r = params.r || 'collections', scope = params.scope || P.scopeUnit() || '';
-      const from = params.from || `${P.year()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`, to = params.to || P.today();
+      const from = params.from || (P.year() === P.thisYear() ? `${P.year()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01` : P.yearFrom()), to = params.to || P.yearTo();
       const year = Number(params.year || P.year()), level = params.level || 'jumuiya', cat = params.category || '', camp = params.campaign || '';
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Ripoti</h1><p class="pm-muted">Ripoti zote zinatoka kwenye kumbukumbu moja ya miamala — hakuna kunakili kati ya karatasi.</p></div>
         <div class="pm-actions"><button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button><button class="pm-btn" data-print><span class="material-symbols-outlined">picture_as_pdf</span>PDF / Chapa</button></div></div>
@@ -191,7 +191,7 @@
         rows = await P.q(P.from('v_receipt_register').select('*').gte('issued_at', from).lte('issued_at', to + 'T23:59:59').order('seq'));
         cols = [{ key: 'receipt_no', label: 'Risiti' }, { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'status', label: 'Hali' }];
         foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
-      } else if (r === 'zaka') { P.go(`#/zaka?year=${year}&level=${level === 'parish' ? 'kigango' : level}&scope=${scope}`); return; }
+      } else if (r === 'zaka') { if (year !== P.year()) P.setYear(year); const su = scope && P.ref.unitsById[scope]; P.go(`#/zaka?level=${level === 'parish' ? 'kigango' : level}${su ? `&${su.unit_type === 'jumuiya' ? 'jumuiya' : 'kigango'}=${scope}` : ''}`); return; }
       out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
         `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
       el.querySelector('[data-print]').addEventListener('click', () => P.print(title));

@@ -81,6 +81,12 @@
     const p = P.ref.parish;
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
     if (PM.applyAccess) PM.applyAccess(P.access);
+    PM.fillYears && PM.fillYears(P.ref.years.map(y => y.label));
+    // a kigango / jumuiya leader starts on their own community
+    if (!location.hash || location.hash === '#/dashboard') {
+      const u = P.scopeUnit() && P.ref.unitsById[P.scopeUnit()];
+      if (u && (u.unit_type === 'kigango' || u.unit_type === 'jumuiya')) history.replaceState(null, '', `#/${u.unit_type}?id=${u.id}`);
+    }
     window.addEventListener('hashchange', route);
     route();
   };

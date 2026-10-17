@@ -147,6 +147,20 @@ create unique index if not exists pledges_one_active_per_payer
   on public.pledges (campaign_id, coalesce(parishioner_id, family_id, org_unit_id)) where status = 'active';
 create index if not exists pledges_campaign_idx on public.pledges (campaign_id);
 
+-- contribution rules per campaign and the kind of obligation (see migration 13)
+alter table public.campaigns add column if not exists giver_level text
+  check (giver_level is null or giver_level in ('parishioner','family','jumuiya','kigango'));
+alter table public.campaigns add column if not exists amount_mode text not null default 'pledge'
+  check (amount_mode in ('assigned','pledge','free'));
+alter table public.campaigns add column if not exists frequency text not null default 'yearly'
+  check (frequency in ('yearly','monthly'));
+alter table public.campaigns add column if not exists default_amount numeric(14,2)
+  check (default_amount is null or default_amount >= 0);
+alter table public.campaigns add column if not exists relation_rates jsonb not null default '{}'::jsonb;
+
+alter table public.pledges add column if not exists source text not null default 'pledge'
+  check (source in ('pledge','assigned'));
+
 -- ---------------------------------------------------------------------------
 -- THE LEDGER
 -- ---------------------------------------------------------------------------

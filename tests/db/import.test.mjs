@@ -34,6 +34,9 @@ test('legacy workbook import: completeness, formula parity and integrity', { ski
   assert.ok(by.match >= 2070, `matches: ${by.match}`);
   for (const d of diffs) assert.ok(d.explanation, `unexplained difference at ${d.cell_ref}`);
 
+  // the workbook's PANGIWA amounts arrive as assigned amounts, not promises
+  assert.equal(Number(await db.val(`select count(*) from public.pledges where legacy_ref is not null and source <> 'assigned'`)), 0);
+
   // integrity of the imported ledger
   const checks = await db.q(`select * from public.finance_integrity_checks()`);
   for (const c of checks) assert.ok(c.ok, `${c.check_code}: ${c.problem_count}`);

@@ -86,6 +86,42 @@
     },
   };
 
+  /* family and parishioner forms (used here and on the jumuiya / family pages) */
+  P.famForm = async (f, { jumuiya = '' } = {}) => {
+    const v = await P.modal({ title: f ? 'Hariri familia' : 'Familia mpya', body: `<div class="pm-form">
+      <label>Jina la familia<input name="family_name" required value="${P.esc(f?.family_name || '')}"></label>
+      <label>Namba ya familia<input name="family_code" value="${P.esc(f?.family_code || '')}"></label>
+      <label>Jumuiya<select name="jumuiya_id" required>${P.unitOptions(['jumuiya'], { blank: 'Chagua…', selected: f?.jumuiya_id || jumuiya })}</select></label>
+      <label>Simu<input name="phone" value="${P.esc(f?.phone || '')}"></label>
+      <label class="pm-span2">Anuani<input name="address" value="${P.esc(f?.address || '')}"></label>
+      ${f ? `<label>Mkuu wa familia<select name="head_parishioner_id">${P.options(f.parishioners, { label: 'full_name', blank: '—', selected: f.head_parishioner_id })}</select></label>
+             <label>Hali<select name="status">${['active', 'inactive', 'moved'].map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>` : ''}</div>
+      ${f ? '<p class="pm-muted pm-small">Ukihamisha familia kwenda jumuiya nyingine, waumini wake wanahamia pia. Miamala ya zamani inabaki kwenye jumuiya ya awali.</p>' : ''}` });
+    if (!v) return;
+    Object.keys(v).forEach(k => { if (v[k] === '') v[k] = null; });
+    if (f) await P.q(P.from('families').update(v).eq('id', f.id));
+    else await P.q(P.from('families').insert({ ...v, parish_id: P.ref.parish.id }));
+    Toast.success('Familia imehifadhiwa.'); P.reload();
+  };
+  P.personForm = async (fam, p, { families = [] } = {}) => {
+    const v = await P.modal({ title: p ? 'Hariri muumini' : `Muumini mpya — ${fam.family_name}`, body: `<div class="pm-form">
+      <label class="pm-span2">Jina kamili<input name="full_name" required value="${P.esc(p?.full_name || '')}"></label>
+      <label>Jinsi<select name="gender"><option value="">—</option><option value="male" ${p?.gender === 'male' ? 'selected' : ''}>Me</option><option value="female" ${p?.gender === 'female' ? 'selected' : ''}>Ke</option></select></label>
+      <label>Uhusiano<input name="relationship" list="pm-rel" value="${P.esc(p?.relationship || '')}"><datalist id="pm-rel">${['BABA', 'MAMA', 'MTOTO', 'MJUKUU', 'BIBI', 'BABU', 'KAKA', 'DADA', 'MJOMBA', 'SHANGAZI'].map(x => `<option>${x}</option>`).join('')}</datalist></label>
+      <label>Simu<input name="phone" value="${P.esc(p?.phone || '')}"></label>
+      <label>Mwaka wa kuzaliwa<input name="birth_year" type="number" min="1900" max="2100" value="${P.esc(p?.birth_year || '')}"></label>
+      <label>Mlipa zaka<select name="is_zaka_payer"><option value="false">Hapana</option><option value="true" ${p?.is_zaka_payer ? 'selected' : ''}>Ndiyo</option></select></label>
+      <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased'].map(s => `<option ${p?.membership_status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      ${p ? `<label class="pm-span2">Hamishia familia nyingine (hiari)<select name="family_id">${P.options(families.length ? families : [fam], { label: 'family_name', selected: fam.id })}</select></label>` : ''}</div>` });
+    if (!v) return;
+    const row = { ...v, birth_year: v.birth_year ? Number(v.birth_year) : null, is_zaka_payer: v.is_zaka_payer === 'true', gender: v.gender || null };
+    const target = families.find(x => x.id === (row.family_id || fam.id)) || fam;
+    row.family_id = target.id; row.jumuiya_id = target.jumuiya_id;
+    if (p) await P.q(P.from('parishioners').update(row).eq('id', p.id));
+    else await P.q(P.from('parishioners').insert({ ...row, parish_id: P.ref.parish.id, registered_on: P.today() }));
+    Toast.success('Muumini amehifadhiwa.'); P.reload();
+  };
+
   /* ================= FAMILIA NA WAUMINI ================= */
   V.registry = {
     title: 'Familia na Waumini', perm: 'registry.read',
@@ -124,40 +160,8 @@
             { key: 'id', label: '', html: p => `<a class="pm-btn pm-btn--sm" href="#/statement?parishioner=${p.id}">Michango</a>${canW ? ` <button class="pm-btn pm-btn--sm" data-editp="${p.id}" data-fam="${f.id}">Hariri</button>` : ''}` }])}
         </div>`).join('') : P.empty('Hakuna familia iliyopatikana.');
       const famById = Object.fromEntries(fams.map(f => [f.id, f]));
-      const famForm = async (f) => {
-        const v = await P.modal({ title: f ? 'Hariri familia' : 'Familia mpya', body: `<div class="pm-form">
-          <label>Jina la familia<input name="family_name" required value="${P.esc(f?.family_name || '')}"></label>
-          <label>Namba ya familia<input name="family_code" value="${P.esc(f?.family_code || '')}"></label>
-          <label>Jumuiya<select name="jumuiya_id" required>${P.unitOptions(['jumuiya'], { blank: 'Chagua…', selected: f?.jumuiya_id || jum })}</select></label>
-          <label>Simu<input name="phone" value="${P.esc(f?.phone || '')}"></label>
-          <label class="pm-span2">Anuani<input name="address" value="${P.esc(f?.address || '')}"></label>
-          ${f ? `<label>Mkuu wa familia<select name="head_parishioner_id">${P.options(f.parishioners, { label: 'full_name', blank: '—', selected: f.head_parishioner_id })}</select></label>
-                 <label>Hali<select name="status">${['active', 'inactive', 'moved'].map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>` : ''}</div>
-          ${f ? '<p class="pm-muted pm-small">Ukihamisha familia kwenda jumuiya nyingine, waumini wake wanahamia pia. Miamala ya zamani inabaki kwenye jumuiya ya awali.</p>' : ''}` });
-        if (!v) return;
-        Object.keys(v).forEach(k => { if (v[k] === '') v[k] = null; });
-        if (f) await P.q(P.from('families').update(v).eq('id', f.id));
-        else await P.q(P.from('families').insert({ ...v, parish_id: P.ref.parish.id }));
-        Toast.success('Familia imehifadhiwa.'); P.reload();
-      };
-      const personForm = async (fam, p) => {
-        const v = await P.modal({ title: p ? 'Hariri muumini' : `Muumini mpya — ${fam.family_name}`, body: `<div class="pm-form">
-          <label class="pm-span2">Jina kamili<input name="full_name" required value="${P.esc(p?.full_name || '')}"></label>
-          <label>Jinsi<select name="gender"><option value="">—</option><option value="male" ${p?.gender === 'male' ? 'selected' : ''}>Me</option><option value="female" ${p?.gender === 'female' ? 'selected' : ''}>Ke</option></select></label>
-          <label>Uhusiano<input name="relationship" list="pm-rel" value="${P.esc(p?.relationship || '')}"><datalist id="pm-rel">${['BABA', 'MAMA', 'MTOTO', 'MJUKUU', 'BIBI', 'BABU', 'KAKA', 'DADA', 'MJOMBA', 'SHANGAZI'].map(x => `<option>${x}</option>`).join('')}</datalist></label>
-          <label>Simu<input name="phone" value="${P.esc(p?.phone || '')}"></label>
-          <label>Mwaka wa kuzaliwa<input name="birth_year" type="number" min="1900" max="2100" value="${P.esc(p?.birth_year || '')}"></label>
-          <label>Mlipa zaka<select name="is_zaka_payer"><option value="false">Hapana</option><option value="true" ${p?.is_zaka_payer ? 'selected' : ''}>Ndiyo</option></select></label>
-          <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased'].map(s => `<option ${p?.membership_status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
-          ${p ? `<label class="pm-span2">Hamishia familia nyingine (hiari)<select name="family_id">${P.options(fams, { label: 'family_name', selected: fam.id })}</select></label>` : ''}</div>` });
-        if (!v) return;
-        const row = { ...v, birth_year: v.birth_year ? Number(v.birth_year) : null, is_zaka_payer: v.is_zaka_payer === 'true', gender: v.gender || null };
-        const target = famById[row.family_id || fam.id] || fam;
-        row.family_id = target.id; row.jumuiya_id = target.jumuiya_id;
-        if (p) await P.q(P.from('parishioners').update(row).eq('id', p.id));
-        else await P.q(P.from('parishioners').insert({ ...row, parish_id: P.ref.parish.id, registered_on: P.today() }));
-        Toast.success('Muumini amehifadhiwa.'); P.reload();
-      };
+      const famForm = f => P.famForm(f, { jumuiya: jum });
+      const personForm = (fam, p) => P.personForm(fam, p, { families: fams });
       const nf = el.querySelector('[data-newfam]'); nf && nf.addEventListener('click', () => famForm(null));
       out.querySelectorAll('[data-editf]').forEach(b => b.addEventListener('click', () => famForm(famById[b.dataset.editf])));
       out.querySelectorAll('[data-addp]').forEach(b => b.addEventListener('click', () => personForm(famById[b.dataset.addp], null)));

@@ -54,7 +54,8 @@ select pl.id as pledge_id, pl.parish_id, pl.campaign_id, cp.name as campaign_nam
        round(least(coalesce(x.received, 0) / pl.amount, 1) * 100, 2) as completion_pct,
        x.payment_count, x.last_payment_on,
        (pl.status = 'active' and pl.due_on is not null and pl.due_on < current_date
-        and coalesce(x.received, 0) < pl.amount) as is_overdue
+        and coalesce(x.received, 0) < pl.amount) as is_overdue,
+       pl.source, cp.giver_level, cp.amount_mode, cp.frequency
 from public.pledges pl
 join public.campaigns cp on cp.id = pl.campaign_id
 join public.contribution_categories c on c.id = cp.category_id
