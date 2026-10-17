@@ -39,7 +39,9 @@
     const token = ++routeSeq;
     const box = document.createElement('div');
     box.innerHTML = P.loading();
-    main.replaceChildren(box);
+    // a refresh after saving keeps the old page on screen until the new one is ready
+    const quiet = keep !== null;
+    if (!quiet) main.replaceChildren(box);
     try {
       await view.render(box, params);
     } catch (e) {
@@ -47,10 +49,14 @@
       if (token === routeSeq) box.innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
     }
     if (token !== routeSeq) return;
-    window.scrollTo(0, 0);
+    if (quiet) main.replaceChildren(box);
+    window.scrollTo(0, keep ?? 0);
   }
+  let keep = null;
   P.go = (hash) => { if (location.hash === hash) route(); else location.hash = hash; };
   P.reload = route;
+  // refresh the page after saving without jumping back to the top
+  P.refresh = () => { keep = window.scrollY; return route().finally(() => { keep = null; }); };
 
   P.start = async function () {
     const profile = await PM.guard();

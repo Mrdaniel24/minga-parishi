@@ -242,3 +242,21 @@ button.kh-topbar__btn { border: 0; cursor: pointer; }
 .pm-yearpick select { border: 0; background: transparent; font: inherit; font-weight: 900; color: inherit; cursor: pointer; padding-right: .2rem; }
 .pm-yearpick .material-symbols-outlined { font-size: 1.05rem; }
 @media (max-width: 767px) { .pm-yearpick--mobile { display: inline-flex; } }
+
+/* zaka month boxes: click to fill in */
+.pm-table td.pm-cellcol { padding: .25rem .2rem; }
+.pm-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 3.4rem; height: 2rem; padding: 0 .35rem;
+  border-radius: .5rem; border: 1px dashed var(--pm-line); background: transparent; font: inherit; font-size: .78rem; font-weight: 700; color: var(--pm-ink, #1f2d2a); }
+button.pm-cell { cursor: pointer; }
+button.pm-cell:hover, button.pm-cell:focus-visible { border-style: solid; border-color: var(--pm-gold); background: #fff8e6; outline: none; }
+.pm-cell span { color: var(--pm-muted); opacity: .45; font-weight: 800; }
+.pm-cell.is-paid { border: 1px solid transparent; background: rgba(23, 128, 112, .1); color: var(--pm-primary); }
+.pm-cell.is-due { border-color: rgba(190, 70, 90, .35); color: #b8455a; }
+@media (max-width: 760px) { .pm-cell { min-width: 2.6rem; height: 1.8rem; font-size: .72rem; } }
+/* month grids keep their columns on phones and scroll sideways; the name stays in view */
+.pm-keep-table th:first-child, .pm-keep-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--pm-card, #fff); }
+.pm-keep-table tr.pm-group-row td:first-child { background: #eef3f1; }
+@media (max-width: 760px) {
+  .pm-keep-table { min-width: 56rem; }
+  .pm-keep-table th:first-child, .pm-keep-table td:first-child { max-width: 9rem; white-space: normal; box-shadow: 4px 0 6px -4px rgba(0,0,0,.15); }
+}

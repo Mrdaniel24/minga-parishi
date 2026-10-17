@@ -112,19 +112,18 @@
     h('Yangu');
     a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
-    a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
+    a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
-    h('Fedha · Parokia nzima');
-    a('Miamala', 'point_of_sale', 'payments', 'finance.read');
-    a('Zaka', 'calendar_month', 'zaka', 'finance.read');
-    a('Michango na Kampeni', 'volunteer_activism', 'campaigns', 'finance.read');
-    a('Ahadi na Madeni', 'handshake', 'pledges', 'finance.read');
-    a('Bahasha', 'mail', 'envelopes', 'finance.read');
+    h('Muhtasari wa parokia nzima');
+    a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
+    a('Zaka (vigango vyote)', 'calendar_month', 'zaka', 'finance.read');
+    a('Michango (vigango vyote)', 'volunteer_activism', 'campaigns', 'finance.read');
+    a('Ripoti', 'bar_chart', 'reports', 'finance.read');
+    h('Ofisi ya Fedha');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
     a('Uhasibu', 'account_balance', 'accounting', 'finance.read');
     a('Risiti', 'receipt_long', 'receipts', 'finance.read');
-    a('Ripoti', 'bar_chart', 'reports', 'finance.read');
     a('Uhakiki wa Fedha', 'fact_check', 'reconciliation', 'finance.read');
     h('Mfumo');
     a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
@@ -135,6 +134,8 @@
 
     const isActive = href => {
       const route = location.hash || '#/dashboard';
+      // the pages inside a kigango / jumuiya / familia belong to "Vigango na Jumuiya"
+      if (href === '#/units' && /^#\/(kigango|jumuiya|family)\b/.test(route)) return true;
       return route === href || (!href.includes('?') && route.split('?')[0] === href);
     };
     const nav = sidebar.querySelector('#pm-nav');
@@ -227,6 +228,7 @@
     main.querySelectorAll('table').forEach(table => {
       const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
       if (!heads.length) return;
+      if (table.classList.contains('pm-keep-table')) return;    // month grids stay a table and scroll sideways
       addClass(table, 'kh-cards');
       addClass(table.parentElement, 'kh-table-wrap');
       table.querySelectorAll('tbody tr').forEach(tr => {

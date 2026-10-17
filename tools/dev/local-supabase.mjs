@@ -96,6 +96,8 @@ async function selectList(table, alias, select) {
     let many = all.filter(f => f.tbl === target && f.ref === table && (!hint || f.conname === hint || f.col === hint));
     const a2 = `${alias}_${target}`;
     const innerCols = await selectList(target, a2, inner);
+    // like PostgREST: without a hint, two possible relationships is an error (PGRST201)
+    if (one.length + many.length > 1) throw httpErr(300, `Could not embed because more than one relationship was found for '${table}' and '${target}'`, 'PGRST201');
     if (one.length) {
       const f = one[0];
       cols.push(`(select to_jsonb(x) from (select ${innerCols} from public.${ident(target)} ${a2} where ${a2}.${ident(f.refcol)} = ${alias}.${ident(f.col)}) x) as ${ident(target)}`);

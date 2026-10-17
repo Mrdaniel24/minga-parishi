@@ -224,7 +224,7 @@
       const LV = [['jumuiya', 'Jumuiya'], ['family', 'Familia'], ['parishioner', 'Muumini'], ['kigango', 'Kigango']];
       el.innerHTML = `
         <div class="pm-head"><div><h1 class="pm-h1">Zaka ${year}</h1><p class="pm-muted">Imepangwa Kigango → Jumuiya${level === 'parishioner' ? ' → Familia' : ''}. Bonyeza jumuiya kuona zaka ya kila muumini wake. Mwaka unabadilishwa juu kabisa.</p></div>
-          <div class="pm-actions">${P.can('finance.record') ? `<button class="pm-btn pm-btn--primary" data-new><span class="material-symbols-outlined">add</span>Rekodi Zaka</button>` : ''}
+          <div class="pm-actions"><a class="pm-btn pm-btn--primary" href="#/units"><span class="material-symbols-outlined">account_tree</span>Jaza zaka: Vigango → Jumuiya → Familia</a>
           <button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button><button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
         <form class="pm-filters">
           <label>Onyesha kwa<select name="level">${LV.map(([k, v]) => `<option value="${k}" ${k === level ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -233,8 +233,6 @@
         <div data-out>${P.loading()}</div>`;
       P.wireCascade(el);
       el.querySelector('.pm-filters').addEventListener('submit', e => { e.preventDefault(); P.go('#/zaka?' + new URLSearchParams(Object.fromEntries(new FormData(e.target)))); });
-      const nb = el.querySelector('[data-new]');
-      nb && nb.addEventListener('click', () => P.recordPayment({ category_id: P.ref.cats.find(c => c.code === 'ZAKA')?.id, ...(f.jumuiya ? { jumuiya: f.jumuiya } : {}) }));
       const rows = await P.rpc('zaka_grid_tree', { p_year: year, p_level: level, p_scope: scope || null });
       const mk = i => `m${String(i + 1).padStart(2, '0')}`;
       const mcols = P.MONTHS.map((m, i) => ({ key: mk(i), label: m, fmt: v => Number(v) ? P.num(v) : '', cls: 'pm-num' }));
@@ -290,7 +288,9 @@
       const rules = Object.fromEntries(P.ref.camps.map(c => [c.id, c]));
       const all = prog.map(r => ({ ...r, ...(rules[r.campaign_id] ? { giver_level: rules[r.campaign_id].giver_level, amount_mode: rules[r.campaign_id].amount_mode,
         frequency: rules[r.campaign_id].frequency, default_amount: rules[r.campaign_id].default_amount, relation_rates: rules[r.campaign_id].relation_rates } : {}) }));
-      const list = all.filter(r => !kind || kindOf(r.category_kind) === kind);
+      const active = r => Number(r.target) > 0 || Number(r.pledged) > 0 || Number(r.collected) > 0;
+      const list = all.filter(r => (!kind || kindOf(r.category_kind) === kind) && (params.all || active(r)));
+      const hidden = all.filter(r => (!kind || kindOf(r.category_kind) === kind) && !active(r)).length;
       const sel = params.id ? all.find(c => c.campaign_id === params.id) : null;
       const prevYear = P.ref.camps.filter(c => c.campaign_year === year - 1 && c.recurs_annually);
       const missing = prevYear.filter(c => !P.ref.camps.some(x => x.campaign_year === year && x.category_id === c.category_id));
@@ -299,7 +299,7 @@
           <p class="pm-muted">Kila mchango una kanuni zake za mwaka huu: nani anatoa (kila muumini / familia / jumuiya / kigango), kiasi (kupangiwa / ahadi / hiari) na mara ngapi (kwa mwaka / kwa mwezi). Badilisha mwaka juu kuona au kupanga mwaka mwingine.</p></div>
           <div class="pm-actions">${cfg && missing.length ? `<button class="pm-btn" data-copy><span class="material-symbols-outlined">content_copy</span>Anzisha ${missing.length} ya ${year} kutoka ${year - 1}</button>` : ''}
             ${cfg ? '<button class="pm-btn pm-btn--primary" data-newcamp><span class="material-symbols-outlined">add</span>Mchango mpya</button>' : ''}</div></div>
-        <div class="pm-chips">${KTABS.map(([k, l]) => `<a class="pm-chip ${k === kind ? 'is-active' : ''}" href="#/campaigns?kind=${k}">${l} <small>${all.filter(r => !k || kindOf(r.category_kind) === k).length}</small></a>`).join('')}</div>
+        <div class="pm-chips">${KTABS.map(([k, l]) => `<a class="pm-chip ${k === kind ? 'is-active' : ''}" href="#/campaigns?kind=${k}">${l} <small>${all.filter(r => (!k || kindOf(r.category_kind) === k) && active(r)).length}</small></a>`).join('')}</div>
         <section class="pm-card">${P.table(list, [
           { key: 'name', label: 'Mchango', html: r => `<a class="pm-link" href="#/campaigns?kind=${kind}&id=${r.campaign_id}">${P.esc(r.name)}</a><br><small class="pm-muted">${P.esc(r.category_name)}</small>` },
           { key: 'rules', label: 'Kanuni', html: r => P.rulesBadges(r) },
@@ -308,7 +308,8 @@
           { key: 'outstanding_pledges', label: 'Bado', fmt: v => Number(v) ? `<span class="pm-due">${P.tzs(v)}</span>` : '—', cls: 'pm-num' },
           { key: 'payers', label: 'Walipaji', cls: 'pm-num' },
           { key: 'campaign_id', label: '', html: r => cfg ? `<button class="pm-btn pm-btn--sm" data-rules="${r.campaign_id}">Kanuni</button>` : '' }],
-          { empty: `Hakuna michango ya mwaka ${year}${missing.length ? ' — bonyeza "Anzisha" kunakili ya mwaka uliopita.' : '.'}` })}</section>
+          { empty: `Hakuna michango ya mwaka ${year}${missing.length ? ' — bonyeza "Anzisha" kunakili ya mwaka uliopita.' : '.'}` })}
+          ${hidden && !params.all ? `<p class="pm-small pm-muted">${hidden} michango haijapangiwa wala kulipwa mwaka huu — <a class="pm-link" href="#/campaigns?kind=${kind}&all=1">ionyeshe</a>.</p>` : ''}</section>
         ${sel ? `<section class="pm-card"><div class="pm-row"><div><h3 class="pm-h3">${P.esc(sel.name)} — kwa Kigango → Jumuiya</h3>${P.rulesBadges(sel)}</div>
           <div class="pm-actions">${P.can('finance.pledge') && sel.giver_level && sel.amount_mode === 'assigned' ? '<button class="pm-btn pm-btn--sm" data-assign>Pangia wote (parokia nzima)</button>' : ''}
           ${cfg ? `<button class="pm-btn pm-btn--sm" data-target="${sel.campaign_id}">Weka lengo</button>` : ''}

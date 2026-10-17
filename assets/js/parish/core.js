@@ -110,7 +110,7 @@
       <p>${P.esc(label)}</p><h3>${value}</h3></div>`;
 
   /* table: columns = [{ key, label, fmt?, cls?, html? }] */
-  P.table = (rows, cols, { empty, foot, rowAttr } = {}) => {
+  P.table = (rows, cols, { empty, foot, rowAttr, cls = '' } = {}) => {
     if (!rows || !rows.length) return P.empty(empty);
     const th = cols.map(c => `<th class="${c.cls || ''}">${P.esc(c.label)}</th>`).join('');
     const tr = rows.map(r => `<tr ${rowAttr ? rowAttr(r) : ''}>${cols.map(c => {
@@ -118,7 +118,7 @@
       return `<td class="${c.cls || ''}">${v}</td>`;
     }).join('')}</tr>`).join('');
     const tf = foot ? `<tfoot><tr>${cols.map(c => `<td class="${c.cls || ''}">${foot[c.key] ?? ''}</td>`).join('')}</tr></tfoot>` : '';
-    return `<div class="pm-table-wrap"><table class="pm-table"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody>${tf}</table></div>`;
+    return `<div class="pm-table-wrap"><table class="pm-table ${cls}"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody>${tf}</table></div>`;
   };
   P.sum = (rows, key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
 
@@ -152,7 +152,7 @@
   P.cascadeUnit = f => f.jumuiya || f.kigango || '';
 
   /* table grouped by levels (e.g. kigango → jumuiya) with a subtotal on every group row */
-  P.groupedTable = (rows, cols, { levels = [], sums = [], empty, fmt = P.tzs, foot } = {}) => {
+  P.groupedTable = (rows, cols, { levels = [], sums = [], empty, fmt = P.tzs, foot, cls = '' } = {}) => {
     if (!rows || !rows.length) return P.empty(empty);
     const th = cols.map(c => `<th class="${c.cls || ''}">${P.esc(c.label)}</th>`).join('');
     const idx = cols.map(c => c.key);
@@ -175,7 +175,7 @@
     };
     walk(rows, 0);
     const tf = foot ? `<tfoot><tr>${cols.map(c => `<td class="${c.cls || ''}">${foot[c.key] ?? ''}</td>`).join('')}</tr></tfoot>` : '';
-    return `<div class="pm-table-wrap"><table class="pm-table pm-table--grouped"><thead><tr>${th}</tr></thead><tbody>${out.join('')}</tbody>${tf}</table></div>`;
+    return `<div class="pm-table-wrap"><table class="pm-table pm-table--grouped ${cls}"><thead><tr>${th}</tr></thead><tbody>${out.join('')}</tbody>${tf}</table></div>`;
   };
 
   /* page path: Parokia › Kigango › Jumuiya › … */
@@ -254,8 +254,8 @@
       t = setTimeout(async () => {
         const like = `%${v}%`;
         const [people, fams] = await Promise.all([
-          (jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families(family_name)').eq('jumuiya_id', jumuiya)
-                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families(family_name)')).ilike('full_name', like).limit(jumuiya ? 15 : 8),
+          (jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)').eq('jumuiya_id', jumuiya)
+                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).ilike('full_name', like).limit(jumuiya ? 15 : 8),
           (jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
                    : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5),
         ].map(P.q)).catch(() => [[], []]);
