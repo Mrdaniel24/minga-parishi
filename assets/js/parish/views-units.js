@@ -643,7 +643,7 @@
         const all = T('gave');
         body.insertAdjacentHTML('beforebegin', `<section class="pm-card pm-unitduty"><div class="pm-row"><div>
             <h3 class="pm-h3">Jumuiya ya ${P.esc(jumuiya?.name || '')} imepangiwa ${jt.target ? P.tzs(jt.target) : '— (bado haijapangiwa)'}</h3>
-            <p class="pm-muted pm-small">${jt.target ? `Imetoa ${P.tzs(all)} · bado ${P.tzs(Math.max(jt.target - all, 0)} · ${P.pct(Math.min(all / jt.target, 9.99) * 100)}` : 'Weka kiasi ambacho jumuiya hii inatakiwa kutoa.'}
+            <p class="pm-muted pm-small">${jt.target ? `Imetoa ${P.tzs(all)} · bado ${P.tzs(Math.max(jt.target - all, 0))} · ${P.pct(Math.min(all / jt.target, 9.99) * 100)}` : 'Weka kiasi ambacho jumuiya hii inatakiwa kutoa.'}
             ${jt.due_on ? ` · mwisho wa kulipa ${P.date(jt.due_on)}` : ''}</p>${jt.target ? P.progress(all / jt.target * 100) : ''}</div>
           <div class="pm-actions">${P.can('finance.pledge') ? btn('data-jt', jt.target ? 'Badilisha mpango' : 'Pangia jumuiya', 'assignment_add') : ''}
             ${P.can('finance.record') ? btn('data-jpay', 'Lipa (jumuiya)', 'payments', true) : ''}</div></div></section>`);
