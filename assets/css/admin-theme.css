@@ -7,7 +7,7 @@
    Pairs with assets/js/admin-tw-config.js and
    assets/js/admin-layout.js.
    ============================================ */
-/* Nunito Sans is linked in each page's <head> (an @import here would be a
+/* Montserrat is linked in each page's <head> (an @import here would be a
    second, chained render-blocking request). */
 
 /* Pages start hidden until the auth guard runs; when the tab already has the
@@ -43,12 +43,12 @@ html {
 }
 /* transparent so the decorative circles below paint behind the content */
 body {
-  font-family: 'Nunito Sans', sans-serif !important;
+  font-family: 'Montserrat', sans-serif !important;
   background: transparent !important;
   color: var(--kh-ink);
 }
 h1, h2, h3, h4, h5, h6, .font-headline, .font-body, .font-label {
-  font-family: 'Nunito Sans', sans-serif !important;
+  font-family: 'Montserrat', sans-serif !important;
 }
 body::before {
   content: '';
