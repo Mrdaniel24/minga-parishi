@@ -124,7 +124,6 @@
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
 
     a('Risiti', 'receipt_long', 'receipts', 'finance.read');
-    a('Uhakiki wa Fedha', 'fact_check', 'reconciliation', 'finance.read');
     h('Mfumo');
     a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
     a('Viongozi', 'badge', 'leaders', 'registry.read');
