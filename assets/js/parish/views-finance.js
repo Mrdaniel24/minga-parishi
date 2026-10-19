@@ -215,7 +215,9 @@
       });
       const newBtn = el.querySelector('[data-new]');
       const openNew = async () => {
-        const pre = at.j && at.j !== 'none' ? { jumuiya: at.j } : at.k && at.k !== 'none' ? { org_unit_id: at.k } : {};
+        const pre = at.j && at.j !== 'none' ? { jumuiya: at.j } : at.k && at.k !== 'none'
+          ? { kigango_id: at.k, org_unit_id: at.k, kigango_contributions: await P.rpc('unit_contributions', { p_year: P.year(), p_unit: at.k }) }
+          : {};
         if (fam) Object.assign(pre, { payer: { kind: 'family', id: fam.id }, payerName: fam.family_name });
         if (per) Object.assign(pre, { payer: { kind: 'parishioner', id: per.id }, payerName: per.full_name });
         const r = await paymentForm(pre).catch(e => { Toast.error(P.friendlyError(e)); return null; });
