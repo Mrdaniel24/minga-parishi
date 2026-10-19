@@ -23,7 +23,8 @@
     if (P.selfOnly()) raw = `statement?parishioner=${P.access.parishioner_id}`;
     const [name, qs] = raw.split('?');
     const params = Object.fromEntries(new URLSearchParams(qs || ''));
-    const view = P.views[name] || P.views.dashboard;
+    if (name === 'accounting') history.replaceState(null, '', '#/dashboard');
+    const view = name === 'accounting' ? P.views.dashboard : (P.views[name] || P.views.dashboard);
     const main = document.getElementById('pm-view');
     if (view.perm && !P.can(view.perm)) {
       routeSeq++;
