@@ -155,7 +155,7 @@
 .pm-family .pm-table { font-size: .82rem; }
 
 /* ---------- receipt page ---------- */
-.pm-receipt-page { background: #e6eeeb; font-family: 'Nunito Sans', sans-serif; color: #26332f; margin: 0; padding: 1.5rem 1rem; }
+.pm-receipt-page { background: #e6eeeb; font-family: 'Montserrat', sans-serif; color: #26332f; margin: 0; padding: 1.5rem 1rem; }
 .pm-receipt-tools { display: flex; gap: .5rem; justify-content: center; margin-bottom: 1rem; }
 .pm-receipt { position: relative; background: #fff; max-width: 720px; margin: 0 auto; border-radius: 18px; padding: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,.08); overflow: hidden; }
 .pm-receipt header { display: flex; gap: 1rem; align-items: center; border-bottom: 3px double #3d5650; padding-bottom: 1rem; }
@@ -278,9 +278,9 @@ button.pm-cell:hover, button.pm-cell:focus-visible { border-style: solid; border
 
  
 /* Clear, familiar typography across the parish dashboard and unit pages */
-body:not(.pm-receipt-page) { font-family: Arial, Helvetica, sans-serif !important; line-height: 1.5; }
+body { font-family: 'Montserrat', sans-serif !important; line-height: 1.5; }
 .pm-h1, .pm-h2, .pm-h3, .pm-kpi h3, .pm-unit h3, .pm-modal__box header h3 {
-  font-family: Arial, Helvetica, sans-serif !important;
+  font-family: 'Montserrat', sans-serif !important;
   letter-spacing: normal;
 }
 .pm-h1 { font-size: clamp(1.65rem, 2.6vw, 2.15rem); font-weight: 700; line-height: 1.25; }
