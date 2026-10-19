@@ -580,16 +580,22 @@
       const nc = el.querySelector('[data-newcamp]');
       nc && nc.addEventListener('click', async () => {
         const v = await rulesModal({ title: `Mchango mpya — ${year}`, wide: true, body: `<div class="pm-form">
-          <label>Aina ya mchango<select name="category_id" required>${P.typeOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'], { blank: 'Chagua…' })}</select></label>
+          <label>Aina ya mchango<input name="category_name" list="campaign-category-options" required placeholder="Andika au chagua aina…"><datalist id="campaign-category-options">${P.ref.cats.filter(c => c.is_active && c.code !== 'TRANSFER').map(c => `<option value="${P.esc(c.name_sw)}"></option>`).join('')}</datalist>
+            <small class="pm-muted">Aina mpya itahifadhiwa kwa matumizi yajayo; itawekwa kundi la michango maalumu.</small></label>
           <label>Jina<input name="name" required placeholder="mf. Mavuno ${year}"></label>
-          ${P.newTypeHtml()}
           ${rulesForm({}, `<label>Mwaka<input name="year" type="number" value="${year}" required></label>
             <label>Lengo la jumla la parokia (hiari)<input name="target" type="number" min="0"></label>
             <label>Unarudiwa kila mwaka?<select name="recurs"><option value="1">Ndiyo</option><option value="">Hapana, mara moja tu</option></select></label>
             <label class="pm-span2">Maelezo<input name="description"></label>`)}</div>`,
-          onOpen: m => P.wireNewType(m, m.querySelector('[name=category_id]')) });
+        });
         if (!v) return;
-        v.category_id = await P.resolveType(v);
+        const typedCategory = P.ref.cats.find(c => c.is_active && c.name_sw.trim().toLocaleLowerCase() === v.category_name.trim().toLocaleLowerCase());
+        if (typedCategory) v.category_id = typedCategory.id;
+        else {
+          const createdCategory = await P.rpc('create_contribution_type', { p: { name: v.category_name, kind: 'special' } });
+          v.category_id = createdCategory.id;
+          await P.loadRef(true);
+        }
         await P.q(P.from('campaigns').insert({ parish_id: P.ref.parish.id, category_id: v.category_id, campaign_year: Number(v.year), name: v.name,
           financial_year_id: fyId(v.year), target_amount: v.target ? Number(v.target) : null, starts_on: `${v.year}-01-01`, ends_on: `${v.year}-12-31`,
           description: v.description || null, recurs_annually: !!v.recurs, ...rulesRow(v) }));
