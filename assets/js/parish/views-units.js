@@ -93,6 +93,9 @@
   // assign a contribution to a jumuiya / kigango: what money, how much, from when, by when
   const targetForm = async (unit, year, row = null) => {
     const camps = P.ref.camps.filter(c => c.campaign_year === year && c.status !== 'closed' && P.ref.catsById[c.category_id]?.kind !== 'zaka');
+    const children = unit.unit_type === 'kigango'
+      ? P.ref.units.filter(u => u.is_active && u.parent_id === unit.id && ['jumuiya', 'group'].includes(u.unit_type)).sort((a, b) => P.unitOrder(a.id) - P.unitOrder(b.id) || a.name.localeCompare(b.name))
+      : [];
     const v = await P.modal({ title: row ? `${row.campaign_name} — ${unit.name}` : `Pangia ${unit.unit_type === 'kigango' ? 'kigango cha' : 'jumuiya ya'} ${unit.name}`, wide: true, body: `
       <p class="pm-muted pm-small">Andika ni pesa ya nini, kiasi, na muda wa kulipa. Mfumo utahesabu kilicholipwa na asilimia kiotomatiki.</p>
       <div class="pm-form">
@@ -104,10 +107,62 @@
         <label>Kuanzia<input name="starts_on" type="date" value="${row?.starts_on ? String(row.starts_on).slice(0, 10) : `${year}-01-01`}"></label>
         <label>Mwisho wa kulipa<input name="due_on" type="date" value="${row?.due_on ? String(row.due_on).slice(0, 10) : `${year}-12-31`}"></label>
         <label class="pm-span2">Maelezo (hiari)<input name="notes" value="${P.esc(note(row?.notes))}"></label>
+        ${children.length ? `<label class="pm-span2 pm-relall"><input type="checkbox" name="distribute_to_jumuiya" value="true" data-distribute> Gawa kwa jumuiya zake</label>
+        <div class="pm-span2" data-allocations hidden>
+          <p class="pm-muted pm-small">Weka sehemu ya jumla kwa kila jumuiya. Jumla ya mgao isizidi kiasi cha kigango. Kiasi kilichobaki kitabaki kwa kigango chenyewe.</p>
+          <div class="pm-form" data-allocation-list>${children.map(u => `<label>${P.esc(u.name)} (TZS)<input name="allocation_${u.id}" type="number" min="0" step="1" inputmode="numeric" data-allocation="${u.id}" value=""></label>`).join('')}</div>
+          <small class="pm-muted" data-allocation-total></small>
+        </div>` : ''}
       </div>${row ? '<p class="pm-small pm-muted">Weka kiasi 0 kuondoa mgao huu.</p>' : ''}`,
-      onOpen: m => { const s = m.querySelector('[data-camp]'); if (!s) return;
+      onOpen: m => {
+        const s = m.querySelector('[data-camp]');
+        if (s) {
         const sync = () => m.querySelectorAll('[data-new]').forEach(x => { x.hidden = !!s.value; x.querySelectorAll('input').forEach(i => { i.required = !s.value; }); });
-        s.addEventListener('change', sync); sync(); } });
+          s.addEventListener('change', sync); sync();
+        }
+        const toggle = m.querySelector('[data-distribute]');
+        if (!toggle) return;
+        const list = m.querySelector('[data-allocations]'), total = m.querySelector('[name=amount]'), summary = m.querySelector('[data-allocation-total]');
+        const updateTotal = () => {
+          const allocated = [...m.querySelectorAll('[data-allocation]')].reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+          const limit = Number(total.value) || 0;
+          summary.textContent = `Jumla ya jumuiya: ${P.tzs(allocated)} kati ya ${P.tzs(limit)}${allocated > limit ? ' — imezidi kiasi cha kigango.' : ''}`;
+          summary.classList.toggle('pm-due', allocated > limit);
+        };
+        const loadExisting = async campaignId => {
+          if (!campaignId) {
+            toggle.checked = false;
+            m.querySelectorAll('[data-allocation]').forEach(input => { input.value = ''; });
+            list.hidden = true;
+            updateTotal();
+            return;
+          }
+          const ids = children.map(u => u.id);
+          if (!ids.length) return;
+          const rows = await P.q(P.from('kigango_target_allocations').select('jumuiya_id,amount').eq('campaign_id', campaignId).eq('kigango_id', unit.id));
+          const byUnit = new Map(rows.map(x => [x.jumuiya_id, x]));
+          m.querySelectorAll('[data-allocation]').forEach(input => {
+            const child = byUnit.get(input.dataset.allocation);
+            input.value = child ? Number(child.amount) : '';
+          });
+          toggle.checked = rows.length > 0;
+          list.hidden = !toggle.checked;
+          updateTotal();
+        };
+        toggle.addEventListener('change', () => { list.hidden = !toggle.checked; updateTotal(); });
+        m.querySelectorAll('[data-allocation], [name=amount]').forEach(input => input.addEventListener('input', updateTotal));
+        m.querySelector('form').addEventListener('submit', e => {
+          if (!toggle.checked) return;
+          const allocated = [...m.querySelectorAll('[data-allocation]')].reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+          if (allocated > (Number(total.value) || 0)) {
+            e.preventDefault(); e.stopImmediatePropagation();
+            Toast.error('Jumla ya mgao wa jumuiya haiwezi kuzidi kiasi cha kigango.');
+          }
+        }, true);
+        const campaign = row?.campaign_id || s?.value;
+        if (campaign) loadExisting(campaign).catch(e => Toast.error(P.friendlyError(e)));
+        s && s.addEventListener('change', () => loadExisting(s.value).catch(e => Toast.error(P.friendlyError(e))));
+      } });
     if (!v) return;
     if (!v.campaign_id && v.category_id === '__new') {
       // a brand-new contribution: its type takes the name given (without the year)
@@ -116,8 +171,13 @@
       v.category_id = await P.resolveType(v);
     }
     if (!v.campaign_id && !v.category_id) { Toast.error('Chagua mchango, au andika jina la mchango mpya.'); return; }
-    await P.rpc('set_unit_target', { p: { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: v.category_id || null, name: v.name || null, year,
-      amount: Number(v.amount) || 0, starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null } });
+    const target = { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: v.category_id || null, name: v.name || null, year,
+      amount: Number(v.amount) || 0, starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null };
+    if (children.length) {
+      target.distribute_to_jumuiya = v.distribute_to_jumuiya === 'true';
+      target.allocations = children.map(u => ({ org_unit_id: u.id, amount: Number(v[`allocation_${u.id}`]) || 0 }));
+      await P.rpc('set_kigango_targets', { p: target });
+    } else await P.rpc('set_unit_target', { p: target });
     if (!v.campaign_id) await P.loadRef(true);
     Toast.success('Imehifadhiwa.'); P.refresh();
   };
@@ -737,3 +797,4 @@
     },
   };
 })();
+
