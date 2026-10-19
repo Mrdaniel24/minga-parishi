@@ -104,18 +104,41 @@
     title: 'Risiti', perm: 'finance.read',
     async render(el, params) {
       const q = params.q || '';
+      const f = { kigango: params.kigango || '', jumuiya: params.jumuiya || '', family: params.family || '', person: params.person || '' };
+      const families = f.jumuiya
+        ? await P.q(P.from('families').select('id,family_name,family_code').eq('jumuiya_id', f.jumuiya).eq('status', 'active').order('family_code').limit(2000))
+        : [];
+      const people = f.family
+        ? await P.q(P.from('parishioners').select('id,full_name').eq('family_id', f.family).eq('membership_status', 'active').order('full_name').limit(2000))
+        : [];
       let qb = P.from('v_receipt_register').select('*').order('issued_at', { ascending: false }).limit(300);
       if (q) qb = qb.or(`receipt_no.ilike.%${q}%,payer_name.ilike.%${q}%`);
+      if (f.kigango) qb = qb.eq('kigango_id', f.kigango);
+      if (f.jumuiya) qb = qb.eq('jumuiya_id', f.jumuiya);
+      if (f.family) qb = qb.eq('family_id', f.family);
+      if (f.person) qb = qb.eq('parishioner_id', f.person);
       const rows = await P.q(qb);
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Rejista ya Risiti</h1><p class="pm-muted">Risiti hutolewa kiotomatiki kwa kila malipo yaliyothibitishwa. Namba hazijirudii; risiti ya muamala uliorudishwa hubatilishwa.</p></div>
         <div class="pm-actions"><button class="pm-btn" data-xls>Excel</button></div></div>
-        <form class="pm-filters"><label>Tafuta (namba au mlipaji)<input name="q" value="${P.esc(q)}"></label><button class="pm-btn">Tafuta</button></form>
+        <form class="pm-filters">
+          ${P.cascadeHtml({ kigango: f.kigango, jumuiya: f.jumuiya })}
+          <label>Familia<select name="family" ${f.jumuiya ? '' : 'disabled'}><option value="">${f.jumuiya ? 'Familia zote' : 'Chagua jumuiya kwanza'}</option>${P.options(families, { label: x => `${x.family_code ? `${x.family_code} · ` : ''}${x.family_name}`, selected: f.family })}</select></label>
+          <label>Muumini<select name="person" ${f.family ? '' : 'disabled'}><option value="">${f.family ? 'Waumini wote' : 'Chagua familia kwanza'}</option>${P.options(people, { label: 'full_name', selected: f.person })}</select></label>
+          <label>Tafuta (namba au mlipaji)<input name="q" value="${P.esc(q)}"></label><button class="pm-btn">Tafuta</button>
+        </form>
         <section class="pm-card">${P.table(rows, [{ key: 'receipt_no', label: 'Risiti', html: r => `<a class="pm-link" target="_blank" href="receipt.html?id=${r.id}">${P.esc(r.receipt_no)}</a>` },
           { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' },
-          { key: 'jumuiya_name', label: 'Jumuiya' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'payment_method', label: 'Njia', fmt: v => P.METHODS[v] || v },
+          { key: 'kigango_name', label: 'Kigango' }, { key: 'jumuiya_name', label: 'Jumuiya' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'payment_method', label: 'Njia', fmt: v => P.METHODS[v] || v },
           { key: 'status', label: 'Hali', html: r => r.status === 'valid' ? P.badge('Halali', 'teal') : P.badge('Imebatilishwa', 'rose') }, { key: 'print_count', label: 'Imechapwa', cls: 'pm-num' }])}</section>`;
-      el.querySelector('.pm-filters').addEventListener('submit', e => { e.preventDefault(); P.go('#/receipts?' + new URLSearchParams(Object.fromEntries(new FormData(e.target)))); });
-      el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel('rejista_ya_risiti', { Risiti: rows.map(r => ({ Risiti: r.receipt_no, Tarehe: r.issued_at, Mlipaji: r.payer_name, Aina: r.category_name, Jumuiya: r.jumuiya_name, Kiasi: Number(r.amount), Hali: r.status })) }));
+      const form = el.querySelector('.pm-filters');
+      P.wireCascade(form);
+      const kigango = form.querySelector('[name="kigango"]'), jumuiya = form.querySelector('[name="jumuiya"]');
+      const family = form.querySelector('[name="family"]'), person = form.querySelector('[name="person"]');
+      kigango.addEventListener('change', () => { family.value = ''; person.value = ''; });
+      jumuiya.addEventListener('change', () => { family.value = ''; person.value = ''; });
+      family.addEventListener('change', () => { person.value = ''; });
+      form.addEventListener('submit', e => { e.preventDefault(); P.go('#/receipts?' + new URLSearchParams(Object.fromEntries(new FormData(form)))); });
+      el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel('rejista_ya_risiti', { Risiti: rows.map(r => ({ Risiti: r.receipt_no, Tarehe: r.issued_at, Mlipaji: r.payer_name, Aina: r.category_name, Kigango: r.kigango_name, Jumuiya: r.jumuiya_name, Kiasi: Number(r.amount), Hali: r.status })) }));
     },
   };
 
@@ -314,3 +337,4 @@
     },
   };
 })();
+
