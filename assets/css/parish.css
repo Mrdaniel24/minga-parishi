@@ -275,3 +275,23 @@ button.pm-cell:hover, button.pm-cell:focus-visible { border-style: solid; border
 .pm-more { border-top: 1px dashed var(--pm-line); padding-top: .5rem; }
 .pm-more summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--pm-muted); }
 .pm-more[open] summary { margin-bottom: .6rem; }
+
+ 
+/* Clear, familiar typography across the parish dashboard and unit pages */
+body:not(.pm-receipt-page) { font-family: Arial, Helvetica, sans-serif !important; line-height: 1.5; }
+.pm-h1, .pm-h2, .pm-h3, .pm-kpi h3, .pm-unit h3, .pm-modal__box header h3 {
+  font-family: Arial, Helvetica, sans-serif !important;
+  letter-spacing: normal;
+}
+.pm-h1 { font-size: clamp(1.65rem, 2.6vw, 2.15rem); font-weight: 700; line-height: 1.25; }
+.pm-h2, .pm-h3 { font-weight: 600; line-height: 1.35; }
+.pm-eyebrow { font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: none; }
+.pm-kpi p { font-size: .82rem; font-weight: 600; letter-spacing: normal; text-transform: none; line-height: 1.4; }
+.pm-kpi h3 { font-size: 1.3rem; font-weight: 700; line-height: 1.3; }
+.pm-table th { font-size: .78rem; font-weight: 600; letter-spacing: normal; text-transform: none; white-space: normal; }
+.pm-btn { font-weight: 600; }
+.pm-filters label, .pm-form label { font-size: .78rem; font-weight: 600; letter-spacing: normal; }
+.pm-unit h3 { font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+.pm-unit small { font-size: .84rem; font-weight: 500; }
+.pm-unit dt { font-weight: 500; }
+.pm-unit dd { font-weight: 600; }
