@@ -104,7 +104,7 @@
     title: 'Risiti', perm: 'finance.read',
     async render(el, params) {
       const q = params.q || '';
-      const f = { kigango: params.kigango || '', jumuiya: params.jumuiya || '', family: params.family || '', person: params.person || '' };
+      const f = { kigango: params.kigango || '', jumuiya: params.jumuiya || '', family: params.family || '', person: params.person || '', category: params.category || '' };
       const families = f.jumuiya
         ? await P.q(P.from('families').select('id,family_name,family_code').eq('jumuiya_id', f.jumuiya).eq('status', 'active').order('family_code').limit(2000))
         : [];
@@ -117,6 +117,8 @@
       if (f.jumuiya) qb = qb.eq('jumuiya_id', f.jumuiya);
       if (f.family) qb = qb.eq('family_id', f.family);
       if (f.person) qb = qb.eq('parishioner_id', f.person);
+      const selectedCategory = P.ref.catsById[f.category];
+      if (selectedCategory) qb = qb.eq('category_name', selectedCategory.name_sw);
       const rows = await P.q(qb);
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Rejista ya Risiti</h1><p class="pm-muted">Risiti hutolewa kiotomatiki kwa kila malipo yaliyothibitishwa. Namba hazijirudii; risiti ya muamala uliorudishwa hubatilishwa.</p></div>
         <div class="pm-actions"><button class="pm-btn" data-xls>Excel</button></div></div>
@@ -124,6 +126,7 @@
           ${P.cascadeHtml({ kigango: f.kigango, jumuiya: f.jumuiya })}
           <label>Familia<select name="family" ${f.jumuiya ? '' : 'disabled'}><option value="">${f.jumuiya ? 'Familia zote' : 'Chagua jumuiya kwanza'}</option>${P.options(families, { label: x => `${x.family_code ? `${x.family_code} · ` : ''}${x.family_name}`, selected: f.family })}</select></label>
           <label>Muumini<select name="person" ${f.family ? '' : 'disabled'}><option value="">${f.family ? 'Waumini wote' : 'Chagua familia kwanza'}</option>${P.options(people, { label: 'full_name', selected: f.person })}</select></label>
+          <label>Aina ya mchango<select name="category">${P.catOptions(null, { blank: 'Aina zote', selected: f.category })}</select></label>
           <label>Tafuta (namba au mlipaji)<input name="q" value="${P.esc(q)}"></label><button class="pm-btn">Tafuta</button>
         </form>
         <section class="pm-card">${P.table(rows, [{ key: 'receipt_no', label: 'Risiti', html: r => `<a class="pm-link" target="_blank" href="receipt.html?id=${r.id}">${P.esc(r.receipt_no)}</a>` },
