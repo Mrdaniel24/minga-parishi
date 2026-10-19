@@ -511,7 +511,7 @@
           { key: 'pledged', label: 'Pangiwa/Ahadi', fmt: P.tzs, cls: 'pm-num' }, { key: 'collected', label: 'Imekusanywa', fmt: P.tzs, cls: 'pm-num pm-strong' },
           { key: 'outstanding_pledges', label: 'Bado', fmt: v => Number(v) ? `<span class="pm-due">${P.tzs(v)}</span>` : '—', cls: 'pm-num' },
           { key: 'payers', label: 'Walipaji', cls: 'pm-num' },
-          { key: 'campaign_id', label: '', html: r => cfg ? `<button class="pm-btn pm-btn--sm" data-rules="${r.campaign_id}">Kanuni</button>` : '' }],
+          { key: 'campaign_id', label: '', html: r => cfg ? `<span class="pm-nowrap"><button class="pm-btn pm-btn--sm" data-rules="${r.campaign_id}">Kanuni</button> <button class="pm-btn pm-btn--sm" data-rename-campaign="${r.campaign_id}">Hariri jina</button> <button class="pm-btn pm-btn--sm pm-btn--danger" data-delete-campaign="${r.campaign_id}">Futa</button></span>` : '' }],
           { empty: `Hakuna michango ya mwaka ${year}${missing.length ? ' — bonyeza "Anzisha" kunakili ya mwaka uliopita.' : '.'}` })}
           ${hidden && !params.all ? `<p class="pm-small pm-muted">${hidden} michango haijapangiwa wala kulipwa mwaka huu — <a class="pm-link" href="#/campaigns?kind=${kind}&all=1">ionyeshe</a>.</p>` : ''}</section>
 `;
@@ -521,6 +521,22 @@
         if (!v) return;
         await P.q(P.from('campaigns').update(rulesRow(v)).eq('id', c.id));
         await P.loadRef(true); Toast.success('Kanuni zimehifadhiwa.'); P.reload();
+      }));
+      el.querySelectorAll('[data-rename-campaign]').forEach(b => b.addEventListener('click', async () => {
+        const c = rules[b.dataset.renameCampaign];
+        const v = await P.modal({ title: 'Hariri jina la mchango', submit: 'Hifadhi', body: `<div class="pm-form">
+          <label class="pm-span2">Jina la mchango<input name="name" required maxlength="160" value="${P.esc(c.name)}"></label>
+          <p class="pm-small pm-muted pm-span2">Kubadilisha jina hakubadili miamala, ahadi au aina ya mchango.</p></div>` });
+        if (!v || v.name.trim() === c.name) return;
+        await P.q(P.from('campaigns').update({ name: v.name.trim() }).eq('id', c.id));
+        await P.loadRef(true); Toast.success('Jina la mchango limesahihishwa.'); P.reload();
+      }));
+      el.querySelectorAll('[data-delete-campaign]').forEach(b => b.addEventListener('click', async () => {
+        const c = rules[b.dataset.deleteCampaign];
+        const ok = await P.confirm('Futa taarifa ya mchango?', `Mchango “${c.name}” utaondolewa ikiwa hauna malipo, ahadi, au bahasha. Malengo ya jumuiya yaliyopangwa yataondolewa pamoja nao.`, 'Futa mchango');
+        if (!ok) return;
+        await P.rpc('delete_campaign', { p_id: c.id });
+        await P.loadRef(true); Toast.success('Mchango umefutwa.'); P.reload();
       }));
       if (sel) {
         // vigango first; a kigango opens its jumuiya; a jumuiya opens its own page (families)
