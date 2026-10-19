@@ -1,5 +1,41 @@
 -- Campaign names can be corrected in the UI. Deletion is allowed only while
 -- the campaign has no financial history or issued envelope batches.
+create or replace function public.rename_campaign(p_id uuid, p_name text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  c public.campaigns;
+  v_name text := trim(coalesce(p_name, ''));
+  v_old_name text;
+begin
+  select * into c from public.campaigns where id = p_id;
+  if c.id is null then
+    raise exception 'Mchango haupo' using errcode = 'P0001';
+  end if;
+  v_old_name := c.name;
+
+  if not public.is_platform_admin() and not exists (
+    select 1
+      from public.parish_user_roles ur
+      join public.role_permissions rp on rp.role_code = ur.role_code
+     where ur.user_id = auth.uid()
+       and ur.parish_id = c.parish_id
+       and ur.org_unit_id is null
+       and rp.permission = 'finance.configure'
+  ) then
+    raise exception 'Huna ruhusa ya kubadilisha mipangilio ya fedha katika parokia hii (permission denied)' using errcode = '42501';
+  end if;
+  if v_name = '' or length(v_name) > 160 then
+    raise exception 'Jina la mchango linahitajika (herufi zisizozidi 160)' using errcode = 'P0001';
+  end if;
+
+  update public.campaigns set name = v_name where id = p_id returning * into c;
+  insert into public.audit_log (actor_id, action, table_name, row_id, old_data, new_data)
+  values (auth.uid(), 'rename_campaign', 'campaigns', p_id::text,
+          jsonb_build_object('name', v_old_name),
+          jsonb_build_object('name', v_name));
+  return jsonb_build_object('status', 'renamed', 'name', v_name);
+end $$;
+
 create or replace function public.delete_campaign(p_id uuid)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -52,6 +88,8 @@ begin
   return jsonb_build_object('status', 'deleted');
 end $$;
 
+revoke execute on function public.rename_campaign(uuid, text) from public, anon;
+grant execute on function public.rename_campaign(uuid, text) to authenticated;
 revoke execute on function public.delete_campaign(uuid) from public, anon;
 grant execute on function public.delete_campaign(uuid) to authenticated;
 notify pgrst, 'reload schema';
