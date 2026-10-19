@@ -122,7 +122,7 @@
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
     h('Ofisi ya Fedha');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
-    a('Uhasibu', 'account_balance', 'accounting', 'finance.read');
+
     a('Risiti', 'receipt_long', 'receipts', 'finance.read');
     a('Uhakiki wa Fedha', 'fact_check', 'reconciliation', 'finance.read');
     h('Mfumo');
