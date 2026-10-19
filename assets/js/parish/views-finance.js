@@ -98,20 +98,25 @@
           <div class="pm-search"><input data-payer-search name="payer_name" autocomplete="off" placeholder="Andika jina…" value="${P.esc(prefill.payerName || '')}" required>
           <div data-payer-results class="pm-search__results"></div></div>
           <small data-payer-kind class="pm-muted">${payer ? 'Amechaguliwa kutoka kwenye rejista' : 'Jina huru (halijaunganishwa na rejista)'}</small></label>
-        <label>${kigango ? 'Jumuiya (kama mlipaji si muumini aliyesajiliwa)' : 'Jumuiya / Kigango (kama mlipaji si muumini aliyesajiliwa)'}<select name="org_unit_id">${kigango
+        <label data-org-field ${payer ? 'hidden' : ''}>${kigango ? 'Jumuiya (kama mlipaji hajaunganishwa na rejista)' : 'Jumuiya / Kigango (kama mlipaji hajaunganishwa na rejista)'}<select name="org_unit_id">${kigango
           ? P.options(kigangoJumuiya, { blank: '— Chagua Jumuiya —', selected: kigangoJumuiya.some(u => u.id === prefill.org_unit_id) ? prefill.org_unit_id : '' })
           : P.unitOptions(['jumuiya', 'kigango', 'group'], { blank: '— Parokia —', selected: prefill.org_unit_id || prefill.jumuiya })}</select></label>
         <label>Aina ya mchango<select name="category_id" required>${kigango
           ? P.options(paymentCategories, { label: 'name_sw', blank: 'Chagua…', selected: prefill.category_id })
           : P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
         ${P.newTypeHtml()}
-        <label>Kampeni / Mwaka<select name="campaign_id"><option value="">—</option></select></label>
-        <label data-period hidden>Malipo ya mwezi<input type="month" name="period_month" value="${prefill.period_month || periodDefault}"></label>
         <label>Kiasi (TZS)<input name="amount" type="number" min="1" step="1" required inputmode="numeric"></label>
         <label>Tarehe<input name="txn_date" type="date" value="${P.today()}" required></label>
         <label>Njia ya malipo<select name="payment_method">${Object.entries(P.METHODS).filter(([k]) => k !== 'envelope').map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
-        <label>Namba ya kumbukumbu (benki/simu/hundi)<input name="reference_no" placeholder="mf. M-Pesa QJ7…"></label>
-        <label class="pm-span2">Maelezo<input name="description" maxlength="300"></label>
+        <details class="pm-span2" data-payment-extra ${prefill.campaign_id || prefill.period_month ? 'open' : ''}>
+          <summary>Maelezo ya ziada — kampeni, kumbukumbu au mwezi</summary>
+          <div class="pm-form mt-3">
+            <label>Kampeni / Mwaka<select name="campaign_id"><option value="">—</option></select></label>
+            <label data-period hidden>Malipo ya mwezi<input type="month" name="period_month" value="${prefill.period_month || periodDefault}"></label>
+            <label>Namba ya kumbukumbu (hiari)<input name="reference_no" placeholder="mf. M-Pesa QJ7…"></label>
+            <label class="pm-span2">Maelezo (hiari)<input name="description" maxlength="300"></label>
+          </div>
+        </details>
       </div>`;
     const result = await P.modal({
       title: jum ? `Rekodi malipo — Jumuiya ya ${jum.name}` : 'Rekodi malipo', submit: 'Thibitisha na Hifadhi', wide: true, body,
@@ -134,8 +139,8 @@
         };
         cat.addEventListener('change', syncCat); camp.addEventListener('change', syncPeriod); syncCat();
         P.wireNewType(m, cat);
-        P.payerPicker(m, { jumuiya: prefill.jumuiya, onPick: p => { payer = p; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
-        m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
+        P.payerPicker(m, { jumuiya: prefill.jumuiya, onPick: p => { payer = p; m.querySelector('[data-org-field]').hidden = true; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
+        m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; m.querySelector('[data-org-field]').hidden = false; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
         if (zakaCat && prefill.category_id === zakaCat.id) syncCat();
       },
     });
