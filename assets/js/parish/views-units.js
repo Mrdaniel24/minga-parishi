@@ -578,8 +578,10 @@
         family: ['Familia', 'Jumuiya yenyewe (jumla ya jumuiya)'], parishioner: ['Muumini', 'Familia nzima'] };
       const giver = camp.giver_level;
       const assigned = camp.amount_mode === 'assigned';
-      // the last level where someone gives: the family for "kila familia", the person for "kila muumini"
-      const lastLevel = giver === 'parishioner' ? 'parishioner' : 'family';
+      // Keep a jumuiya-level contribution at the jumuiya; do not imply each family owes it.
+      const lastLevel = ['kigango', 'jumuiya', 'family', 'parishioner'].includes(giver) ? giver : 'family';
+      const jumuiyaLeaf = giver === 'jumuiya' && level === 'family' && at.j && at.j !== 'none';
+      const kigangoLeaf = giver === 'kigango' && level === 'jumuiya' && at.k && at.k !== 'none';
 
       el.innerHTML = `${P.crumbs(crumbs.map((c, i) => i === crumbs.length - 1 ? { label: c.label } : c))}
         <div class="pm-head"><div><p class="pm-eyebrow">${P.esc(cat.name_sw || 'Mchango')} · Mwaka ${camp.campaign_year}</p>
@@ -604,6 +606,7 @@
           ...tree.filter(r => r.group_id && !known.has(r.group_id))]);
         const self = tree.find(r => !r.group_id);
         if (self) rows.unshift({ ...self, group_name: LBL[level][1], self: true });
+        if (jumuiyaLeaf || kigangoLeaf) rows = rows.filter(r => r.self);
       }
       // totals of what is on screen
       // totals: what is assigned here minus everything given here (also money handed in as a lump)
@@ -615,14 +618,15 @@
         ${P.kpi('Asilimia', T('obligation') ? P.pct(T('gave') / T('obligation') * 100) : '—', 'percent')}` : '';
 
       const key = { kigango: 'k', jumuiya: 'j', family: 'fa' }[level];
-      const opens = r => level !== 'parishioner' && !(level === 'family' && lastLevel === 'family');
+      const opens = r => level !== 'parishioner' && !jumuiyaLeaf && !kigangoLeaf
+        && !(level === 'family' && lastLevel === 'family');
       const name = r => r.self ? `<span class="pm-muted">${P.esc(r.group_name)}</span>`
         : opens(r) ? `<a class="pm-link" href="${link({ [key]: r.group_id })}">${P.esc(r.group_name || '—')}</a>`
         : `<b>${P.esc(r.group_name || '—')}</b>${r.rel ? ` <small class="pm-muted">${P.esc(r.rel)}</small>` : ''}`;
       // who pays on a line: the jumuiya (its own line), a family or a person
       const payerOf = r => level === 'family' ? (r.self ? { kind: 'org_unit', id: at.j, name: `Jumuiya ya ${jumuiya?.name || ''}` } : { kind: 'family', id: r.group_id, name: r.group_name })
         : level === 'parishioner' ? (r.self ? { kind: 'family', id: at.fa, name: fam?.family_name } : { kind: 'parishioner', id: r.group_id, name: r.group_name }) : null;
-      const canPay = r => P.can('finance.record') && !!payerOf(r);
+      const canPay = r => P.can('finance.record') && !!payerOf(r) && !(jumuiyaLeaf && r.self);
       const canAssignLine = r => P.can('finance.pledge') && assigned && !r.self && !Number(r.pledged)
         && ((level === 'family' && giver === 'family') || (level === 'parishioner' && giver === 'parishioner'));
       const actions = r => `<span class="pm-nowrap">${canPay(r) ? `<button class="pm-btn pm-btn--sm pm-btn--primary" data-lipa="${r.group_id || 'self'}">Lipa</button> ` : ''}${
@@ -633,15 +637,15 @@
       // the jumuiya's own amount for this contribution (kupangiwa kwa jumuiya)
       let jt = null;
       if (level === 'family' && (giver === 'jumuiya' || rows.find(r => r.self && Number(r.target)))) {
-        const t = await P.q(P.from('campaign_targets').select('target_amount,starts_on,due_on,notes').eq('campaign_id', camp.id).eq('org_unit_id', at.j).maybeSingle()).catch(() => null);
+        const t = await P.q(P.from('campaign_targets').select('target_amount,starts_on,due_on,notes,self_assessed').eq('campaign_id', camp.id).eq('org_unit_id', at.j).maybeSingle()).catch(() => null);
         const self = rows.find(r => r.self) || {};
-        jt = { campaign_id: camp.id, campaign_name: camp.name, target: t?.target_amount || 0, starts_on: t?.starts_on, due_on: t?.due_on, notes: t?.notes };
+        jt = { campaign_id: camp.id, campaign_name: camp.name, target: t?.target_amount || 0, self_assessed: t?.self_assessed || false, starts_on: t?.starts_on, due_on: t?.due_on, notes: t?.notes };
         const all = T('gave');
         body.insertAdjacentHTML('beforebegin', `<section class="pm-card pm-unitduty"><div class="pm-row"><div>
             <h3 class="pm-h3">Jumuiya ya ${P.esc(jumuiya?.name || '')} imepangiwa ${jt.target ? P.tzs(jt.target) : '— (bado haijapangiwa)'}</h3>
-            <p class="pm-muted pm-small">${jt.target ? `Imetoa ${P.tzs(all)} · bado ${P.tzs(Math.max(jt.target - all, 0))} · ${P.pct(Math.min(all / jt.target, 9.99) * 100)}` : 'Weka kiasi ambacho jumuiya hii inatakiwa kutoa.'}
+            <p class="pm-muted pm-small">${jt.target ? `Imetoa ${P.tzs(all)} · bado ${P.tzs(Math.max(jt.target - all, 0)} · ${P.pct(Math.min(all / jt.target, 9.99) * 100)}` : 'Weka kiasi ambacho jumuiya hii inatakiwa kutoa.'}
             ${jt.due_on ? ` · mwisho wa kulipa ${P.date(jt.due_on)}` : ''}</p>${jt.target ? P.progress(all / jt.target * 100) : ''}</div>
-          <div class="pm-actions">${P.can('finance.pledge') ? btn('data-jt', jt.target ? 'Badilisha kiasi' : 'Pangia jumuiya', 'assignment_add') : ''}
+          <div class="pm-actions">${P.can('finance.pledge') ? btn('data-jt', jt.target ? 'Badilisha mpango' : 'Pangia jumuiya', 'assignment_add') : ''}
             ${P.can('finance.record') ? btn('data-jpay', 'Lipa (jumuiya)', 'payments', true) : ''}</div></div></section>`);
       }
 
@@ -649,7 +653,7 @@
       const tops = [];
       if (level === 'family' && assigned && P.can('finance.pledge') && ['family', 'parishioner'].includes(giver)) tops.push(btn('data-assignall', 'Pangia wote wa jumuiya hii', 'group_add'));
       if (level === 'parishioner' && assigned && P.can('finance.pledge') && giver === 'parishioner') tops.push(btn('data-assignall', 'Pangia wote wa familia hii', 'group_add'));
-      if (P.can('finance.record')) tops.push(btn('data-other', 'Rekodi malipo', 'add', !jt));
+      if (P.can('finance.record') && !jumuiyaLeaf) tops.push(btn('data-other', 'Rekodi malipo', 'add', !jt));
       top.innerHTML = tops.join('');
 
       // the list for this level
