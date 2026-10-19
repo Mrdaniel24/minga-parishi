@@ -92,18 +92,20 @@
 
   // assign a contribution to a jumuiya / kigango: what money, how much, from when, by when
   const targetForm = async (unit, year, row = null) => {
-    const camps = P.ref.camps.filter(c => c.campaign_year === year && c.status !== 'closed' && P.ref.catsById[c.category_id]?.kind !== 'zaka');
     const children = unit.unit_type === 'kigango'
       ? P.ref.units.filter(u => u.is_active && u.parent_id === unit.id && ['jumuiya', 'group'].includes(u.unit_type)).sort((a, b) => P.unitOrder(a.id) - P.unitOrder(b.id) || a.name.localeCompare(b.name))
       : [];
+    const selfAssessed = row && Number(row.target) === 0;
     const v = await P.modal({ title: row ? `${row.campaign_name} — ${unit.name}` : `Pangia ${unit.unit_type === 'kigango' ? 'kigango cha' : 'jumuiya ya'} ${unit.name}`, wide: true, body: `
-      <p class="pm-muted pm-small">Andika ni pesa ya nini, kiasi, na muda wa kulipa. Mfumo utahesabu kilicholipwa na asilimia kiotomatiki.</p>
+      <p class="pm-muted pm-small">Andika aina ya mchango na pesa yake. Ukiweka kiasi, mfumo utaonyesha kilicholipwa na kinachobaki. Unaweza pia kuacha jumuiya zijipangie kiasi.</p>
       <div class="pm-form">
-        ${row ? `<input type="hidden" name="campaign_id" value="${row.campaign_id}">` : `
-        <label class="pm-span2">Ni pesa ya nini<select name="campaign_id" data-camp>${P.options(camps, { blank: '— Mchango mpya (andika jina chini) —' })}</select></label>
-        <label data-new>Aina<select name="category_id"><option value="__new">+ Aina mpya ya mchango (jina hapo pembeni)</option>${P.catOptions(['mavuno', 'ujenzi', 'special', 'shukrani', 'sadaka', 'income_other'])}</select></label>
-        <label data-new>Jina la mchango<input name="name" placeholder="mf. Ujenzi wa choo ${year}"></label>`}
-        <label>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="0" required value="${row ? Number(row.target) || '' : ''}"></label>
+        ${row ? `<input type="hidden" name="campaign_id" value="${row.campaign_id}">
+          <label>Aina ya mchango<input value="${P.esc(row.category_name || '')}" readonly></label>
+          <label>Ni pesa ya nini<input value="${P.esc(row.campaign_name || '')}" readonly></label>` : `
+          <label>Aina ya mchango<input name="category_name" required minlength="3" placeholder="Andika aina, mfano: Ujenzi, Mavuno, au jina lako"></label>
+          <label>Ni pesa ya nini<input name="name" required minlength="3" placeholder="Andika jina la mchango"></label>`}
+        <label class="pm-span2 pm-relall"><input type="checkbox" name="self_assessed" value="true" data-self-assessed ${selfAssessed ? 'checked' : ''}> Hakuna kiasi maalumu — jumuiya itajipangia</label>
+        <label data-target-amount>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="1" step="1" inputmode="numeric" ${selfAssessed ? '' : 'required'} value="${row && !selfAssessed ? Number(row.target) || '' : ''}"></label>
         <label>Kuanzia<input name="starts_on" type="date" value="${row?.starts_on ? String(row.starts_on).slice(0, 10) : `${year}-01-01`}"></label>
         <label>Mwisho wa kulipa<input name="due_on" type="date" value="${row?.due_on ? String(row.due_on).slice(0, 10) : `${year}-12-31`}"></label>
         <label class="pm-span2">Maelezo (hiari)<input name="notes" value="${P.esc(note(row?.notes))}"></label>
@@ -115,12 +117,23 @@
         </div>` : ''}
       </div>${row ? '<p class="pm-small pm-muted">Weka kiasi 0 kuondoa mgao huu.</p>' : ''}`,
       onOpen: m => {
-        const s = m.querySelector('[data-camp]');
-        if (s) {
-        const sync = () => m.querySelectorAll('[data-new]').forEach(x => { x.hidden = !!s.value; x.querySelectorAll('input').forEach(i => { i.required = !s.value; }); });
-          s.addEventListener('change', sync); sync();
-        }
         const toggle = m.querySelector('[data-distribute]');
+        const self = m.querySelector('[data-self-assessed]');
+        const targetLabel = m.querySelector('[data-target-amount]');
+        const targetInput = m.querySelector('[name=amount]');
+        const syncSelfAssessed = () => {
+          const open = self.checked;
+          targetLabel.hidden = open;
+          targetInput.required = !open;
+          if (open) targetInput.value = '';
+          if (toggle) {
+            toggle.disabled = open;
+            if (open) toggle.checked = false;
+            m.querySelector('[data-allocations]').hidden = open || !toggle.checked;
+          }
+        };
+        self.addEventListener('change', syncSelfAssessed);
+        syncSelfAssessed();
         if (!toggle) return;
         const list = m.querySelector('[data-allocations]'), total = m.querySelector('[name=amount]'), summary = m.querySelector('[data-allocation-total]');
         const updateTotal = () => {
@@ -159,20 +172,24 @@
             Toast.error('Jumla ya mgao wa jumuiya haiwezi kuzidi kiasi cha kigango.');
           }
         }, true);
-        const campaign = row?.campaign_id || s?.value;
+        const campaign = row?.campaign_id;
         if (campaign) loadExisting(campaign).catch(e => Toast.error(P.friendlyError(e)));
-        s && s.addEventListener('change', () => loadExisting(s.value).catch(e => Toast.error(P.friendlyError(e))));
       } });
     if (!v) return;
-    if (!v.campaign_id && v.category_id === '__new') {
-      // a brand-new contribution: its type takes the name given (without the year)
-      v.new_type_name = String(v.name || '').replace(/\s*\b(19|20)\d\d\b\s*$/, '').trim();
-      v.new_type_kind = 'special';
-      v.category_id = await P.resolveType(v);
+    let categoryId = null;
+    if (!v.campaign_id) {
+      const name = String(v.category_name || '').trim();
+      const existing = P.ref.cats.find(c => c.is_active && (c.name_sw || '').trim().toLocaleLowerCase() === name.toLocaleLowerCase());
+      if (existing) categoryId = existing.id;
+      else {
+        const kindByName = { mavuno: 'mavuno', ujenzi: 'ujenzi', sadaka: 'sadaka', shukrani: 'shukrani' };
+        categoryId = await P.resolveType({ category_id: '__new', new_type_name: name, new_type_kind: kindByName[name.toLocaleLowerCase()] || 'special' });
+      }
     }
-    if (!v.campaign_id && !v.category_id) { Toast.error('Chagua mchango, au andika jina la mchango mpya.'); return; }
-    const target = { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: v.category_id || null, name: v.name || null, year,
-      amount: Number(v.amount) || 0, starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null };
+    const target = { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: categoryId,
+      name: String(v.name || '').trim() || null, year, self_assessed: v.self_assessed === 'true',
+      amount: v.self_assessed === 'true' ? 0 : Number(v.amount) || 0,
+      starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null };
     if (children.length) {
       target.distribute_to_jumuiya = v.distribute_to_jumuiya === 'true';
       target.allocations = children.map(u => ({ org_unit_id: u.id, amount: Number(v[`allocation_${u.id}`]) || 0 }));

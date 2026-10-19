@@ -30,6 +30,25 @@ test('the jumuiya leader assigns their own jumuiya: what, how much, by when — 
   assert.deepEqual([c.name, c.giver_level, c.amount_mode], ['Ujenzi wa choo cha kigango 2026', 'jumuiya', 'assigned']);
 });
 
+test('a self-assessed contribution stays listed with no fixed amount; zero still removes it when not marked self-assessed', async () => {
+  const unit = I['org:jumuiya:Clara'];
+  const saved = await db.as(U.admin).val(`select public.set_unit_target($1)`, [{ org_unit_id: unit,
+    category_id: I['cat:RADIO_MARIA'], name: 'Mchango wazi wa kipimo', amount: 0, self_assessed: true, year: 2026 }]);
+  const camp = saved.campaign_id;
+  assert.equal(saved.status, 'saved');
+  assert.equal(saved.self_assessed, true);
+  const target = await db.asAdmin().one(`select target_amount, self_assessed from public.campaign_targets where campaign_id = $1 and org_unit_id = $2`, [camp, unit]);
+  assert.equal(N(target.target_amount), 0);
+  assert.equal(target.self_assessed, true);
+  const summary = (await db.asAdmin().q(`select * from public.unit_contributions(2026, $1)`, [unit])).find(r => r.campaign_id === camp);
+  assert.ok(summary);
+  assert.equal(N(summary.target), 0);
+
+  const removed = await db.as(U.admin).val(`select public.set_unit_target($1)`, [{ org_unit_id: unit, campaign_id: camp, amount: 0 }]);
+  assert.equal(removed.status, 'removed');
+  assert.equal(N(await db.asAdmin().val(`select count(*) from public.campaign_targets where campaign_id = $1 and org_unit_id = $2`, [camp, unit])), 0);
+});
+
 test('payments count towards the assignment and the % is computed for the jumuiya and its kigango', async () => {
   await db.as(U.clerk).rpc('post_payment', { idempotency_key: db.key(), payment_method: 'cash', category_id: I['cat:RADIO_MARIA'], campaign_id: U.camp,
     org_unit_id: I['org:jumuiya:Clara'], payer_name: 'Jumuiya ya Clara', amount: 40000, txn_date: '2026-03-01' });
