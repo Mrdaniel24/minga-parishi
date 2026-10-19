@@ -111,12 +111,19 @@
       const people = f.family
         ? await P.q(P.from('parishioners').select('id,full_name').eq('family_id', f.family).eq('membership_status', 'active').order('full_name').limit(2000))
         : [];
-      let qb = P.from('v_receipt_register').select('*').order('issued_at', { ascending: false }).limit(300);
+      const applyArea = query => {
+        if (f.kigango) query = query.eq('kigango_id', f.kigango);
+        if (f.jumuiya) query = query.eq('jumuiya_id', f.jumuiya);
+        if (f.family) query = query.eq('family_id', f.family);
+        if (f.person) query = query.eq('parishioner_id', f.person);
+        return query;
+      };
+      const categoryRows = await P.q(applyArea(P.from('v_receipt_register').select('category_name')).limit(10000));
+      const availableNames = new Set(categoryRows.map(r => r.category_name).filter(Boolean));
+      const availableCategories = P.ref.cats.filter(c => c.is_active && c.code !== 'TRANSFER' && availableNames.has(c.name_sw));
+      if (!availableCategories.some(c => c.id === f.category)) f.category = '';
+      let qb = applyArea(P.from('v_receipt_register').select('*')).order('issued_at', { ascending: false }).limit(300);
       if (q) qb = qb.or(`receipt_no.ilike.%${q}%,payer_name.ilike.%${q}%`);
-      if (f.kigango) qb = qb.eq('kigango_id', f.kigango);
-      if (f.jumuiya) qb = qb.eq('jumuiya_id', f.jumuiya);
-      if (f.family) qb = qb.eq('family_id', f.family);
-      if (f.person) qb = qb.eq('parishioner_id', f.person);
       const selectedCategory = P.ref.catsById[f.category];
       if (selectedCategory) qb = qb.eq('category_name', selectedCategory.name_sw);
       const rows = await P.q(qb);
@@ -126,7 +133,7 @@
           ${P.cascadeHtml({ kigango: f.kigango, jumuiya: f.jumuiya })}
           <label>Familia<select name="family" ${f.jumuiya ? '' : 'disabled'}><option value="">${f.jumuiya ? 'Familia zote' : 'Chagua jumuiya kwanza'}</option>${P.options(families, { label: x => `${x.family_code ? `${x.family_code} · ` : ''}${x.family_name}`, selected: f.family })}</select></label>
           <label>Muumini<select name="person" ${f.family ? '' : 'disabled'}><option value="">${f.family ? 'Waumini wote' : 'Chagua familia kwanza'}</option>${P.options(people, { label: 'full_name', selected: f.person })}</select></label>
-          <label>Aina ya mchango<select name="category">${P.catOptions(null, { blank: 'Aina zote', selected: f.category })}</select></label>
+          <label>Aina ya mchango<select name="category"><option value="">Aina zote zilizopo hapa</option>${P.options(availableCategories, { label: 'name_sw', selected: f.category })}</select></label>
           <label>Tafuta (namba au mlipaji)<input name="q" value="${P.esc(q)}"></label><button class="pm-btn">Tafuta</button>
         </form>
         <section class="pm-card">${P.table(rows, [{ key: 'receipt_no', label: 'Risiti', html: r => `<a class="pm-link" target="_blank" href="receipt.html?id=${r.id}">${P.esc(r.receipt_no)}</a>` },
@@ -137,9 +144,13 @@
       P.wireCascade(form);
       const kigango = form.querySelector('[name="kigango"]'), jumuiya = form.querySelector('[name="jumuiya"]');
       const family = form.querySelector('[name="family"]'), person = form.querySelector('[name="person"]');
-      kigango.addEventListener('change', () => { family.value = ''; person.value = ''; });
-      jumuiya.addEventListener('change', () => { family.value = ''; person.value = ''; });
-      family.addEventListener('change', () => { person.value = ''; });
+      const reloadArea = () => {
+        form.querySelector('[name="category"]').value = '';
+        P.go('#/receipts?' + new URLSearchParams(Object.fromEntries(new FormData(form))));
+      };
+      kigango.addEventListener('change', () => { family.value = ''; person.value = ''; reloadArea(); });
+      jumuiya.addEventListener('change', () => { family.value = ''; person.value = ''; reloadArea(); });
+      family.addEventListener('change', () => { person.value = ''; reloadArea(); });
       form.addEventListener('submit', e => { e.preventDefault(); P.go('#/receipts?' + new URLSearchParams(Object.fromEntries(new FormData(form)))); });
       el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel('rejista_ya_risiti', { Risiti: rows.map(r => ({ Risiti: r.receipt_no, Tarehe: r.issued_at, Mlipaji: r.payer_name, Aina: r.category_name, Kigango: r.kigango_name, Jumuiya: r.jumuiya_name, Kiasi: Number(r.amount), Hali: r.status })) }));
     },
