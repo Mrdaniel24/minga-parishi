@@ -528,7 +528,7 @@
           <label class="pm-span2">Jina la mchango<input name="name" required maxlength="160" value="${P.esc(c.name)}"></label>
           <p class="pm-small pm-muted pm-span2">Kubadilisha jina hakubadili miamala, ahadi au aina ya mchango.</p></div>` });
         if (!v || v.name.trim() === c.name) return;
-        await P.q(P.from('campaigns').update({ name: v.name.trim() }).eq('id', c.id));
+        await P.rpc('rename_campaign', { p_id: c.id, p_name: v.name.trim() });
         await P.loadRef(true); Toast.success('Jina la mchango limesahihishwa.'); P.reload();
       }));
       el.querySelectorAll('[data-delete-campaign]').forEach(b => b.addEventListener('click', async () => {
