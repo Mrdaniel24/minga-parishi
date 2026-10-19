@@ -290,7 +290,7 @@
           Makusanyo: Number(r.income), Pangiwa: Number(r.pledged), Bado: Number(r.outstanding) })),
         Michango: contrib.map(r => ({ Mchango: r.campaign_name, Kiasi: Number(r.obligation), Ametoa: gave(r), Bado: Number(r.balance), Asilimia: r.pct })) }));
       const pay = el.querySelector('[data-pay]');
-      pay && pay.addEventListener('click', () => P.recordPayment({ org_unit_id: k.id }));
+      pay && pay.addEventListener('click', () => P.recordPayment({ kigango_id: k.id, kigango_contributions: contrib }));
       const tb = el.querySelector('[data-target]');
       tb && tb.addEventListener('click', () => targetForm(k, year));
       el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => targetForm(k, year, contrib.find(r => r.campaign_id === b.dataset.edit))));

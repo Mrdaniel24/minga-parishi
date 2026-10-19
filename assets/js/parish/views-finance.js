@@ -82,6 +82,14 @@
     const zakaCat = P.ref.cats.find(c => c.code === 'ZAKA');
     let payer = prefill.payer || null;
     const jum = prefill.jumuiya ? P.ref.unitsById[prefill.jumuiya] : null;      // recording inside one jumuiya
+    const kigango = prefill.kigango_id ? P.ref.unitsById[prefill.kigango_id] : null;
+    const kigangoJumuiya = kigango
+      ? P.ref.units.filter(u => u.parent_id === kigango.id && u.unit_type === 'jumuiya' && u.is_active)
+      : null;
+    const kigangoCategoryIds = new Set((prefill.kigango_contributions || []).map(r => r.category_id));
+    const paymentCategories = kigango
+      ? P.ref.cats.filter(c => c.is_active && c.code !== 'TRANSFER' && kigangoCategoryIds.has(c.id))
+      : null;
     const periodDefault = P.year() === P.thisYear() ? new Date().toISOString().slice(0, 7) : `${P.year()}-12`;
     const key = P.uuid();       // one key for this form: retries never post twice
     const body = `
@@ -90,8 +98,12 @@
           <div class="pm-search"><input data-payer-search name="payer_name" autocomplete="off" placeholder="Andika jina…" value="${P.esc(prefill.payerName || '')}" required>
           <div data-payer-results class="pm-search__results"></div></div>
           <small data-payer-kind class="pm-muted">${payer ? 'Amechaguliwa kutoka kwenye rejista' : 'Jina huru (halijaunganishwa na rejista)'}</small></label>
-        <label>Jumuiya / Kigango (kama mlipaji si muumini aliyesajiliwa)<select name="org_unit_id">${P.unitOptions(['jumuiya', 'kigango', 'group'], { blank: '— Parokia —', selected: prefill.org_unit_id || prefill.jumuiya })}</select></label>
-        <label>Aina ya mchango<select name="category_id" required>${P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
+        <label>${kigango ? 'Jumuiya (kama mlipaji si muumini aliyesajiliwa)' : 'Jumuiya / Kigango (kama mlipaji si muumini aliyesajiliwa)'}<select name="org_unit_id">${kigango
+          ? P.options(kigangoJumuiya, { blank: '— Chagua Jumuiya —', selected: kigangoJumuiya.some(u => u.id === prefill.org_unit_id) ? prefill.org_unit_id : '' })
+          : P.unitOptions(['jumuiya', 'kigango', 'group'], { blank: '— Parokia —', selected: prefill.org_unit_id || prefill.jumuiya })}</select></label>
+        <label>Aina ya mchango<select name="category_id" required>${kigango
+          ? P.options(paymentCategories, { label: 'name_sw', blank: 'Chagua…', selected: prefill.category_id })
+          : P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
         ${P.newTypeHtml()}
         <label>Kampeni / Mwaka<select name="campaign_id"><option value="">—</option></select></label>
         <label data-period hidden>Malipo ya mwezi<input type="month" name="period_month" value="${prefill.period_month || periodDefault}"></label>
@@ -111,9 +123,12 @@
         };
         const syncCat = () => {
           const c = P.ref.catsById[cat.value];
-          const hasCamps = P.ref.camps.some(x => x.category_id === cat.value);
-          camp.innerHTML = `<option value="">—</option>` + P.campOptions(cat.value, { selected: prefill.campaign_id ||
-            (P.ref.camps.find(x => x.category_id === cat.value && x.campaign_year === P.year()) || {}).id });
+          const availableCampaigns = kigango
+            ? P.ref.camps.filter(x => (prefill.kigango_contributions || []).some(r => r.campaign_id === x.id) && x.category_id === cat.value && x.status !== 'closed')
+            : P.ref.camps.filter(x => x.category_id === cat.value && x.status !== 'closed');
+          const hasCamps = availableCampaigns.length > 0;
+          camp.innerHTML = `<option value="">—</option>` + P.options(availableCampaigns, { label: 'name', selected: prefill.campaign_id ||
+            (availableCampaigns.find(x => x.campaign_year === P.year()) || {}).id });
           camp.disabled = !c || (!c.is_pledgeable && !hasCamps);
           syncPeriod();
         };
@@ -667,3 +682,4 @@
     },
   };
 })();
+
