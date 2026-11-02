@@ -21,12 +21,18 @@
   P.today = () => new Date().toISOString().slice(0, 10);
   /* the working year: chosen once in the top bar, used by every page (remembered per browser) */
   P.thisYear = () => new Date().getFullYear();
+  // a year chosen last year is forgotten when the calendar year changes: in January
+  // every page opens on the new (empty) year; last year stays one click away
   P.year = () => {
     if (P._year) return P._year;
-    try { const y = Number(localStorage.getItem('pm-year')); if (y > 2000 && y < 2100) return (P._year = y); } catch (e) { /* storage blocked */ }
+    try {
+      const y = Number(localStorage.getItem('pm-year')), set = Number(localStorage.getItem('pm-year-set'));
+      if (y > 2000 && y < 2100 && set === P.thisYear()) return (P._year = y);
+    } catch (e) { /* storage blocked */ }
     return (P._year = P.thisYear());
   };
-  P.setYear = y => { P._year = Number(y); try { localStorage.setItem('pm-year', String(y)); } catch (e) { /* ignore */ }
+  P.setYear = y => { P._year = Number(y);
+    try { localStorage.setItem('pm-year', String(y)); localStorage.setItem('pm-year-set', String(P.thisYear())); } catch (e) { /* ignore */ }
     document.querySelectorAll('[data-yearpick]').forEach(s => { s.value = String(y); }); };
   P.yearFrom = () => `${P.year()}-01-01`;
   P.yearTo = () => P.year() === P.thisYear() ? P.today() : `${P.year()}-12-31`;

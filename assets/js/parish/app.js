@@ -80,7 +80,7 @@
     const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0 || !!P.access.parishioner_id;
     if (!hasRole) {
       document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Huna nafasi kwenye mfumo wa parokia</h2>
-        <p class="pm-muted">Akaunti yako (${P.esc(profile.email)}) haijapewa nafasi bado (mf. Mhasibu, Katibu, Kiongozi wa Jumuiya). Mwombe Msimamizi wa Mfumo akupe nafasi, kisha ingia tena.</p>
+        <p class="pm-muted">Akaunti yako (${P.esc(PM.loginLabel(profile))}) haijapewa nafasi bado (mf. Mhasibu, Katibu, Kiongozi wa Jumuiya). Mwombe Msimamizi wa Mfumo akupe nafasi, kisha ingia tena.</p>
         <p class="mt-4"><button class="pm-btn" data-action="logout">Toka</button></p></div>`;
       if (PM.applyAccess) PM.applyAccess(P.access);
       return;

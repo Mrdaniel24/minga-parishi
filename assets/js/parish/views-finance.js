@@ -7,7 +7,7 @@
     title: 'Dashibodi',
     async render(el) {
       const year = P.year(), scope = P.scopeUnit();
-      const d = await P.rpc('parish_dashboard', { p_year: year, p_scope: scope });
+      const [d, notices] = await Promise.all([P.rpc('parish_dashboard', { p_year: year, p_scope: scope }), P.announcementsHtml()]);
       const t = d.totals, c = d.counts;
       const scopeName = scope ? P.ref.unitsById[scope]?.label : P.ref.parish.official_name;
       el.innerHTML = `
@@ -16,6 +16,7 @@
           <p class="pm-muted">Mfumo wa Usimamizi wa Parokia · Mwaka ${year}</p></div>
           <div class="pm-actions">${P.can('finance.record') ? '<a class="pm-btn pm-btn--primary" href="#/payments?new=1"><span class="material-symbols-outlined">add</span>Rekodi Malipo</a>' : ''}
           <a class="pm-btn" href="#/units"><span class="material-symbols-outlined">account_tree</span>Vigango na Jumuiya</a><a class="pm-btn" href="#/reports"><span class="material-symbols-outlined">bar_chart</span>Ripoti</a></div></div>
+        ${notices}
         ${(d.alerts || []).length ? `<div class="pm-alert pm-alert--warn"><b>Tahadhari za uhakiki:</b> ${(d.alerts).map(a => `${P.esc(a.description)} (${a.problem_count})`).join(' · ')} — <a href="#/reconciliation">angalia</a></div>` : ''}
         <section class="pm-kpis">
           ${P.kpi('Waumini', P.num(c.parishioners), 'groups')}
@@ -92,6 +93,7 @@
       : null;
     const periodDefault = P.year() === P.thisYear() ? new Date().toISOString().slice(0, 7) : `${P.year()}-12`;
     const key = P.uuid();       // one key for this form: retries never post twice
+    let split = null;           // zaka of a jumuiya divided among its families: { lines() }
     const body = `
       <div class="pm-form">
         <label class="pm-span2">Mlipaji (tafuta muumini, familia au jumuiya${jum ? ` — ndani ya Jumuiya ya ${P.esc(jum.name)}` : ''})
@@ -108,6 +110,10 @@
         <label>Kiasi (TZS)<input name="amount" type="number" min="1" step="1" required inputmode="numeric"></label>
         <label>Tarehe<input name="txn_date" type="date" value="${P.today()}" required></label>
         <label>Njia ya malipo<select name="payment_method">${Object.entries(P.METHODS).filter(([k]) => k !== 'envelope').map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+        ${P.proofField()}
+        ${jum ? `<div class="pm-span2" data-split-wrap hidden>
+          <button type="button" class="pm-btn" data-split-open><span class="material-symbols-outlined">call_split</span>Gawanya kwa familia</button>
+          <div class="pm-split" data-split hidden></div></div>` : ''}
         <details class="pm-span2" data-payment-extra ${prefill.campaign_id || prefill.period_month ? 'open' : ''}>
           <summary>Maelezo ya ziada — kampeni, kumbukumbu au mwezi</summary>
           <div class="pm-form mt-3">
@@ -136,15 +142,115 @@
             (availableCampaigns.find(x => x.campaign_year === P.year()) || {}).id });
           camp.disabled = !c || (!c.is_pledgeable && !hasCamps);
           syncPeriod();
+          const sw = m.querySelector('[data-split-wrap]');
+          if (sw) { sw.hidden = !(zakaCat && cat.value === zakaCat.id); if (sw.hidden) closeSplit(); }
         };
+
+        /* Zaka brought by the jumuiya: the amount is divided among its families,
+           and a family (tick) among its members. Must add up to the amount. */
+        const amountIn = m.querySelector('[name=amount]'), payerIn = m.querySelector('[data-payer-search]');
+        const box = m.querySelector('[data-split]'), openBtn = m.querySelector('[data-split-open]');
+        const nOf = el => Math.max(0, Math.round(Number(el.value) || 0));
+        let resum = null;
+        const closeSplit = () => {
+          if (!box || box.hidden) return;
+          split = null; resum = null; box.hidden = true; box.innerHTML = ''; openBtn.hidden = false;
+          payerIn.required = true; payerIn.placeholder = 'Andika jina…'; amountIn.setCustomValidity('');
+          m.querySelector('[data-payer-kind]').hidden = false;
+          m.querySelector('[data-org-field]').hidden = !!payer;
+        };
+        const openSplit = async () => {
+          openBtn.hidden = true; box.hidden = false; box.innerHTML = P.loading();
+          const [fams, people] = await Promise.all([P.levelMembers('family', jum.id),
+            P.q(P.from('parishioners').select('id,full_name,family_id,is_zaka_payer').eq('jumuiya_id', jum.id).eq('membership_status', 'active').order('full_name').limit(2000))]);
+          P.levelSort('family', fams.map(f => Object.assign(f, { group_name: f.name })));
+          const byFam = {};
+          people.forEach(p => { (byFam[p.family_id] ||= []).push(p); });
+          box.innerHTML = `
+            <div class="pm-row"><h3 class="pm-h3">Mgawanyo kwa familia — Jumuiya ya ${P.esc(jum.name)}</h3>
+              <button type="button" class="pm-btn pm-btn--sm" data-split-close>Ghairi mgawanyo</button></div>
+            <p class="pm-muted pm-small">Andika kiasi cha kila familia iliyolipa. Weka tiki <b>Gawanya kwa wanafamilia</b> kuandika kiasi cha kila mwanafamilia — kiasi cha familia kitajumlishwa chenyewe. Kila familia au muumini atapata risiti yake.</p>
+            <input class="pm-split__find" type="search" placeholder="Tafuta familia…" data-split-find>
+            <div class="pm-split__list">${fams.length ? fams.map(f => `
+              <div class="pm-split__fam" data-fam="${f.id}" data-name="${P.esc((f.name + ' ' + (byFam[f.id] || []).map(p => p.full_name).join(' ')).toLowerCase())}">
+                <div class="pm-split__row"><b>${f.code ? `<small class="pm-muted">${P.esc(f.code)}</small> ` : ''}${P.esc(f.name)}</b>
+                  <input type="number" min="0" step="1" inputmode="numeric" placeholder="0" data-fam-amt></div>
+                ${(byFam[f.id] || []).length ? `<label class="pm-relall pm-split__tick"><input type="checkbox" data-fam-tick> Gawanya kwa wanafamilia (${byFam[f.id].length})</label>
+                <div class="pm-split__members" data-members hidden>${byFam[f.id].map(p => `
+                  <div class="pm-split__row"><span>${P.esc(p.full_name)}${p.is_zaka_payer ? '' : ' <small class="pm-muted">· hajawekwa kulipa zaka</small>'}</span>
+                    <input type="number" min="0" step="1" inputmode="numeric" placeholder="0" data-per-amt="${p.id}"></div>`).join('')}</div>` : ''}
+              </div>`).join('') : P.empty('Jumuiya hii haina familia bado.')}</div>
+            <div class="pm-split__sum" data-split-sum></div>`;
+          const famEls = [...box.querySelectorAll('[data-fam]')];
+          const lines = () => famEls.flatMap(fe => {
+            const tick = fe.querySelector('[data-fam-tick]');
+            if (tick && tick.checked) return [...fe.querySelectorAll('[data-per-amt]')].map(i => ({ parishioner_id: i.dataset.perAmt, amount: nOf(i) })).filter(l => l.amount > 0);
+            const a = nOf(fe.querySelector('[data-fam-amt]'));
+            return a > 0 ? [{ family_id: fe.dataset.fam, amount: a }] : [];
+          });
+          const sum = () => {
+            famEls.forEach(fe => {
+              const tick = fe.querySelector('[data-fam-tick]');
+              if (tick && tick.checked) fe.querySelector('[data-fam-amt]').value = P.sum([...fe.querySelectorAll('[data-per-amt]')].map(i => ({ v: nOf(i) })), 'v') || '';
+            });
+            const total = nOf(amountIn), given = P.sum(lines(), 'amount'), left = total - given;
+            box.querySelector('[data-split-sum]').innerHTML = `Kiasi kilicholetwa <b>${P.tzs(total)}</b> · Kimegawanywa <b>${P.tzs(given)}</b> · ${
+              !total ? '<span class="pm-due">Andika kwanza kiasi kilicholetwa</span>'
+              : left === 0 ? '<span class="pm-ok">Kimelingana ✓</span>'
+              : left > 0 ? `<span class="pm-due">Kimebaki ${P.tzs(left)}</span>` : `<span class="pm-due">Kimezidi kwa ${P.tzs(-left)}</span>`}`;
+            amountIn.setCustomValidity(!given ? 'Gawanya kiasi kwa angalau familia moja.'
+              : given !== total ? `Mgawanyo (${P.tzs(given)}) lazima ulingane na kiasi kilicholetwa (${P.tzs(total)}).` : '');
+          };
+          famEls.forEach(fe => {
+            const tick = fe.querySelector('[data-fam-tick]'), famAmt = fe.querySelector('[data-fam-amt]');
+            tick && tick.addEventListener('change', () => {
+              fe.querySelector('[data-members]').hidden = !tick.checked;
+              famAmt.readOnly = tick.checked;
+              if (!tick.checked) famAmt.value = '';
+              sum();
+            });
+          });
+          box.addEventListener('input', e => { if (e.target.matches('[data-fam-amt],[data-per-amt]')) sum(); });
+          box.querySelector('[data-split-find]').addEventListener('input', e => {
+            const q = e.target.value.trim().toLowerCase();
+            famEls.forEach(fe => { fe.hidden = q && !fe.dataset.name.includes(q); });
+          });
+          box.querySelector('[data-split-close]').addEventListener('click', closeSplit);
+          // the payer is now each family / member; the name typed here is who brought the money
+          payerIn.required = false;
+          payerIn.placeholder = 'Aliyeleta (hiari) — mf. katibu wa jumuiya';
+          m.querySelector('[data-payer-kind]').hidden = true;
+          m.querySelector('[data-org-field]').hidden = true;
+          split = { lines }; resum = sum;
+          sum();
+        };
+        const startSplit = () => openSplit().catch(e => { Toast.error(P.friendlyError(e)); closeSplit(); });
+        if (openBtn) {
+          openBtn.addEventListener('click', startSplit);
+          amountIn.addEventListener('input', () => resum && resum());
+        }
+
         cat.addEventListener('change', syncCat); camp.addEventListener('change', syncPeriod); syncCat();
         P.wireNewType(m, cat);
         P.payerPicker(m, { jumuiya: prefill.jumuiya, onPick: p => { payer = p; m.querySelector('[data-org-field]').hidden = true; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
-        m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; m.querySelector('[data-org-field]').hidden = false; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
+        m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; if (split) return; m.querySelector('[data-org-field]').hidden = false; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
         if (zakaCat && prefill.category_id === zakaCat.id) syncCat();
+        if (prefill.split && openBtn && zakaCat && cat.value === zakaCat.id) startSplit();
       },
     });
     if (!result) return null;
+    if (split) {
+      const lines = split.lines();
+      const r = await P.rpc('post_zaka_split', { p: {
+        idempotency_key: key, jumuiya_id: jum.id, amount: Number(result.amount), txn_date: result.txn_date,
+        payment_method: result.payment_method, reference_no: result.reference_no || null,
+        period_month: result.period_month ? result.period_month + '-01' : null,
+        brought_by: result.payer_name || null, receiving_officer: P.profile.full_name || P.profile.email, lines } });
+      const rc = r.receipts || [];
+      await P.attachAfterPost(result.proof, rc.map(x => x.transaction_id));
+      return { ...r, receipt_id: null,
+        receipt_no: rc.length > 1 ? `${rc[0].receipt_no} – ${rc[rc.length - 1].receipt_no} (risiti ${rc.length})` : rc[0]?.receipt_no };
+    }
     const categoryId = await P.resolveType(result);
     const args = {
       idempotency_key: key, amount: Number(result.amount), txn_date: result.txn_date, category_id: categoryId,
@@ -161,6 +267,7 @@
       if (!ok) return null;
       r = await P.rpc('post_payment', { p: { ...args, confirm_duplicate: true } });
     }
+    if (r.status === 'posted') await P.attachAfterPost(result.proof, [r.transaction_id]);
     return r;
   }
   P.paymentForm = paymentForm;
@@ -249,6 +356,18 @@
           ...rows.filter(r => r.group_id && !known.has(r.group_id))]);
         if (itself) list.unshift({ ...itself, group_name: LBL[level][1], self: true });
         const key = { kigango: 'k', jumuiya: 'j', family: 'fa', parishioner: 'p' }[level];
+        // each amount opens the payments behind it
+        const scopeOf = r => r.group_id ? { kigango: { unit: r.group_id }, jumuiya: { unit: r.group_id }, family: { family: r.group_id }, parishioner: { parishioner: r.group_id } }[level]
+          : level === 'jumuiya' ? { unit_self: at.k } : level === 'family' ? { unit_self: at.j } : null;
+        const KIND = { zaka: { kinds: ['zaka'] }, mavuno: { kinds: ['mavuno'] }, ujenzi: { kinds: ['ujenzi'] }, sadaka: { kinds: ['sadaka'] },
+          other: { not_kinds: ['zaka', 'mavuno', 'ujenzi', 'sadaka'] }, total: {} };
+        const LABEL = { zaka: 'Zaka', mavuno: 'Mavuno', ujenzi: 'Ujenzi', sadaka: 'Sadaka', other: 'Michango mingine', total: 'Makusanyo yote' };
+        const cellLink = (k, fmt) => (v, r) => {
+          const s = scopeOf(r);
+          if (!Number(v) || !s) return fmt(v);
+          return P.txLink(fmt(v), { title: `${LABEL[k]} — ${r.group_name}`, sub: `${P.date(f.from)} – ${P.date(f.to)}`, ...s, ...KIND[k],
+            from: f.from, to: f.to, category: f.category || null, status: f.status });
+        };
         const money = v => Number(v) ? P.tzs(v) : '—';
         const S = k => P.sum(list, k);
         out.innerHTML = `<p class="pm-muted pm-small">${P.num(S('n'))} miamala · Jumla <b>${P.tzs(S('total'))}</b> ·
@@ -256,9 +375,9 @@
           P.table(list, [
             { key: 'group_name', label: LBL[level][0], html: r => `<a class="pm-link ${r.self ? 'pm-muted' : ''}" href="${link({ [key]: r.group_id || 'none' })}">${P.esc(r.group_name || '—')}</a>` },
             { key: 'n', label: 'Miamala', fmt: P.num, cls: 'pm-num' },
-            { key: 'zaka', label: 'Zaka', fmt: money, cls: 'pm-num' }, { key: 'mavuno', label: 'Mavuno', fmt: money, cls: 'pm-num' },
-            { key: 'ujenzi', label: 'Ujenzi', fmt: money, cls: 'pm-num' }, { key: 'sadaka', label: 'Sadaka', fmt: money, cls: 'pm-num' },
-            { key: 'other', label: 'Mingine', fmt: money, cls: 'pm-num' }, { key: 'total', label: 'Jumla', fmt: P.tzs, cls: 'pm-num pm-strong' },
+            { key: 'zaka', label: 'Zaka', fmt: cellLink('zaka', money), cls: 'pm-num' }, { key: 'mavuno', label: 'Mavuno', fmt: cellLink('mavuno', money), cls: 'pm-num' },
+            { key: 'ujenzi', label: 'Ujenzi', fmt: cellLink('ujenzi', money), cls: 'pm-num' }, { key: 'sadaka', label: 'Sadaka', fmt: cellLink('sadaka', money), cls: 'pm-num' },
+            { key: 'other', label: 'Mingine', fmt: cellLink('other', money), cls: 'pm-num' }, { key: 'total', label: 'Jumla', fmt: cellLink('total', P.tzs), cls: 'pm-num pm-strong' },
             { key: 'group_id', label: '', html: r => `<a class="pm-btn pm-btn--sm" href="${link({ [key]: r.group_id || 'none' })}">Fungua</a>` }],
             { empty: 'Hakuna miamala kwa vigezo hivi.', foot: { group_name: '<b>JUMLA</b>', n: P.num(S('n')), zaka: P.tzs(S('zaka')), mavuno: P.tzs(S('mavuno')),
               ujenzi: P.tzs(S('ujenzi')), sadaka: P.tzs(S('sadaka')), other: P.tzs(S('other')), total: `<b>${P.tzs(S('total'))}</b>` } }) +
@@ -303,7 +422,9 @@
         { key: 'payment_method', label: 'Njia', fmt: v => P.METHODS[v] || v },
         { key: 'receipt_no', label: 'Risiti', html: r => r.receipt_no ? `<a class="pm-link" target="_blank" href="receipt.html?tx=${r.id}">${P.esc(r.receipt_no)}</a>${r.receipt_status === 'void' ? ' ' + P.badge('imefutwa', 'rose') : ''}` : (r.legacy_receipt_no ? `<small class="pm-muted">Excel #${P.esc(r.legacy_receipt_no)}</small>` : '—') },
         { key: 'status', label: 'Hali', html: r => r.sign < 0 ? P.badge('Reversal', 'rose') : r.reversed_by_id ? P.badge('Imerudishwa', 'rose') : r.status === 'pending' ? P.badge('Inasubiri', 'gold') : '' },
-        { key: 'id', label: '', html: r => canRev && r.status === 'posted' && r.sign > 0 && !r.reversed_by_id ? `<button class="pm-btn pm-btn--sm" data-reverse="${r.id}" data-no="${r.txn_no}">Rudisha</button>` : '' },
+        { key: 'id', label: '', html: r => r.status === 'posted' && r.sign > 0 && !r.reversed_by_id ? `<span class="pm-nowrap">${
+          canRev || (P.can('finance.record') && r.recorded_by === P.profile.id) ? `<button class="pm-btn pm-btn--sm" data-fix="${r.id}">Rekebisha</button> ` : ''}${
+          canRev ? `<button class="pm-btn pm-btn--sm" data-reverse="${r.id}" data-no="${r.txn_no}">Rudisha</button>` : ''}</span>` : '' },
       ];
       const draw = () => {
         box.innerHTML = `<p class="pm-muted pm-small">${P.num(rows.length)}${done ? '' : '+'} miamala${done ? ` · Jumla <b>${P.tzs(P.sum(rows, 'net_amount'))}</b>` : ''}</p>` +
@@ -311,6 +432,12 @@
           (done ? '' : `<p class="mt-4"><button class="pm-btn" data-more>Onyesha ${PAGE} zaidi</button></p>`);
         const more = box.querySelector('[data-more]');
         more && more.addEventListener('click', async () => { more.disabled = true; await fetchPage(); draw(); });
+        // correct who / which month it was for: the payment with the other lines recorded with it
+        box.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', async () => {
+          const r = rows.find(x => x.id === b.dataset.fix);
+          const t = await P.q(P.from('finance_transactions').select('batch_id').eq('id', r.id).maybeSingle());
+          if (await P.redistribute({ ...r, batch_id: t?.batch_id || null }).catch(e => { Toast.error(P.friendlyError(e)); return false; })) P.refresh();
+        }));
         box.querySelectorAll('[data-reverse]').forEach(b => b.addEventListener('click', async () => {
           const v = await P.modal({ title: `Rudisha muamala Na. ${b.dataset.no}`, submit: 'Rudisha muamala',
             body: `<p class="pm-muted">Muamala hautafutwa. Muamala wa kurudisha (reversal) utaandikwa na jumla zote zitajirekebisha. Risiti itabatilishwa.</p>
@@ -365,14 +492,21 @@
         ...rows.filter(r => r.group_id && !known.has(r.group_id))]);
       if (itself) list.unshift({ ...itself, group_name: LBL[level][1], self: true });
       const go = r => r.self ? null : level === 'kigango' ? link({ k: r.group_id }) : level === 'jumuiya' ? link({ j: r.group_id }) : `#/family?id=${r.group_id}`;
-      const mcols = P.MONTHS.map((m, i) => ({ key: mk(i), label: m, fmt: v => Number(v) ? P.num(v) : '', cls: 'pm-num' }));
+      // every month and total opens the zaka payments behind it
+      const zscope = r => r.self ? null : level === 'family' ? { family: r.group_id } : { unit: r.group_id };
+      const zlink = (v, r, i) => {
+        if (!Number(v) || !zscope(r)) return Number(v) ? P.num(v) : '';
+        const pm = i === undefined ? {} : { period_month: `${year}-${String(i + 1).padStart(2, '0')}-01` };
+        return P.txLink(P.num(v), { title: `Zaka ${i === undefined ? year : P.MONTHS[i] + ' ' + year} — ${r.group_name}`, ...zscope(r), kinds: ['zaka'], zaka_year: year, ...pm });
+      };
+      const mcols = P.MONTHS.map((m, i) => ({ key: mk(i), label: m, fmt: (v, r) => zlink(v, r, i), cls: 'pm-num' }));
       const foot = Object.fromEntries(mcols.map(c => [c.key, P.num(P.sum(list, c.key))]));
       foot.total = `<b>${P.num(P.sum(list, 'total'))}</b>`; foot.group_name = '<b>JUMLA</b>';
       el.querySelector('[data-out]').innerHTML = P.reportHeader(`Zaka ${year}`, crumbs.map(c => c.label).join(' › ')) +
         `<p class="pm-muted pm-small">${list.filter(r => !r.self).length} ${LBL[level][0].toLowerCase()} (${list.filter(r => !r.self && Number(r.total)).length} zenye zaka) · Jumla <b>${P.tzs(P.sum(list, 'total'))}</b></p>` +
         P.table(list, [
           { key: 'group_name', label: LBL[level][0], html: r => go(r) ? `<a class="pm-link" href="${go(r)}">${P.esc(r.group_name || '—')}</a>` : `<span class="pm-muted">${P.esc(r.group_name)}</span>` },
-          ...mcols, { key: 'total', label: 'Jumla', fmt: P.num, cls: 'pm-num pm-strong' },
+          ...mcols, { key: 'total', label: 'Jumla', fmt: (v, r) => zlink(v, r), cls: 'pm-num pm-strong' },
           ...(level === 'family' ? [] : [{ key: 'months_unpaid', label: 'Miezi bila zaka', html: r => r.self ? '' : r.months_unpaid ?? (Number(r.total) ? 0 : '—'), cls: 'pm-num' }]),
           { key: 'group_id', label: '', html: r => go(r) ? `<a class="pm-btn pm-btn--sm" href="${go(r)}">Fungua</a>` : '' }],
           { foot, cls: 'pm-keep-table', empty: level === 'family' ? 'Hakuna zaka iliyolipwa kwa jina la familia mwaka huu — fungua "Jaza zaka ya jumuiya hii".' : 'Hakuna zaka iliyorekodiwa.' });

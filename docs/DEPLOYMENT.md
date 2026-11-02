@@ -77,3 +77,23 @@ pg_dump "$DB_URL" --format=custom --file minga_YYYYMMDD.dump
 ```
 - Restore drill each quarter into a scratch project: `pg_restore --clean --no-owner -d "$SCRATCH_URL" minga_YYYYMMDD.dump`, then run `select * from public.finance_integrity_checks();` — all rows must be `ok`.
 - Year end: lock months (*Uhasibu → Vipindi*), then *Funga mwaka wa fedha*.
+
+## SMS kwa wingi (hiari)
+
+Ujumbe unaandaliwa kwenye **Matangazo na SMS**. Ili mfumo uutume wenyewe, weka mtoa huduma wa SMS
+kwenye Vercel → Project → Settings → Environment Variables, kisha fanya Redeploy:
+
+| Variable | Thamani |
+|---|---|
+| `SMS_PROVIDER` | `beem` au `nextsms` |
+| `SMS_SENDER_ID` | Sender ID iliyoidhinishwa (mf. `PAROKIA`) |
+| `BEEM_API_KEY`, `BEEM_SECRET_KEY` | kwa Beem Africa |
+| `NEXTSMS_USERNAME`, `NEXTSMS_PASSWORD` | kwa NextSMS |
+
+Bila hizi, ujumbe unaandaliwa na namba zinapakuliwa (Excel) ili kutuma kwa njia nyingine.
+Kutuma kunafanywa na `api/sms.js` kwa kutumia akaunti ya aliyeingia; database inakagua ruhusa (`comms.send`).
+
+## Kuingia kwa namba ya simu
+
+Akaunti mpya zinaundwa kwenye **Watumiaji na Nafasi → Mtumiaji mpya** (jina, namba ya simu, nenosiri).
+Mtumiaji akisahau nenosiri, Msimamizi anabonyeza **Nenosiri** na kumwekea jipya. Hakuna SMS inayotumwa.

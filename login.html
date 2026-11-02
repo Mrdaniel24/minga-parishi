@@ -78,11 +78,11 @@
   <section class="form-side">
     <form class="card" id="login" novalidate>
       <h2 id="title">Ingia</h2>
-      <p class="sub" id="sub">Tumia barua pepe na nenosiri ulilopewa na msimamizi wa mfumo.</p>
+      <p class="sub" id="sub">Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.</p>
       <div class="msg" id="msg" role="alert"></div>
-      <label>Barua pepe
-        <span class="field"><span class="material-symbols-outlined">mail</span>
-          <input type="email" name="email" autocomplete="username" required placeholder="jina@mfano.com"></span>
+      <label>Namba ya simu
+        <span class="field"><span class="material-symbols-outlined">smartphone</span>
+          <input type="text" name="login" inputmode="tel" autocomplete="username" required placeholder="mf. 0712 345 678"></span>
       </label>
       <label id="pw-wrap">Nenosiri
         <span class="field"><span class="material-symbols-outlined">lock</span>
@@ -138,7 +138,7 @@
       b.lastChild.textContent = label;
       b.title = email;
       b.addEventListener('click', () => {
-        form.email.value = email; form.password.value = cfg.DEMO_PASSWORD || '';
+        form.login.value = email; form.password.value = cfg.DEMO_PASSWORD || '';
         if (resetMode) document.getElementById('forgot').click();
         form.requestSubmit();
       });
@@ -147,11 +147,19 @@
   }
 
   let resetMode = false;
+  // '0712 345 678' / '+255 712…' → '255712345678@simu.parokia.local'; an e-mail is used as typed
+  const toLogin = v => {
+    if (v.includes('@')) return v.toLowerCase();
+    let d = v.replace(/\D/g, '');
+    if (/^0[67]\d{8}$/.test(d)) d = '255' + d.slice(1);
+    else if (/^[67]\d{8}$/.test(d)) d = '255' + d;
+    return /^\d{10,15}$/.test(d) ? d + '@simu.parokia.local' : null;
+  };
   document.getElementById('forgot').addEventListener('click', () => {
     resetMode = !resetMode;
     document.getElementById('pw-wrap').style.display = resetMode ? 'none' : '';
     document.getElementById('title').textContent = resetMode ? 'Badilisha nenosiri' : 'Ingia';
-    document.getElementById('sub').textContent = resetMode ? 'Andika barua pepe yako. Tutakutumia kiungo cha kuweka nenosiri jipya.' : 'Tumia barua pepe na nenosiri ulilopewa na msimamizi wa mfumo.';
+    document.getElementById('sub').textContent = resetMode ? 'Kama unaingia kwa namba ya simu, mwombe Msimamizi wa Mfumo akuwekee nenosiri jipya. Kama unaingia kwa barua pepe, iandike hapa tukutumie kiungo.' : 'Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.';
     document.getElementById('go-label').textContent = resetMode ? 'Tuma kiungo' : 'Ingia';
     document.getElementById('forgot').textContent = resetMode ? '← Rudi kuingia' : 'Umesahau nenosiri?';
     msg.className = 'msg';
@@ -159,12 +167,16 @@
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const email = form.email.value.trim();
+    // a phone number signs in through the private address made from it (database migration 29)
+    const typed = form.login.value.trim();
+    const email = toLogin(typed);
     const password = form.password.value;
-    if (!email) { say('Andika barua pepe yako.'); return; }
+    if (!typed) { say('Andika namba yako ya simu.'); return; }
+    if (!email) { say('Namba ya simu si sahihi. Iandike kama 0712 345 678.'); return; }
     go.disabled = true;
     try {
       if (resetMode) {
+        if (!typed.includes('@')) { say('Mwombe Msimamizi wa Mfumo (Watumiaji na Nafasi → Nenosiri) akuwekee nenosiri jipya. Mfumo hautumi SMS.'); return; }
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: new URL('reset.html', location.href).href });
         if (error) throw error;
         say('Kama barua pepe hii ina akaunti, kiungo kimetumwa. Angalia sanduku la barua (na spam).', true);
@@ -176,7 +188,7 @@
       }
     } catch (err) {
       const m = String(err && err.message || err);
-      say(/invalid login|invalid_credentials/i.test(m) ? 'Barua pepe au nenosiri si sahihi.'
+      say(/invalid login|invalid_credentials/i.test(m) ? (typed.includes('@') ? 'Barua pepe au nenosiri si sahihi.' : 'Namba ya simu au nenosiri si sahihi.')
         : /email not confirmed/i.test(m) ? 'Barua pepe yako bado haijathibitishwa.'
         : /fetch|network/i.test(m) ? 'Hakuna mtandao. Jaribu tena.' : m);
     } finally {

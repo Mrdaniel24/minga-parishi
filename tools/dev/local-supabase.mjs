@@ -148,6 +148,15 @@ function whereSql(sp, params, alias) {
   return conds.length ? ' where ' + conds.join(' and ') : '';
 }
 
+// a JSON list goes into an array column (uuid[], text[]) as a Postgres array, like PostgREST; into jsonb as json
+const typeCache = {};
+async function colTypes(table) {
+  if (typeCache[table]) return typeCache[table];
+  const r = await pg.query(`select column_name, data_type from information_schema.columns where table_schema = 'public' and table_name = $1`, [table]);
+  return (typeCache[table] = Object.fromEntries(r.rows.map(x => [x.column_name, x.data_type])));
+}
+const toParam = (v, type) => v !== null && typeof v === 'object' ? (Array.isArray(v) && type === 'ARRAY' ? v : JSON.stringify(v)) : v;
+
 async function asUser(sub, fn) {
   return pg.transaction(async tx => {
     if (sub) await tx.query(`select set_config('request.jwt.claim.sub', $1, true)`, [sub]);
@@ -164,7 +173,10 @@ async function rest(req, res, url, body, sub) {
     const fn = name.slice(4);
     const argsObj = body ? JSON.parse(body) : Object.fromEntries(sp);
     const keys = Object.keys(argsObj);
-    const params = keys.map(k => (argsObj[k] !== null && typeof argsObj[k] === 'object') ? JSON.stringify(argsObj[k]) : argsObj[k]);
+    // a list of plain values is a Postgres array (uuid[] …), like PostgREST; objects go as json
+    const params = keys.map(k => { const v = argsObj[k];
+      if (Array.isArray(v) && v.every(x => x === null || typeof x !== 'object')) return v;
+      return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v; });
     const sql = `select * from public.${ident(fn)}(${keys.map((k, i) => `${ident(k)} => $${i + 1}`).join(', ')})`;
     const r = await asUser(sub, tx => tx.query(sql, params));
     const rettype = r.fields.length === 1 && r.fields[0].name === fn ? 'scalar' : 'set';
@@ -198,18 +210,21 @@ async function rest(req, res, url, body, sub) {
     let rows = JSON.parse(body); if (!Array.isArray(rows)) rows = [rows];
     const cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
     const params = [];
-    const values = rows.map(r => '(' + cols.map(c => { const v = r[c]; params.push(v !== null && typeof v === 'object' ? JSON.stringify(v) : v); return r.hasOwnProperty(c) ? `$${params.length}` : 'default'; }).join(',') + ')').join(',');
+    const types = await colTypes(table);
+    const values = rows.map(r => '(' + cols.map(c => { const v = r[c]; params.push(toParam(v, types[c])); return r.hasOwnProperty(c) ? `$${params.length}` : 'default'; }).join(',') + ')').join(',');
     let sql = `insert into public.${ident(table)} (${cols.map(ident).join(',')}) values ${values}`;
     if (sp.get('on_conflict')) {
       const oc = sp.get('on_conflict').split(',').map(ident).join(',');
       sql += /ignore-duplicates/.test(prefer) ? ` on conflict (${oc}) do nothing` : ` on conflict (${oc}) do update set ${cols.map(c => `${ident(c)} = excluded.${ident(c)}`).join(',')}`;
     }
     const r = await asUser(sub, tx => tx.query(sql.replace(/ (\w+) \(/, ' $1 (') + returning, params));
+    if (returning && (req.headers.accept || '').includes('vnd.pgrst.object')) return send(res, 201, r.rows[0] ?? null);
     return send(res, 201, returning ? r.rows : null);
   }
   if (req.method === 'PATCH') {
     const row = JSON.parse(body); const params = [];
-    const sets = Object.keys(row).map(c => { const v = row[c]; params.push(v !== null && typeof v === 'object' ? JSON.stringify(v) : v); return `${ident(c)} = $${params.length}`; });
+    const types = await colTypes(table);
+    const sets = Object.keys(row).map(c => { const v = row[c]; params.push(toParam(v, types[c])); return `${ident(c)} = $${params.length}`; });
     const sql = `update public.${ident(table)} ${alias} set ${sets.join(',')}${whereSql(sp, params, alias)}${returning}`;
     const r = await asUser(sub, tx => tx.query(sql, params));
     return send(res, 200, returning ? r.rows : null);
@@ -255,6 +270,12 @@ async function storage(req, res, url, raw, sub) {
     return res.end(readFileSync(file));
   }
   if (!sub) return send(res, 401, { statusCode: '401', error: 'Unauthorized', message: 'sign in to upload' });
+  // private files (payment proofs): a "signed" link — locally just the file itself
+  if (req.method === 'POST' && p.startsWith('object/sign/')) {
+    const key = p.slice('object/sign/'.length);
+    if (!existsSync(normalize(join(STORE, key)))) return send(res, 404, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+    return send(res, 200, { signedURL: '/object/public/' + key });    // supabase-js encodes it
+  }
   if ((req.method === 'POST' || req.method === 'PUT') && p.startsWith('object/')) {
     const key = p.slice('object/'.length);
     const file = normalize(join(STORE, key));
@@ -300,19 +321,27 @@ http.createServer(async (req, res) => {
       const ep = url.pathname.slice(9);
       if (ep === 'token') {
         const { email, password, refresh_token } = JSON.parse(body || '{}');
-        const em = email || (refresh_token || '').replace(/^r-/, '');
-        if (!USERS[em] || (email && password !== PASSWORD)) return send(res, 400, { error: 'invalid_grant', error_description: 'Invalid login credentials', code: 'invalid_credentials', msg: 'Invalid login credentials' });
-        return send(res, 200, { access_token: jwt(USERS[em], em), token_type: 'bearer', expires_in: 86400, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r-' + em, user: userObj(USERS[em], em) });
+        const em = String(email || (refresh_token || '').replace(/^r-/, '')).toLowerCase();
+        // accounts made in the app (e.g. by phone, migration 29) have their own password;
+        // the start-up accounts use the shared one
+        const u = (await pg.query(`select id, email, encrypted_password, (encrypted_password = extensions.crypt($2, encrypted_password)) ok
+                                   from auth.users where lower(email) = $1`, [em, password || ''])).rows[0];
+        const good = u && (!email || (u.encrypted_password ? u.ok : password === PASSWORD));
+        if (!good) return send(res, 400, { error: 'invalid_grant', error_description: 'Invalid login credentials', code: 'invalid_credentials', msg: 'Invalid login credentials' });
+        return send(res, 200, { access_token: jwt(u.id, u.email), token_type: 'bearer', expires_in: 86400, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r-' + u.email, user: userObj(u.id, u.email) });
       }
       if (ep === 'user') {
-        const sub = subOf(req); const em = Object.keys(USERS).find(e => USERS[e] === sub);
-        return sub && em ? send(res, 200, userObj(sub, em)) : send(res, 401, { code: 401, msg: 'invalid JWT' });
+        const sub = subOf(req);
+        const u = sub && (await pg.query(`select id, email from auth.users where id = $1`, [sub])).rows[0];
+        return u ? send(res, 200, userObj(u.id, u.email)) : send(res, 401, { code: 401, msg: 'invalid JWT' });
       }
       if (ep === 'logout') { res.writeHead(204); return res.end(); }
       return send(res, 404, { msg: 'not implemented in local server' });
     }
     if (url.pathname.startsWith('/rest/v1/')) return await rest(req, res, url, body, subOf(req));
     if (url.pathname.startsWith('/storage/v1/')) return storage(req, res, url, raw, subOf(req));
+    // api/sms.js runs on Vercel; locally there is no SMS provider
+    if (url.pathname === '/api/sms') return req.method === 'GET' ? send(res, 200, { configured: false }) : send(res, 503, { error: 'Hakuna mtoa huduma wa SMS kwenye server ya majaribio.' });
     return serveStatic(url, res);
   } catch (e) {
     const status = e.status || 400;

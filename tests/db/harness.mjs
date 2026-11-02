@@ -13,7 +13,14 @@ const MIGRATIONS = join(ROOT, 'database', 'migrations');
 export const SUPABASE_STUB = `
 create schema if not exists auth;
 create schema if not exists extensions;
-create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb);
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb,
+  instance_id uuid, aud text, role text, encrypted_password text, email_confirmed_at timestamptz, raw_app_meta_data jsonb,
+  created_at timestamptz, updated_at timestamptz, confirmation_token text, email_change text, email_change_token_new text, recovery_token text);
+create table auth.identities (id uuid primary key default gen_random_uuid(), provider_id text, user_id uuid references auth.users(id) on delete cascade,
+  identity_data jsonb, provider text, last_sign_in_at timestamptz, created_at timestamptz, updated_at timestamptz);
+-- pgcrypto stand-ins (Supabase has the real ones in schema extensions): crypt(pw, crypt(pw, salt)) = crypt(pw, salt)
+create function extensions.gen_salt(text) returns text language sql as $f$ select 'x$' $f$;
+create function extensions.crypt(text, text) returns text language sql immutable as $f$ select 'x$' || md5($1) $f$;
 create function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create role anon nologin;

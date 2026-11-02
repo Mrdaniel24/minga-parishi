@@ -58,12 +58,14 @@
   };
 
   // fills every [data-user-*] slot (the top bar may be built after the guard ran)
+  // an account that signs in by phone shows its number, not its private sign-in address
+  PM.loginLabel = p => p && p.phone && String(p.email || '').endsWith('@simu.parokia.local') ? '+' + p.phone : (p && p.email) || '';
   PM.paintUser = function () {
     const p = PM.profile;
     if (p) {
-      document.querySelectorAll('[data-user-name]').forEach(el => { el.textContent = p.full_name || p.email; });
-      document.querySelectorAll('[data-user-email]').forEach(el => { el.textContent = p.email || ''; });
-      document.querySelectorAll('[data-user-initials]').forEach(el => { el.textContent = initialsOf(p.full_name || p.email); });
+      document.querySelectorAll('[data-user-name]').forEach(el => { el.textContent = p.full_name || PM.loginLabel(p); });
+      document.querySelectorAll('[data-user-email]').forEach(el => { el.textContent = PM.loginLabel(p); });
+      document.querySelectorAll('[data-user-initials]').forEach(el => { el.textContent = initialsOf(p.full_name || PM.loginLabel(p)); });
     }
     if (PM.roleLabel) document.querySelectorAll('[data-user-role]').forEach(el => { el.textContent = PM.roleLabel; });
   };
@@ -120,6 +122,7 @@
     a('Zaka (vigango vyote)', 'calendar_month', 'zaka', 'finance.read');
     a('Michango (vigango vyote)', 'volunteer_activism', 'campaigns', 'finance.read');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
+    a('Michango ya Viongozi', 'military_tech', 'leaderreport', 'finance.read');
     h('Ofisi ya Fedha');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
 
@@ -128,6 +131,7 @@
     a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
     a('Viongozi', 'badge', 'leaders', 'registry.read');
     a('Taarifa za Parokia', 'info', 'parish', '*');
+    a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Watumiaji na Nafasi', 'admin_panel_settings', 'users', 'users.manage');
     a('Mipangilio ya Fedha', 'settings', 'settings', 'parish.configure');
 
