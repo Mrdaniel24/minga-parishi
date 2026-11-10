@@ -768,7 +768,7 @@
     title: 'Familia',
     async render(el, params) {
       const year = P.year();
-      const f = await P.q(P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,profile_id)').eq('id', params.id).maybeSingle());
+      const f = await P.q(P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,removed_on,removed_reason,profile_id)').eq('id', params.id).maybeSingle());
       if (!f) { el.innerHTML = P.empty('Familia haipo, au huna ruhusa ya kuiona.'); return; }
       const ids = f.parishioners.map(p => p.id);
       const [pl, tx, grid, held] = await Promise.all([
@@ -786,6 +786,7 @@
       const members = f.parishioners.filter(p => p.membership_status === 'active')
         .map(p => ({ ...p, ...(g[p.id] || {}), id: p.id, total: Number(g[p.id]?.total || 0) }))
         .sort((a, b) => (a.id === f.head_parishioner_id ? -1 : b.id === f.head_parishioner_id ? 1 : 0) || (order[a.relationship] || 9) - (order[b.relationship] || 9));
+      const former = f.parishioners.filter(p => p.membership_status !== 'active');
       const track = members.some(m => m.total > 0);
       const jName = P.ref.unitsById[f.jumuiya_id]?.name || '';
       el.innerHTML = `
@@ -808,7 +809,12 @@
             ...P.MONTHS.map((m, i) => ({ key: mk(i), label: m, cls: 'pm-num pm-cellcol',
               html: p => zakaBox(p[mk(i)], i, months, { kind: 'parishioner', id: p.id, name: p.full_name, where: f.family_name }, track && p.is_zaka_payer) })),
             { key: 'total', label: 'Zaka', fmt: (v, p) => P.txMoney(v, { title: `Zaka ${year} — ${p.full_name}`, parishioner: p.id, kinds: ['zaka'], zaka_year: year }, P.num), cls: 'pm-num pm-strong' },
-            { key: 'id', label: '', html: p => canWriteReg() ? `<button class="pm-btn pm-btn--sm" data-editp="${p.id}">Hariri</button>` : '' }], { empty: 'Familia haina wanafamilia bado.', cls: 'pm-keep-table' })}</section>
+            { key: 'id', label: '', html: p => canWriteReg() ? `<button class="pm-btn pm-btn--sm" data-editp="${p.id}">Hariri</button>` : '' }], { empty: 'Familia haina wanafamilia bado.', cls: 'pm-keep-table' })}
+          ${former.length ? `<details class="mt-3"><summary class="pm-muted pm-small">Wasio hai kwenye familia hii (${former.length}) — historia yao inabaki</summary>${P.table(former, [
+            { key: 'full_name', label: 'Jina', html: p => `${P.esc(p.full_name)}<br><small class="pm-muted">${P.esc(p.relationship || '')}</small>` },
+            { key: 'membership_status', label: 'Hali', html: p => P.badge(P.MEMBER_STATUS[p.membership_status] || p.membership_status, p.membership_status === 'removed' ? 'rose' : 'muted')
+              + (p.removed_reason ? `<br><small class="pm-muted">${p.removed_on ? P.date(String(p.removed_on).slice(0, 10)) + ' · ' : ''}${P.esc(p.removed_reason)}</small>` : '') },
+            { key: 'id', label: '', html: p => `<a class="pm-btn pm-btn--sm" href="#/statement?parishioner=${p.id}">Michango</a>${canWriteReg() ? ` <button class="pm-btn pm-btn--sm" data-editp="${p.id}">Hariri</button>` : ''}` }])}</details>` : ''}</section>
         <section class="pm-card"><div class="pm-row"><h3 class="pm-h3">Michango ya familia ${year} (Mavuno, Ujenzi…)</h3>
           <div class="pm-actions">${canPledge() ? '<button class="pm-btn pm-btn--sm" data-assign><span class="material-symbols-outlined">assignment_add</span>Pangia familia</button>' : ''}</div></div>
           ${P.table(pl, [{ key: 'campaign_name', label: 'Mchango' }, { key: 'who', label: 'Wa', html: r => P.esc(who(r)) },

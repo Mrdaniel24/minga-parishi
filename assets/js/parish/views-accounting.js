@@ -186,25 +186,44 @@
       const title = REPORTS.find(x => x[0] === r)[1];
       const scopeLbl = scope ? P.ref.unitsById[scope].label : 'Parokia nzima';
       let rows = [], cols = [], foot = null, sub = scopeLbl, excel = null;
+      // a total of the report opens the payments behind it (same filters as the report)
+      const base = { ...(scope ? { unit: scope } : {}), ...(camp ? { campaign: camp } : {}) };
+      const monthRange = (y, i) => ({ from: `${y}-${String(i + 1).padStart(2, '0')}-01`, to: new Date(y, i + 1, 0).toISOString().slice(0, 10) });
+      const MKIND = { zaka: ['zaka'], mavuno: ['mavuno'], ujenzi: ['ujenzi'], sadaka: ['sadaka'], special: ['special', 'shukrani'], other: ['income_other'] };
+      const byLevelTx = x => {
+        const k = r === 'collections' ? 'parish' : level;
+        if (k === 'parish') return {};
+        if (!x.group_id) return null;
+        if (k === 'family') return { family: x.group_id };
+        if (k === 'parishioner') return { parishioner: x.group_id };
+        if (k === 'kigango') return { unit: x.group_id };
+        // jumuiya level: a row that is a kigango holds what was paid at the kigango itself
+        return P.ref.unitsById[x.group_id]?.unit_type === 'kigango' ? { unit_self: x.group_id } : { unit: x.group_id };
+      };
       if (r === 'collections' || r === 'by_level') {
         rows = await P.rpc('contribution_totals', { p_from: from, p_to: to, p_level: r === 'collections' ? 'parish' : level, p_category: cat || null, p_campaign: camp || null, p_scope: scope || null });
         if (r === 'collections') { rows = rows.map(x => ({ ...x, group_name: x.category_name })); }
         cols = [{ key: 'group_name', label: r === 'collections' ? 'Aina ya mchango' : 'Jina' }, ...(r === 'by_level' ? [{ key: 'category_name', label: 'Aina' }] : []),
-          { key: 'payments', label: 'Malipo', cls: 'pm-num' }, { key: 'reversals', label: 'Yaliyorudishwa', cls: 'pm-num' }, { key: 'total', label: 'Jumla', fmt: P.tzs, cls: 'pm-num pm-strong' }];
+          { key: 'payments', label: 'Malipo', cls: 'pm-num' }, { key: 'reversals', label: 'Yaliyorudishwa', cls: 'pm-num' },
+          { key: 'total', label: 'Jumla', cls: 'pm-num pm-strong', html: x => { const w = byLevelTx(x); return w ? P.txMoney(x.total, { title: `${x.category_name}${r === 'by_level' ? ' — ' + (x.group_name || '') : ''}`, sub: `${P.date(from)} – ${P.date(to)}`, ...base, ...w, category: x.category_id, from, to }) : P.tzs(x.total); } }];
         foot = { group_name: '<b>JUMLA</b>', total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>`, payments: P.num(P.sum(rows, 'payments')) };
         sub = `${scopeLbl} · ${from} – ${to}`;
       } else if (r === 'monthly' || r === 'income_expense') {
         rows = await P.rpc('monthly_totals', { p_year: year, p_scope: scope || null });
         rows = rows.map((m, i) => ({ ...m, mwezi: P.MONTHS[i], net: Number(m.income) - Number(m.expense) }));
-        cols = r === 'monthly' ? [{ key: 'mwezi', label: 'Mwezi' }, ...['zaka', 'mavuno', 'ujenzi', 'sadaka', 'special', 'other'].map(k => ({ key: k, label: k[0].toUpperCase() + k.slice(1), fmt: P.num, cls: 'pm-num' })), { key: 'income', label: 'Jumla', fmt: P.tzs, cls: 'pm-num pm-strong' }]
-          : [{ key: 'mwezi', label: 'Mwezi' }, { key: 'income', label: 'Mapato', fmt: P.tzs, cls: 'pm-num' }, { key: 'expense', label: 'Matumizi', fmt: P.tzs, cls: 'pm-num' }, { key: 'net', label: 'Ziada / Upungufu', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-        foot = Object.fromEntries(cols.slice(1).map(c => [c.key, c.fmt(P.sum(rows, c.key))])); foot.mwezi = '<b>JUMLA</b>';
+        const scU = scope ? { unit: scope } : {};
+        const mtx = (k, fmt) => (v, x) => P.txMoney(v, { title: `${k === 'income' ? 'Mapato' : k[0].toUpperCase() + k.slice(1)} — ${x.mwezi} ${year}`, sub: scopeLbl, ...scU, ...monthRange(year, rows.indexOf(x)), ...(MKIND[k] ? { kinds: MKIND[k] } : {}) }, fmt);
+        cols = r === 'monthly' ? [{ key: 'mwezi', label: 'Mwezi' }, ...['zaka', 'mavuno', 'ujenzi', 'sadaka', 'special', 'other'].map(k => ({ key: k, label: k[0].toUpperCase() + k.slice(1), fmt: mtx(k, P.num), sum: P.num, cls: 'pm-num' })), { key: 'income', label: 'Jumla', fmt: mtx('income', P.tzs), sum: P.tzs, cls: 'pm-num pm-strong' }]
+          : [{ key: 'mwezi', label: 'Mwezi' }, { key: 'income', label: 'Mapato', fmt: mtx('income', P.tzs), sum: P.tzs, cls: 'pm-num' }, { key: 'expense', label: 'Matumizi', fmt: P.tzs, cls: 'pm-num' }, { key: 'net', label: 'Ziada / Upungufu', fmt: P.tzs, cls: 'pm-num pm-strong' }];
+        // the year totals (foot) open the whole year
+        foot = Object.fromEntries(cols.slice(1).map(c => [c.key, c.sum ? P.txMoney(P.sum(rows, c.key), { title: `${c.label} ${year}`, sub: scopeLbl, ...scU, year, ...(MKIND[c.key] ? { kinds: MKIND[c.key] } : {}) }, c.sum) : c.fmt(P.sum(rows, c.key))]));
+        foot.mwezi = '<b>JUMLA</b>';
         sub = `${scopeLbl} · ${year}`;
       } else if (r === 'campaign') {
         if (!camp) { out.innerHTML = P.empty('Chagua kampeni.'); return; }
         rows = await P.rpc('campaign_org_progress', { p_campaign: camp, p_level: level === 'kigango' ? 'kigango' : 'jumuiya' });
         cols = [{ key: 'org_unit_name', label: 'Jina' }, { key: 'target', label: 'Walichopangiwa', fmt: P.tzs, cls: 'pm-num' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
-          { key: 'collected', label: 'Walichotoa', fmt: P.tzs, cls: 'pm-num pm-strong' }, { key: 'balance', label: 'Bado', fmt: P.tzs, cls: 'pm-num' }, { key: 'excess', label: 'Ziada', fmt: P.tzs, cls: 'pm-num' }, { key: 'pct', label: '%', fmt: P.pct, cls: 'pm-num' }];
+          { key: 'collected', label: 'Walichotoa', html: x => x.org_unit_id ? P.txMoney(x.collected, { title: `${P.ref.camps.find(c => c.id === camp)?.name || 'Kampeni'} — ${x.org_unit_name}`, campaign: camp, unit: x.org_unit_id }) : P.tzs(x.collected), cls: 'pm-num pm-strong' }, { key: 'balance', label: 'Bado', fmt: P.tzs, cls: 'pm-num' }, { key: 'excess', label: 'Ziada', fmt: P.tzs, cls: 'pm-num' }, { key: 'pct', label: '%', fmt: P.pct, cls: 'pm-num' }];
         foot = { org_unit_name: '<b>JUMLA</b>', target: P.tzs(P.sum(rows, 'target')), collected: `<b>${P.tzs(P.sum(rows, 'collected'))}</b>`, balance: P.tzs(P.sum(rows, 'balance')), excess: P.tzs(P.sum(rows, 'excess')) };
         sub = P.ref.camps.find(c => c.id === camp)?.name;
       } else if (r === 'outstanding') {
@@ -222,7 +241,9 @@
       } else if (r === 'yoy') {
         const [a, b] = await Promise.all([P.rpc('monthly_totals', { p_year: year - 1, p_scope: scope || null }), P.rpc('monthly_totals', { p_year: year, p_scope: scope || null })]);
         rows = P.MONTHS.map((m, i) => ({ mwezi: m, prev: Number(a[i].income), cur: Number(b[i].income), diff: Number(b[i].income) - Number(a[i].income) }));
-        cols = [{ key: 'mwezi', label: 'Mwezi' }, { key: 'prev', label: String(year - 1), fmt: P.tzs, cls: 'pm-num' }, { key: 'cur', label: String(year), fmt: P.tzs, cls: 'pm-num' }, { key: 'diff', label: 'Tofauti', fmt: P.tzs, cls: 'pm-num pm-strong' }];
+        const scU = scope ? { unit: scope } : {};
+        const ytx = y => (v, x) => P.txMoney(v, { title: `Mapato — ${x.mwezi} ${y}`, sub: scopeLbl, ...scU, ...monthRange(y, rows.indexOf(x)) });
+        cols = [{ key: 'mwezi', label: 'Mwezi' }, { key: 'prev', label: String(year - 1), fmt: ytx(year - 1), cls: 'pm-num' }, { key: 'cur', label: String(year), fmt: ytx(year), cls: 'pm-num' }, { key: 'diff', label: 'Tofauti', fmt: P.tzs, cls: 'pm-num pm-strong' }];
         foot = { mwezi: '<b>JUMLA</b>', prev: P.tzs(P.sum(rows, 'prev')), cur: P.tzs(P.sum(rows, 'cur')), diff: P.tzs(P.sum(rows, 'diff')) };
       } else if (r === 'receipts') {
         rows = await P.q(P.from('v_receipt_register').select('*').gte('issued_at', from).lte('issued_at', to + 'T23:59:59').order('seq'));

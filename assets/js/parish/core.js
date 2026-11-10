@@ -19,6 +19,8 @@
   P.date = d => d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   P.esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   P.today = () => new Date().toISOString().slice(0, 10);
+  /* hali ya muumini kwenye rejista */
+  P.MEMBER_STATUS = { active: 'Hai', inactive: 'Hashiriki', moved: 'Amehama', deceased: 'Marehemu', removed: 'Ameondolewa' };
   /* the working year: chosen once in the top bar, used by every page (remembered per browser) */
   P.thisYear = () => new Date().getFullYear();
   // a year chosen last year is forgotten when the calendar year changes: in January
@@ -288,7 +290,7 @@
         const like = `%${v}%`;
         const [people, fams] = await Promise.all([
           (jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)').eq('jumuiya_id', jumuiya)
-                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).ilike('full_name', like).limit(jumuiya ? 15 : 8),
+                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).neq('membership_status', 'removed').ilike('full_name', like).limit(jumuiya ? 15 : 8),
           (jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
                    : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5),
         ].map(P.q)).catch(() => [[], []]);

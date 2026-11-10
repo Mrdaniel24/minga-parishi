@@ -126,7 +126,8 @@
       <label>Umri (miaka)<input name="age" type="number" min="0" max="120" inputmode="numeric" value="${age}" placeholder="mf. 34"></label>
       <label>Mwaka wa kuzaliwa<input name="birth_year" type="number" min="1900" max="2100" value="${P.esc(p?.birth_year || '')}"></label>
       <label>Mlipa zaka<select name="is_zaka_payer"><option value="false">Hapana</option><option value="true" ${p?.is_zaka_payer ? 'selected' : ''}>Ndiyo</option></select></label>
-      <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased'].map(s => `<option ${p?.membership_status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased', ...(p?.membership_status === 'removed' ? ['removed'] : [])].map(s => `<option value="${s}" ${p?.membership_status === s ? 'selected' : ''}>${P.MEMBER_STATUS[s]}${s === 'active' && p?.membership_status === 'removed' ? ' (mrudishe kwenye rejista)' : ''}</option>`).join('')}</select></label>
+      ${p?.membership_status === 'removed' ? `<p class="pm-span2 pm-alert">Ameondolewa kwenye rejista${p.removed_on ? ' ' + P.date(String(p.removed_on).slice(0, 10)) : ''}${p.removed_reason ? ': ' + P.esc(p.removed_reason) : ''}. Chagua "Hai" kumrudisha.</p>` : ''}
       ${p ? `<label class="pm-span2">Hamishia familia nyingine (hiari)<select name="family_id">${P.options(families.length ? families : [fam], { label: 'family_name', selected: fam.id })}</select></label>` : ''}
       ${shown.length ? `<fieldset class="pm-span2 pm-titles"><legend>Vyeo (hiari) — mtu mmoja anaweza kuwa na vyeo zaidi ya kimoja</legend>
         ${Object.entries(LEVEL).map(([lv, lbl]) => {
@@ -134,7 +135,7 @@
           return list.length ? `<div><small class="pm-muted">${lbl}</small>${list.map(x => `<label class="pm-relall"><input type="checkbox" data-title="${x.id}" ${had.has(x.id) ? 'checked' : ''}> ${P.esc(x.title_sw)}${x.is_active === false ? ' <small class="pm-muted">(hakitumiki)</small>' : ''}</label>`).join('')}</div>` : '';
         }).join('')}</fieldset>` : ''}</div>
       ${p ? `<div class="pm-row-actions"><button type="button" class="pm-btn pm-btn--sm" data-moveperson><span class="material-symbols-outlined">move_up</span>Hamisha jumuiya / familia</button>
-        <button type="button" class="pm-btn pm-btn--sm pm-btn--danger" data-delperson><span class="material-symbols-outlined">person_remove</span>Futa kwenye rejista</button></div>` : ''}`,
+        ${p.membership_status !== 'removed' ? '<button type="button" class="pm-btn pm-btn--sm pm-btn--danger" data-delperson><span class="material-symbols-outlined">person_remove</span>Ondoa kwenye rejista</button>' : ''}</div>` : ''}`,
       onOpen(m) {
         const mv = m.querySelector('[data-moveperson]'), del = m.querySelector('[data-delperson]');
         mv && mv.addEventListener('click', () => { m.querySelector('[data-close]').click(); P.movePerson(p, fam); });
@@ -205,18 +206,18 @@
     Toast.success(`Familia imehamishwa${r.payments_moved ? ` pamoja na malipo ${r.payments_moved}` : ''}.`);
     P.reload();
   };
-  // removed from the register: the payments stay, under the payer's name and family
+  // removed from the register (soft delete): the record, payments, attendance and title history stay
   P.deletePerson = async (p) => {
     const n = await P.q(P.from('finance_transactions').select('id', { count: 'exact', head: true }).eq('parishioner_id', p.id)).catch(() => null);
     const count = n && n.count !== undefined ? n.count : null;
-    const v = await P.modal({ title: `Futa ${p.full_name} kwenye rejista?`, submit: 'Futa', body: `<div class="pm-form">
-      <p class="pm-span2">Jina lake litaondolewa kwenye rejista, vyeo vyake vitamalizwa na akaunti yake (kama ipo) haitaunganishwa naye tena.</p>
-      <p class="pm-span2 pm-alert">${count ? `Malipo yake <b>${count}</b> <b>hayatafutwa</b>` : 'Malipo yake (kama yapo) <b>hayatafutwa</b>'}: yatabaki kwenye ripoti kwa jina lake na familia yake. Kama amehamia jumuiya nyingine, tumia "Hamisha" badala ya kufuta.</p>
-      <label class="pm-span2">Sababu<input name="reason" required maxlength="200" placeholder="mf. Amehamia parokia nyingine / ameandikishwa mara mbili"></label>
-      <label class="pm-span2 pm-relall"><input type="checkbox" name="sure" value="1" required> Nimeelewa — futa jina hili</label></div>` });
+    const v = await P.modal({ title: `Ondoa ${p.full_name} kwenye rejista?`, submit: 'Ondoa', body: `<div class="pm-form">
+      <p class="pm-span2">Hataonekana tena kwenye orodha za waumini hai, mahudhurio mapya wala SMS. Vyeo vyake vitamalizwa na akaunti yake (kama ipo) haitaunganishwa naye tena.</p>
+      <p class="pm-span2 pm-alert">Hakuna kinachofutwa: ${count ? `malipo yake <b>${count}</b>` : 'malipo yake (kama yapo)'}, mahudhurio na historia ya vyeo vinabaki kwa jina lake. Akiondolewa kwa makosa, unaweza kumrudisha (Hariri → Hali: Hai). Kama amehamia jumuiya nyingine, tumia "Hamisha" badala yake.</p>
+      <label class="pm-span2">Sababu<input name="reason" required minlength="3" maxlength="200" placeholder="mf. Amehamia parokia nyingine / ameandikishwa mara mbili"></label>
+      <label class="pm-span2 pm-relall"><input type="checkbox" name="sure" value="1" required> Nimeelewa — mwondoe kwenye rejista</label></div>` });
     if (!v) return;
     const r = await P.rpc('delete_parishioner', { p_parishioner: p.id, p_reason: v.reason });
-    Toast.success(`Amefutwa. Malipo ${r.payments_kept} yamebaki kwenye kumbukumbu.`);
+    Toast.success(`Ameondolewa kwenye rejista. Malipo ${r.payments_kept} na historia yake vimebaki.`);
     P.reload();
   };
 
@@ -237,7 +238,7 @@
       const out = el.querySelector('[data-out]');
       if (!jum && !q) { out.innerHTML = P.empty('Chagua jumuiya au tafuta jina.'); return; }
       out.innerHTML = P.loading();
-      let fq = P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,profile_id)').order('family_code');
+      let fq = P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,removed_on,removed_reason,profile_id)').order('family_code');
       if (jum) fq = fq.eq('jumuiya_id', jum);
       if (q) {
         const ids = await P.q(P.from('parishioners').select('family_id').ilike('full_name', `%${q}%`).limit(200));
@@ -255,7 +256,7 @@
             { key: 'relationship', label: 'Uhusiano' }, { key: 'gender', label: 'Jinsi', fmt: g => g === 'male' ? 'Me' : g === 'female' ? 'Ke' : '—' },
             { key: 'birth_year', label: 'Umri', fmt: y => y ? P.thisYear() - y : '—', cls: 'pm-num' },
             { key: 'phone', label: 'Simu' }, { key: 'is_zaka_payer', label: 'Mlipa zaka', fmt: v => v ? 'Ndiyo' : '—' },
-            { key: 'membership_status', label: 'Hali' },
+            { key: 'membership_status', label: 'Hali', html: p => p.membership_status === 'removed' ? P.badge(P.MEMBER_STATUS.removed, 'rose') : P.esc(P.MEMBER_STATUS[p.membership_status] || p.membership_status) },
             { key: 'id', label: '', html: p => `<a class="pm-btn pm-btn--sm" href="#/statement?parishioner=${p.id}">Michango</a>${canW ? ` <button class="pm-btn pm-btn--sm" data-editp="${p.id}" data-fam="${f.id}">Hariri</button>` : ''}` }])}
         </div>`).join('') : P.empty('Hakuna familia iliyopatikana.');
       const famById = Object.fromEntries(fams.map(f => [f.id, f]));
@@ -269,7 +270,7 @@
       }));
       el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel('rejista', { Waumini: fams.flatMap(f => f.parishioners.map(p => ({
         Familia: f.family_name, Na_familia: f.family_code, Jumuiya: P.ref.unitsById[f.jumuiya_id]?.label, Jina: p.full_name, Uhusiano: p.relationship,
-        Jinsi: p.gender, Simu: p.phone, Mlipa_zaka: p.is_zaka_payer ? 'Ndiyo' : '', Hali: p.membership_status }))) }));
+        Jinsi: p.gender, Simu: p.phone, Mlipa_zaka: p.is_zaka_payer ? 'Ndiyo' : '', Hali: P.MEMBER_STATUS[p.membership_status] || p.membership_status }))) }));
     },
   };
 

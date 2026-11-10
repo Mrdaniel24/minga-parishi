@@ -12,7 +12,7 @@
   const MAX_PROOF = 10 * 1024 * 1024;
   const month = v => v ? `${P.MONTHS[Number(String(v).slice(5, 7)) - 1]} ${String(v).slice(0, 4)}` : '';
   const DRILL_KEYS = ['unit', 'unit_self', 'family', 'parishioner', 'kinds', 'not_kinds', 'category', 'campaign', 'pledge', 'batch',
-    'year', 'campaign_year', 'zaka_year', 'period_month', 'from', 'to', 'status'];
+    'year', 'campaign_year', 'zaka_year', 'gyear', 'family_only', 'period_month', 'from', 'to', 'status'];
 
   /* ---------- clickable totals ---------- */
   P.txLink = (html, filter) => `<button type="button" class="pm-txlink" data-txns="${P.esc(JSON.stringify(filter))}" title="Bonyeza kuona miamala iliyoleta kiasi hiki">${html}</button>`;
@@ -48,7 +48,8 @@
               <div class="pm-actions">${f.add && canRec ? '<button type="button" class="pm-btn pm-btn--sm pm-btn--primary" data-add><span class="material-symbols-outlined">add</span>Ongeza malipo</button>' : ''}
                 <button type="button" class="pm-btn pm-btn--sm" data-xls>Excel</button></div></div>` +
             P.table(shown, [
-              { key: 'txn_no', label: 'Na.' }, { key: 'txn_date', label: 'Tarehe', fmt: P.date },
+              { key: 'txn_no', label: 'Na.', html: r => P.esc(r.txn_no) + (r.reference_no ? `<br><small class="pm-muted" title="Kumbukumbu ya malipo">${P.esc(r.reference_no)}</small>` : '') },
+              { key: 'txn_date', label: 'Tarehe', fmt: P.date },
               { key: 'payer_name', label: 'Mlipaji', html: r => P.esc(r.payer_name || '—') + (r.family_name && r.family_name !== r.payer_name ? `<br><small class="pm-muted">${P.esc(r.family_name)}</small>` : '') },
               { key: 'category_name', label: 'Aina', html: r => P.esc(r.category_name) + (r.campaign_name ? `<br><small class="pm-muted">${P.esc(r.campaign_name)}</small>` : '') },
               { key: 'period_month', label: 'Mwezi', fmt: month },

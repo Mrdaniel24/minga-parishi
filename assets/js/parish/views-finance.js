@@ -10,6 +10,11 @@
       const [d, notices] = await Promise.all([P.rpc('parish_dashboard', { p_year: year, p_scope: scope }), P.announcementsHtml()]);
       const t = d.totals, c = d.counts;
       const scopeName = scope ? P.ref.unitsById[scope]?.label : P.ref.parish.official_name;
+      // every income total opens the payments behind it (same rules as parish_dashboard: payment date in the year, area of the payment)
+      const sc = scope ? { unit: scope } : {};
+      const ym = new Date(), mFrom = `${ym.getFullYear()}-${String(ym.getMonth() + 1).padStart(2, '0')}-01`;
+      const mTo = new Date(ym.getFullYear(), ym.getMonth() + 1, 0).toISOString().slice(0, 10);
+      const dtx = (v, title, f) => P.txMoney(v, { title: `${title} — ${scopeName || ''}`, ...sc, ...f });
       el.innerHTML = `
         <div class="pm-head"><div><p class="pm-eyebrow">${P.esc(P.ref.parish.diocese || '')}</p>
           <h1 class="pm-h1">${P.esc(scopeName || '')}</h1>
@@ -25,22 +30,22 @@
           ${P.kpi('Vigango', P.num(c.vigango), 'account_tree')}
         </section>
         <section class="pm-kpis">
-          ${P.kpi('Makusanyo ya mwezi huu', P.tzs(t.income_month), 'today', 'pm-kpi--teal')}
-          ${P.kpi(`Makusanyo ${year}`, P.tzs(t.income_year), 'savings', 'pm-kpi--teal')}
-          ${P.kpi('Matumizi', P.tzs(t.expenses_year), 'payments')}
+          ${P.kpi('Makusanyo ya mwezi huu', year === ym.getFullYear() ? dtx(t.income_month, 'Makusanyo ya mwezi huu', { from: mFrom, to: mTo }) : P.tzs(t.income_month), 'today', 'pm-kpi--teal')}
+          ${P.kpi(`Makusanyo ${year}`, dtx(t.income_year, `Makusanyo ${year}`, { year }), 'savings', 'pm-kpi--teal')}
+          ${P.kpi('Matumizi', `<a class="pm-link" href="#/expenses">${P.tzs(t.expenses_year)}</a>`, 'payments')}
           ${P.kpi('Fedha zilizopo', P.tzs(t.cash_available), 'account_balance_wallet', 'pm-kpi--gold')}
-          ${P.kpi('Zaka', P.tzs(t.zaka), 'calendar_month')}
-          ${P.kpi('Mavuno', P.tzs(t.mavuno), 'agriculture')}
-          ${P.kpi('Ujenzi', P.tzs(t.ujenzi), 'construction')}
-          ${P.kpi('Sadaka', P.tzs(t.sadaka), 'church')}
-          ${P.kpi('Michango maalumu', P.tzs(t.special), 'volunteer_activism')}
-          ${P.kpi('Ahadi ambazo hazijalipwa', P.tzs(t.outstanding_pledges), 'pending_actions', 'pm-kpi--rose')}
+          ${P.kpi('Zaka', dtx(t.zaka, `Zaka (malipo ya ${year})`, { year, kinds: ['zaka'] }), 'calendar_month')}
+          ${P.kpi('Mavuno', dtx(t.mavuno, `Mavuno ${year}`, { year, kinds: ['mavuno'] }), 'agriculture')}
+          ${P.kpi('Ujenzi', dtx(t.ujenzi, `Ujenzi ${year}`, { year, kinds: ['ujenzi'] }), 'construction')}
+          ${P.kpi('Sadaka', dtx(t.sadaka, `Sadaka ${year}`, { year, kinds: ['sadaka'] }), 'church')}
+          ${P.kpi('Michango maalumu', dtx(t.special, `Michango maalumu ${year}`, { year, kinds: ['special', 'shukrani'] }), 'volunteer_activism')}
+          ${P.kpi('Ahadi ambazo hazijalipwa', `<a class="pm-link" href="#/reports?r=outstanding${scope ? '&scope=' + scope : ''}">${P.tzs(t.outstanding_pledges)}</a>`, 'pending_actions', 'pm-kpi--rose')}
         </section>
         <section class="pm-grid2">
           <div class="pm-card"><h3 class="pm-h3">Mwenendo wa makusanyo ${year}</h3><canvas id="pm-trend" height="220"></canvas></div>
           <div class="pm-card"><h3 class="pm-h3">Kampeni za ${year}</h3>
             ${(d.campaigns || []).filter(x => Number(x.target) || Number(x.collected)).slice(0, 8).map(x => `
-              <div class="pm-camp"><div><b>${P.esc(x.name)}</b><small>${P.tzs(x.collected)}${Number(x.target) ? ' / ' + P.tzs(x.target) : ''}</small></div>
+              <div class="pm-camp"><div><b>${P.esc(x.name)}</b><small>${P.txMoney(x.collected, { title: `${x.name} — imekusanywa`, campaign: x.campaign_id })}${Number(x.target) ? ' / ' + P.tzs(x.target) : ''}</small></div>
               ${Number(x.target) ? P.progress(x.target_pct) : ''}</div>`).join('') || P.empty('Hakuna kampeni zenye malengo bado.')}
           </div>
         </section>
@@ -642,7 +647,8 @@
           { key: 'name', label: 'Mchango', html: r => `<a class="pm-link" href="#/mchango?id=${r.campaign_id}">${P.esc(r.name)}</a><br><small class="pm-muted">${P.esc(r.category_name)}</small>` },
           { key: 'rules', label: 'Kanuni', html: r => P.rulesBadges(r) },
           { key: 'target', label: 'Lengo', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' },
-          { key: 'pledged', label: 'Pangiwa/Ahadi', fmt: P.tzs, cls: 'pm-num' }, { key: 'collected', label: 'Imekusanywa', fmt: P.tzs, cls: 'pm-num pm-strong' },
+          { key: 'pledged', label: 'Pangiwa/Ahadi', fmt: P.tzs, cls: 'pm-num' },
+          { key: 'collected', label: 'Imekusanywa', html: r => P.txMoney(r.collected, { title: `${r.name} — imekusanywa`, campaign: r.campaign_id }), cls: 'pm-num pm-strong' },
           { key: 'outstanding_pledges', label: 'Bado', fmt: v => Number(v) ? `<span class="pm-due">${P.tzs(v)}</span>` : '—', cls: 'pm-num' },
           { key: 'payers', label: 'Walipaji', cls: 'pm-num' },
           { key: 'campaign_id', label: '', html: r => cfg ? `<span class="pm-nowrap"><button class="pm-btn pm-btn--sm" data-rules="${r.campaign_id}">Kanuni</button> <button class="pm-btn pm-btn--sm" data-rename-campaign="${r.campaign_id}">Hariri jina</button> <button class="pm-btn pm-btn--sm pm-btn--danger" data-delete-campaign="${r.campaign_id}">Futa</button></span>` : '' }],
