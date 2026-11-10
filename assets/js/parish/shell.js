@@ -114,8 +114,8 @@
     h('Yangu');
     a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
-    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
+    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
     h('Muhtasari wa parokia nzima');
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
