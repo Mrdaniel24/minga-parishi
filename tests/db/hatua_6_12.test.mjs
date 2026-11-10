@@ -69,17 +69,19 @@ test('a member can start a new family in the new jumuiya; a whole family can mov
   assert.equal(N(await db.val(`select count(*) from public.finance_transactions where family_id = $1 and jumuiya_id <> $2`, [U.famC, CLARA()])), 0);
 });
 
-test('a removed member leaves their payments behind (name and family kept)', async () => {
+test('a removed member stays on record (soft delete): payments, name and family kept', async () => {
   const p = await db.asAdmin().val(`insert into public.parishioners (parish_id, full_name, family_id, jumuiya_id) values (public.default_parish_id(), 'Mtu Atakayefutwa', $1, $2) returning id`, [U.famA, CLARA()]);
   await pay(U.clerk, { amount: 4000, category_id: I['cat:ZAKA'], parishioner_id: p, txn_date: '2026-05-02', period_month: '2026-05-01' });
   await assert.rejects(call(U.plain, `select public.delete_parishioner($1)`, [p]), /ruhusa/);
   const r = await call(U.clara, `select public.delete_parishioner($1, 'Ameondoka parokiani')`, [p]);
   assert.equal(r.payments_kept, 1);
   db.asAdmin();
-  assert.equal(N(await db.val(`select count(*) from public.parishioners where id = $1`, [p])), 0);
-  const t = await db.one(`select parishioner_id, payer_name, family_id, jumuiya_id, amount from public.finance_transactions where payer_name = 'Mtu Atakayefutwa'`);
-  assert.deepEqual({ ...t, amount: N(t.amount) }, { parishioner_id: null, payer_name: 'Mtu Atakayefutwa', family_id: U.famA, jumuiya_id: CLARA(), amount: 4000 });
+  const per = await db.one(`select membership_status, removed_reason, removed_by, removed_on is not null as dated from public.parishioners where id = $1`, [p]);
+  assert.deepEqual(per, { membership_status: 'removed', removed_reason: 'Ameondoka parokiani', removed_by: U.clara, dated: true });
+  const t = await db.one(`select parishioner_id, family_id, jumuiya_id, amount from public.finance_transactions where parishioner_id = $1`, [p]);
+  assert.deepEqual({ ...t, amount: N(t.amount) }, { parishioner_id: p, family_id: t.family_id, jumuiya_id: CLARA(), amount: 4000 });
   assert.ok(await db.val(`select count(*) from public.audit_log where action = 'delete_parishioner' and row_id = $1`, [p]) > 0);
+  await assert.rejects(call(U.clara, `select public.delete_parishioner($1, 'tena')`, [p]), /ameshaondolewa/);
 });
 
 test('the first payment of a new year opens that year by itself', async () => {
