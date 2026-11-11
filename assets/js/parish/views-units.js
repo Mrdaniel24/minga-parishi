@@ -768,7 +768,7 @@
     title: 'Familia',
     async render(el, params) {
       const year = P.year();
-      const f = await P.q(P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,removed_on,removed_reason,profile_id)').eq('id', params.id).maybeSingle());
+      const f = await P.q(P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,profile_id)').eq('id', params.id).maybeSingle());
       if (!f) { el.innerHTML = P.empty('Familia haipo, au huna ruhusa ya kuiona.'); return; }
       const ids = f.parishioners.map(p => p.id);
       const [pl, tx, grid, held] = await Promise.all([
@@ -787,6 +787,13 @@
         .map(p => ({ ...p, ...(g[p.id] || {}), id: p.id, total: Number(g[p.id]?.total || 0) }))
         .sort((a, b) => (a.id === f.head_parishioner_id ? -1 : b.id === f.head_parishioner_id ? 1 : 0) || (order[a.relationship] || 9) - (order[b.relationship] || 9));
       const former = f.parishioners.filter(p => p.membership_status !== 'active');
+      // when and why a member was removed (migration 33); read apart so the page never depends on those columns
+      if (former.some(p => p.membership_status === 'removed')) {
+        try {
+          const det = await P.q(P.from('parishioners').select('id,removed_on,removed_reason').in('id', former.map(p => p.id)));
+          det.forEach(d => Object.assign(former.find(p => p.id === d.id) || {}, d));
+        } catch (e) { /* database not patched yet */ }
+      }
       const track = members.some(m => m.total > 0);
       const jName = P.ref.unitsById[f.jumuiya_id]?.name || '';
       el.innerHTML = `

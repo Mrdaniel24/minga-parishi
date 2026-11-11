@@ -238,7 +238,7 @@
       const out = el.querySelector('[data-out]');
       if (!jum && !q) { out.innerHTML = P.empty('Chagua jumuiya au tafuta jina.'); return; }
       out.innerHTML = P.loading();
-      let fq = P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,removed_on,removed_reason,profile_id)').order('family_code');
+      let fq = P.from('families').select('*, parishioners!parishioners_family_id_fkey(id,full_name,gender,relationship,phone,birth_year,is_zaka_payer,membership_status,profile_id)').order('family_code');
       if (jum) fq = fq.eq('jumuiya_id', jum);
       if (q) {
         const ids = await P.q(P.from('parishioners').select('family_id').ilike('full_name', `%${q}%`).limit(200));
