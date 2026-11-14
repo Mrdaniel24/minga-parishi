@@ -234,6 +234,16 @@
           openBtn.addEventListener('click', startSplit);
           amountIn.addEventListener('input', () => resum && resum());
         }
+        m.querySelector('form').addEventListener('submit', e => {
+          if (!split) return;
+          const total = Number(amountIn.value) || 0, given = P.sum(split.lines(), 'amount');
+          if (total > 0 && given > 0 && given === total) return;
+          e.preventDefault(); e.stopImmediatePropagation();
+          const delta = Math.abs(given - total);
+          Toast.error(given > total
+            ? `Mgawanyo umevuka kiasi kilicholetwa kwa ${P.tzs(delta)}. Punguza kiasi cha familia au waumini; malipo hayajahifadhiwa.`
+            : `Bado ${P.tzs(delta)} haijagawiwa. Kamilisha mgawanyo kabla ya kuhifadhi malipo.`);
+        }, true);
 
         cat.addEventListener('change', syncCat); camp.addEventListener('change', syncPeriod); syncCat();
         P.wireNewType(m, cat);
