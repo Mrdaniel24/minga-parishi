@@ -215,7 +215,24 @@
               sum();
             });
           });
-          box.addEventListener('input', e => { if (e.target.matches('[data-fam-amt],[data-per-amt]')) sum(); });
+          box.addEventListener('input', e => {
+            const input = e.target;
+            if (!input.matches('[data-fam-amt],[data-per-amt]')) return;
+            const previous = input.dataset.lastValid ?? '';
+            const typed = input.value;
+            const total = nOf(amountIn), given = P.sum(lines(), 'amount');
+            if (given > total || (given > 0 && total <= 0)) {
+              const room = Math.max(0, total - (given - nOf(input)));
+              input.value = previous;
+              sum();
+              Toast.error(total > 0
+                ? `Ingizo limezidi mgao unaoruhusiwa. Kiasi cha juu kinachobaki kwa sehemu hii ni ${P.tzs(room)}.`
+                : 'Andika kwanza kiasi kilicholetwa kabla ya kugawa zaka.');
+              return;
+            }
+            input.dataset.lastValid = typed;
+            sum();
+          });
           box.querySelector('[data-split-find]').addEventListener('input', e => {
             const q = e.target.value.trim().toLowerCase();
             famEls.forEach(fe => { fe.hidden = q && !fe.dataset.name.includes(q); });
