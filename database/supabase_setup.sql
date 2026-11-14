@@ -6337,7 +6337,7 @@ notify pgrst, 'reload schema';
 -- moves into a jumuiya that already uses that code, assign an available local
 -- code while keeping the original in the audit record.
 create or replace function public.move_family(p_family uuid, p_jumuiya uuid, p_move_money boolean default true, p_reason text default null)
-returns jsonb language plpgsql security definer set search_path = public as $
+returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   fam public.families;
   n int := 0;
@@ -6389,7 +6389,7 @@ begin
           nullif(btrim(p_reason), ''));
   return jsonb_build_object('jumuiya_id', p_jumuiya, 'payments_moved', n,
                             'previous_family_code', fam.family_code, 'family_code', v_family_code);
-end $;
+end $$;
 revoke execute on function public.move_family(uuid, uuid, boolean, text) from public, anon;
 grant execute on function public.move_family(uuid, uuid, boolean, text) to authenticated;
 
