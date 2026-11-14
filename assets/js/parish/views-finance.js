@@ -501,7 +501,8 @@
       const list = P.levelSort(level, [...members.map(m => ({ total: 0, ...(byId[m.id] || {}), group_id: m.id, group_name: m.name, code: m.code })),
         ...rows.filter(r => r.group_id && !known.has(r.group_id))]);
       if (itself) list.unshift({ ...itself, group_name: LBL[level][1], self: true });
-      const go = r => r.self ? null : level === 'kigango' ? link({ k: r.group_id }) : level === 'jumuiya' ? link({ j: r.group_id }) : `#/family?id=${r.group_id}`;
+      const go = r => r.self ? null : level === 'kigango' ? link({ k: r.group_id }) : level === 'jumuiya'
+        ? `#/jumuiya?id=${r.group_id}&tab=zaka` : `#/family?id=${r.group_id}`;
       // every month and total opens the zaka payments behind it
       const zscope = r => r.self ? null : level === 'family' ? { family: r.group_id } : { unit: r.group_id };
       const zlink = (v, r, i) => {
