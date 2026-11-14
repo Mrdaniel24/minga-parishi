@@ -116,7 +116,6 @@
     h('Parokia');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
-    a('Zaka', 'calendar_month', 'zaka', 'finance.read');
     a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
     h('Muhtasari wa parokia nzima');
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');

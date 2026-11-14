@@ -460,70 +460,15 @@
     },
   };
 
-  /* ================= ZAKA — Vigango → Kigango → Jumuiya → Familia =================
-     One line per unit at each level (Januari–Desemba); click to go one level down.
-     The last step opens the family, where each member's zaka is filled in. */
+  /* Old #/zaka links now open zaka inside its Jumuiya. */
   V.zaka = {
     title: 'Zaka', perm: 'finance.read',
-    async render(el, params) {
-      const year = P.year();
-      const scoped = P.scopeUnit() ? P.ref.unitsById[P.scopeUnit()] : null;
-      const at = { k: params.k || '', j: params.j || '' };
-      if (scoped && !params.k) {
-        if (scoped.unit_type === 'kigango') at.k = scoped.id;
-        if (scoped.unit_type === 'jumuiya') { at.k = P.kigangoOf(scoped.id)?.id || ''; at.j = scoped.id; }
-      }
-      const link = o => '#/zaka?' + new URLSearchParams(Object.entries({ ...at, ...o }).filter(([, v]) => v)).toString();
-      const level = !at.k ? 'kigango' : !at.j ? 'jumuiya' : 'family';
-      const scope = at.j || at.k || null;
-      const crumbs = [{ label: 'Vigango vyote', href: link({ k: '', j: '' }) }];
-      if (at.k) crumbs.push({ label: `Kigango cha ${P.ref.unitsById[at.k]?.name || ''}`, href: link({ j: '' }) });
-      if (at.j) crumbs.push({ label: `Jumuiya ya ${P.ref.unitsById[at.j]?.name || ''}` });
-      const LBL = { kigango: ['Kigango', 'Parokiani (zaka iliyolipwa parokiani moja kwa moja)'], jumuiya: ['Jumuiya', 'Kigango chenyewe (si kupitia jumuiya)'],
-        family: ['Familia', 'Jumuiya yenyewe (jumla iliyowasilishwa na jumuiya)'] };
-      el.innerHTML = `
-        ${P.crumbs(crumbs.map((c, i) => i === crumbs.length - 1 ? { label: c.label } : c))}
-        <div class="pm-head"><div><h1 class="pm-h1">Zaka ${year}${crumbs.length > 1 ? ' — ' + P.esc(crumbs[crumbs.length - 1].label) : ''}</h1>
-          <p class="pm-muted">${level === 'family' ? 'Jumuiya inaweza kuwasilisha zaka kwa jumla, au kuijaza kwa kila muumini. Bonyeza kisanduku cha mwezi kurekodi au kuona malipo.' : `Bonyeza ${LBL[level][0].toLowerCase()} kuingia ndani zaidi.`} Mwaka unabadilishwa juu kabisa.</p></div>
-          <div class="pm-actions">${level !== 'family' ? '<button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button>' : ''}
-          <button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
-        <div data-out>${P.loading()}</div>`;
-      if (level === 'family') {
-        await JTABS.zaka(el.querySelector('[data-out]'), P.ref.unitsById[at.j], year);
-        el.querySelector('[data-print]').addEventListener('click', () => P.print(`Zaka ${year} — ${P.ref.unitsById[at.j]?.name || ''}`));
-        return;
-      }
-      const [rows, members] = await Promise.all([P.rpc('zaka_grid_tree', { p_year: year, p_level: level, p_scope: scope }), P.levelMembers(level, scope)]);
-      const mk = i => `m${String(i + 1).padStart(2, '0')}`;
-      const itself = rows.find(r => !r.group_id);
-      const byId = Object.fromEntries(rows.filter(r => r.group_id).map(r => [r.group_id, r]));
-      const known = new Set(members.map(m => m.id));
-      const list = P.levelSort(level, [...members.map(m => ({ total: 0, ...(byId[m.id] || {}), group_id: m.id, group_name: m.name, code: m.code })),
-        ...rows.filter(r => r.group_id && !known.has(r.group_id))]);
-      if (itself) list.unshift({ ...itself, group_name: LBL[level][1], self: true });
-      const go = r => r.self ? null : level === 'kigango' ? link({ k: r.group_id }) : level === 'jumuiya'
-        ? `#/jumuiya?id=${r.group_id}&tab=zaka` : `#/family?id=${r.group_id}`;
-      // every month and total opens the zaka payments behind it
-      const zscope = r => r.self ? null : level === 'family' ? { family: r.group_id } : { unit: r.group_id };
-      const zlink = (v, r, i) => {
-        if (!Number(v) || !zscope(r)) return Number(v) ? P.num(v) : '';
-        const pm = i === undefined ? {} : { period_month: `${year}-${String(i + 1).padStart(2, '0')}-01` };
-        return P.txLink(P.num(v), { title: `Zaka ${i === undefined ? year : P.MONTHS[i] + ' ' + year} — ${r.group_name}`, ...zscope(r), kinds: ['zaka'], zaka_year: year, ...pm });
-      };
-      const mcols = P.MONTHS.map((m, i) => ({ key: mk(i), label: m, fmt: (v, r) => zlink(v, r, i), cls: 'pm-num' }));
-      const foot = Object.fromEntries(mcols.map(c => [c.key, P.num(P.sum(list, c.key))]));
-      foot.total = `<b>${P.num(P.sum(list, 'total'))}</b>`; foot.group_name = '<b>JUMLA</b>';
-      el.querySelector('[data-out]').innerHTML = P.reportHeader(`Zaka ${year}`, crumbs.map(c => c.label).join(' › ')) +
-        `<p class="pm-muted pm-small">${list.filter(r => !r.self).length} ${LBL[level][0].toLowerCase()} (${list.filter(r => !r.self && Number(r.total)).length} zenye zaka) · Jumla <b>${P.tzs(P.sum(list, 'total'))}</b></p>` +
-        P.table(list, [
-          { key: 'group_name', label: LBL[level][0], html: r => go(r) ? `<a class="pm-link" href="${go(r)}">${P.esc(r.group_name || '—')}</a>` : `<span class="pm-muted">${P.esc(r.group_name)}</span>` },
-          ...mcols, { key: 'total', label: 'Jumla', fmt: (v, r) => zlink(v, r), cls: 'pm-num pm-strong' },
-          ...(level === 'family' ? [] : [{ key: 'months_unpaid', label: 'Miezi bila zaka', html: r => r.self ? '' : r.months_unpaid ?? (Number(r.total) ? 0 : '—'), cls: 'pm-num' }]),
-          { key: 'group_id', label: '', html: r => go(r) ? `<a class="pm-btn pm-btn--sm" href="${go(r)}">Fungua</a>` : '' }],
-          { foot, cls: 'pm-keep-table', empty: level === 'family' ? 'Hakuna zaka iliyolipwa kwa jina la familia mwaka huu — fungua "Jaza zaka ya jumuiya hii".' : 'Hakuna zaka iliyorekodiwa.' });
-      el.querySelector('[data-print]').addEventListener('click', () => P.print(`Zaka ${year}`));
-      el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel(`zaka_${year}`, { Zaka: list.map(r => ({
-        [LBL[level][0]]: r.group_name, ...Object.fromEntries(P.MONTHS.map((m, i) => [m, Number(r[mk(i)]) || 0])), Jumla: Number(r.total) })) }));
+    async render(_el, params) {
+      const j = params.j && P.ref.unitsById[params.j];
+      if (j?.unit_type === 'jumuiya') return P.go(`#/jumuiya?id=${j.id}&tab=zaka`);
+      const k = params.k && P.ref.unitsById[params.k];
+      if (k?.unit_type === 'kigango') return P.go(`#/kigango?id=${k.id}`);
+      P.go('#/units');
     },
   };
 
