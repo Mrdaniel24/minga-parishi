@@ -13,7 +13,8 @@ const sql = readFileSync(join(ROOT, 'database', 'supabase_setup.sql'), 'utf8');
 
 test('supabase_setup.sql contains every migration, unchanged', () => {
   for (const f of readdirSync(join(ROOT, 'database', 'migrations')).filter(f => f.endsWith('.sql'))) {
-    assert.ok(sql.includes(readFileSync(join(ROOT, 'database', 'migrations', f), 'utf8')), `${f} is missing or stale — run: npm run setup:sql`);
+    const migration = readFileSync(join(ROOT, 'database', 'migrations', f), 'utf8').replace(/\r\n/g, '\n');
+    assert.ok(sql.replace(/\r\n/g, '\n').includes(migration), `${f} is missing or stale — run: npm run setup:sql`);
   }
 });
 

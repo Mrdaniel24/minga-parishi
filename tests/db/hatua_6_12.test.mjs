@@ -69,6 +69,29 @@ test('a member can start a new family in the new jumuiya; a whole family can mov
   assert.equal(N(await db.val(`select count(*) from public.finance_transactions where family_id = $1 and jumuiya_id <> $2`, [U.famC, CLARA()])), 0);
 });
 
+test('a whole family can move when its local family code already exists in the destination', async () => {
+  db.asAdmin();
+  const source = await db.val(`insert into public.families (parish_id, family_name, family_code, jumuiya_id)
+    values (public.default_parish_id(), 'Familia yenye namba inayohama', 'F-23', $1) returning id`, [AUG()]);
+  const destination = await db.val(`insert into public.families (parish_id, family_name, family_code, jumuiya_id)
+    values (public.default_parish_id(), 'Familia iliyopo yenye namba', 'F-23', $1) returning id`, [CLARA()]);
+  const member = await db.val(`insert into public.parishioners (parish_id, full_name, family_id, jumuiya_id)
+    values (public.default_parish_id(), 'Muumini wa familia inayohama', $1, $2) returning id`, [source, AUG()]);
+  await pay(U.clerk, { amount: 4500, category_id: I['cat:ZAKA'], parishioner_id: member, txn_date: '2026-05-11', period_month: '2026-05-01' });
+
+  const moved = await call(U.clerk, `select public.move_family($1, $2, true, 'Jaribio la mgongano wa namba')`, [source, CLARA()]);
+  assert.equal(moved.previous_family_code, 'F-23');
+  assert.equal(moved.family_code, 'F-23-2');
+  assert.equal(moved.payments_moved, 1);
+  db.asAdmin();
+  assert.equal(await db.val(`select jumuiya_id from public.families where id = $1`, [source]), CLARA());
+  assert.equal(await db.val(`select jumuiya_id from public.parishioners where id = $1`, [member]), CLARA());
+  assert.equal(await db.val(`select family_id from public.finance_transactions where parishioner_id = $1 and jumuiya_id = $2`, [member, CLARA()]), source);
+  assert.equal(await db.val(`select family_code from public.families where id = $1`, [destination]), 'F-23');
+  assert.ok(await db.val(`select count(*) from public.audit_log where action = 'move_family' and row_id = $1
+    and old_data->>'family_code' = 'F-23' and new_data->>'family_code' = 'F-23-2'`, [source]) > 0);
+});
+
 test('a removed member stays on record (soft delete): payments, name and family kept', async () => {
   const p = await db.asAdmin().val(`insert into public.parishioners (parish_id, full_name, family_id, jumuiya_id) values (public.default_parish_id(), 'Mtu Atakayefutwa', $1, $2) returning id`, [U.famA, CLARA()]);
   await pay(U.clerk, { amount: 4000, category_id: I['cat:ZAKA'], parishioner_id: p, txn_date: '2026-05-02', period_month: '2026-05-01' });

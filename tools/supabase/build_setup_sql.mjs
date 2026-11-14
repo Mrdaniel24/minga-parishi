@@ -17,7 +17,7 @@ const parts = [`-- =============================================================
 -- Run it on the parish's own project. It contains no personal data.
 -- ============================================================================
 `];
-for (const f of files) parts.push(`\n-- >>>>>>>>>>>>>>>>>>>> ${f} >>>>>>>>>>>>>>>>>>>>\n` + readFileSync(join(DIR, f), 'utf8'));
+for (const f of files) parts.push(`\n-- >>>>>>>>>>>>>>>>>>>> ${f} >>>>>>>>>>>>>>>>>>>>\n` + readFileSync(join(DIR, f), 'utf8').replace(/\r\n/g, '\n'));
 parts.push(`\n-- >>>>>>>>>>>>>>>>>>>> check >>>>>>>>>>>>>>>>>>>>
 select 'Database ya parokia iko tayari' as hali,
        (select count(*) from public.org_units where unit_type = 'kigango') as vigango,

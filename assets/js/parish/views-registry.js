@@ -203,7 +203,10 @@
       <label class="pm-span2">Sababu (hiari)<input name="reason" maxlength="200"></label></div>` });
     if (!v) return;
     const r = await P.rpc('move_family', { p_family: f.id, p_jumuiya: v.jumuiya_id, p_move_money: !!v.move_money, p_reason: v.reason || null });
-    Toast.success(`Familia imehamishwa${r.payments_moved ? ` pamoja na malipo ${r.payments_moved}` : ''}.`);
+    const codeNote = r.previous_family_code !== r.family_code
+      ? ` Namba ya familia imebadilishwa kutoka ${r.previous_family_code || '—'} kwenda ${r.family_code || '—'}.`
+      : '';
+    Toast.success(`Familia imehamishwa${r.payments_moved ? ` pamoja na malipo ${r.payments_moved}` : ''}.${codeNote}`);
     P.reload();
   };
   // removed from the register (soft delete): the record, payments, attendance and title history stay
