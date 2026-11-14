@@ -335,7 +335,8 @@
     async render(el, params) {
       const j = P.ref.unitsById[params.id];
       if (!j) { el.innerHTML = P.empty('Jumuiya haipo.'); return; }
-      const tab = TABS.some(t => t[0] === params.tab) ? params.tab : 'familia';
+      const isOwnJumuiyaLeader = (P.access.roles || []).some(r => r.role === 'jumuiya_leader' && r.org_unit_id === j.id);
+      const tab = TABS.some(t => t[0] === params.tab) ? params.tab : isOwnJumuiyaLeader ? 'mahudhurio' : 'familia';
       const year = P.year();
       el.innerHTML = `
         ${P.unitCrumbs(j.id)}
