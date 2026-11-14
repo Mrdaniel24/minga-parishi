@@ -327,7 +327,7 @@
   };
 
   /* ================= JUMUIYA (tabs) ================= */
-  const TABS = [['familia', 'Familia', 'family_restroom'], ['zaka', 'Zaka', 'calendar_month'], ['michango', 'Michango', 'volunteer_activism'],
+  const TABS = [['familia', 'Familia', 'family_restroom'], ['michango', 'Michango', 'volunteer_activism'],
     ['miamala', 'Miamala', 'point_of_sale'], ['mahudhurio', 'Mahudhurio', 'how_to_reg'], ['muhtasari', 'Muhtasari', 'dashboard']];
 
   V.jumuiya = {
@@ -335,6 +335,11 @@
     async render(el, params) {
       const j = P.ref.unitsById[params.id];
       if (!j) { el.innerHTML = P.empty('Jumuiya haipo.'); return; }
+      if (params.tab === 'zaka') {
+        const k = P.kigangoOf(j.id);
+        P.go(`#/zaka?${new URLSearchParams({ k: k?.id || '', j: j.id })}`);
+        return;
+      }
       const tab = TABS.some(t => t[0] === params.tab) ? params.tab : 'familia';
       const year = P.year();
       el.innerHTML = `

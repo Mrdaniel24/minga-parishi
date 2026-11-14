@@ -116,10 +116,10 @@
     h('Parokia');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
+    a('Zaka', 'calendar_month', 'zaka', 'finance.read');
     a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
     h('Muhtasari wa parokia nzima');
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
-    a('Zaka (vigango vyote)', 'calendar_month', 'zaka', 'finance.read');
     a('Michango (vigango vyote)', 'volunteer_activism', 'campaigns', 'finance.read');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
     a('Michango ya Viongozi', 'military_tech', 'leaderreport', 'finance.read');

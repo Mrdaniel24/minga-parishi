@@ -484,10 +484,15 @@
       el.innerHTML = `
         ${P.crumbs(crumbs.map((c, i) => i === crumbs.length - 1 ? { label: c.label } : c))}
         <div class="pm-head"><div><h1 class="pm-h1">Zaka ${year}${crumbs.length > 1 ? ' — ' + P.esc(crumbs[crumbs.length - 1].label) : ''}</h1>
-          <p class="pm-muted">${level === 'family' ? 'Bonyeza familia kufungua wanafamilia na kujaza zaka yao.' : `Bonyeza ${LBL[level][0].toLowerCase()} kuingia ndani zaidi.`} Mwaka unabadilishwa juu kabisa.</p></div>
-          <div class="pm-actions">${at.j ? `<a class="pm-btn pm-btn--primary" href="#/jumuiya?id=${at.j}&tab=zaka"><span class="material-symbols-outlined">edit_calendar</span>Jaza zaka ya jumuiya hii</a>` : ''}
-          <button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button><button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
+          <p class="pm-muted">${level === 'family' ? 'Jumuiya inaweza kuwasilisha zaka kwa jumla, au kuijaza kwa kila muumini. Bonyeza kisanduku cha mwezi kurekodi au kuona malipo.' : `Bonyeza ${LBL[level][0].toLowerCase()} kuingia ndani zaidi.`} Mwaka unabadilishwa juu kabisa.</p></div>
+          <div class="pm-actions">${level !== 'family' ? '<button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button>' : ''}
+          <button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
         <div data-out>${P.loading()}</div>`;
+      if (level === 'family') {
+        await JTABS.zaka(el.querySelector('[data-out]'), P.ref.unitsById[at.j], year);
+        el.querySelector('[data-print]').addEventListener('click', () => P.print(`Zaka ${year} — ${P.ref.unitsById[at.j]?.name || ''}`));
+        return;
+      }
       const [rows, members] = await Promise.all([P.rpc('zaka_grid_tree', { p_year: year, p_level: level, p_scope: scope }), P.levelMembers(level, scope)]);
       const mk = i => `m${String(i + 1).padStart(2, '0')}`;
       const itself = rows.find(r => !r.group_id);
