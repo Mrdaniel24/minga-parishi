@@ -179,6 +179,20 @@ test('financial year boundaries and payments against a previous-year pledge', as
   assert.ok(N(y26.totals.mavuno) >= 40000);      // … and as 2026 cash
 });
 
+test('dashboard details follow the selected year while cash remains a live balance', async () => {
+  const year = await db.as(U.acct).val(`select public.parish_dashboard(2025)`);
+  const expectedOutstanding = await db.asAdmin().val(`select coalesce(sum(outstanding), 0) from public.v_pledge_balances
+    where status = 'active' and campaign_year = 2025`);
+  assert.equal(N(year.totals.outstanding_pledges), N(expectedOutstanding));
+  assert.ok((year.recent || []).every(r => String(r.txn_date).startsWith('2025-')));
+
+  const empty = await db.as(U.acct).val(`select public.parish_dashboard(1900)`);
+  assert.equal(N(empty.totals.income_year), 0);
+  assert.equal(N(empty.totals.outstanding_pledges), 0);
+  assert.equal((empty.recent || []).length, 0);
+  assert.equal(typeof N(empty.totals.cash_available), 'number'); // live balance intentionally spans years
+});
+
 test('carry forward moves only the unpaid balance — no double counting', async () => {
   const p = await db.as(U.acct).rpc('create_pledge', { campaign_id: I['camp:UJENZI:2025'], family_id: U.famA, amount: 120000 });
   await pay(U.clerk, { amount: 20000, category_id: I['cat:UJENZI'], campaign_id: I['camp:UJENZI:2025'], family_id: U.famA, txn_date: '2025-08-01' });
