@@ -13,7 +13,7 @@
   <style>
     :root{--green:#3d5650;--green-deep:#263d37;--gold:#d7ad3c;--ink:#26332f;--muted:#7b8b86;--line:#dfe8e4;--canvas:#e7efec}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:clamp(1rem,4vw,3rem);font-family:Montserrat,system-ui,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 10% 10%,#fff 0,transparent 42%),radial-gradient(ellipse at 90% 90%,#d5e4de 0,transparent 38%),var(--canvas)}
-    .page{width:min(100%,760px);position:relative}.brand{display:flex;align-items:center;gap:.7rem;margin:0 0 1rem .35rem;color:var(--green);font-weight:800;font-size:.83rem;letter-spacing:.04em}.brand__mark{display:grid;place-items:center;width:40px;height:40px;border:1.5px solid var(--gold);border-radius:50%;color:var(--gold);background:#fff}.brand__mark .material-symbols-outlined{font-size:23px}
+    .page{width:min(100%,760px);position:relative}.brand{display:flex;align-items:center;gap:.7rem;margin:0 0 1rem .35rem;color:var(--green);font-weight:800;font-size:.83rem;letter-spacing:.04em}.brand__mark{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;overflow:hidden;border:1.5px solid var(--gold);border-radius:50%;color:var(--gold);background:#fff}.brand__mark svg{display:block;width:22px;height:22px}
     .card{position:relative;overflow:hidden;padding:clamp(1.25rem,5vw,3rem);border:1px solid rgba(255,255,255,.9);border-radius:28px;background:rgba(255,255,255,.96);box-shadow:0 24px 80px rgba(43,69,61,.15);min-height:480px;display:flex;flex-direction:column;justify-content:space-between;animation:card-in .55s cubic-bezier(.2,.8,.2,1) both}
     .card::before{content:"";position:absolute;top:0;left:0;width:100%;height:5px;background:linear-gradient(90deg,var(--gold),#e8cf83,var(--green))}.top{display:flex;justify-content:space-between;align-items:center;gap:1rem}.top h1{margin:0;color:var(--green);font-size:1.05rem}.top a{display:flex;align-items:center;gap:.2rem;color:var(--green);font-size:.8rem;font-weight:700;text-decoration:none}
     .progress{margin:1.45rem 0 0}.progress__meta{display:flex;justify-content:space-between;gap:1rem;color:var(--muted);font-size:.7rem;font-weight:700}.progress__track{height:5px;margin-top:.55rem;overflow:hidden;border-radius:99px;background:#edf2f0}.progress__bar{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--gold),var(--green));transition:width .35s ease}
@@ -29,7 +29,7 @@
 </head>
 <body>
   <main class="page">
-    <div class="brand"><span class="brand__mark"><span class="material-symbols-outlined">church</span></span><span>MFUMO WA PAROKIA</span></div>
+    <div class="brand"><span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M6 21V10l6-4 6 4v11M9 21v-6h6v6M12 2v6m-3-3h6"/></svg></span><span>MFUMO WA PAROKIA</span></div>
     <section class="card" id="wizard-card">
       <div id="form-wrap">
         <header class="top"><h1>Usajili wa muumini</h1><a href="login.html"><span class="material-symbols-outlined">arrow_back</span>Ingia</a></header>
