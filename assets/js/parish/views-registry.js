@@ -118,12 +118,12 @@
     const LEVEL = { jumuiya: 'Jumuiya', kigango: 'Kigango', parish: 'Parokia' };
     const shown = positions.filter(x => x.is_active !== false || had.has(x.id));
     const age = p?.birth_year ? P.thisYear() - p.birth_year : '';
-    const v = await P.modal({ title: p ? 'Hariri muumini' : `Muumini mpya — ${fam.family_name}`, body: `<div class="pm-form">
+    const v = await P.modal({ title: p ? 'Hariri muumini' : `Muumini mpya — ${fam.family_name}`, body: `<div class="pm-form pm-member-form">
       <label class="pm-span2">Jina kamili<input name="full_name" required value="${P.esc(p?.full_name || '')}"></label>
       <label>Jinsi<select name="gender"><option value="">—</option><option value="male" ${p?.gender === 'male' ? 'selected' : ''}>Me</option><option value="female" ${p?.gender === 'female' ? 'selected' : ''}>Ke</option></select></label>
       <label>Uhusiano<input name="relationship" list="pm-rel" value="${P.esc(p?.relationship || '')}"><datalist id="pm-rel">${['BABA', 'MAMA', 'MTOTO', 'MJUKUU', 'BIBI', 'BABU', 'KAKA', 'DADA', 'MJOMBA', 'SHANGAZI'].map(x => `<option>${x}</option>`).join('')}</datalist></label>
       <label>Simu<input name="phone" value="${P.esc(p?.phone || '')}"></label>
-      <label>Umri (miaka)<input name="age" type="number" min="0" max="120" inputmode="numeric" value="${age}" placeholder="mf. 34"></label>
+      <label>Umri (miaka)<input name="age" type="number" min="0" max="120" inputmode="numeric" value="${age}" placeholder="mf. 34"><small>Umri na mwaka wa kuzaliwa hujazana wenyewe.</small></label>
       <label>Mwaka wa kuzaliwa<input name="birth_year" type="number" min="1900" max="2100" value="${P.esc(p?.birth_year || '')}"></label>
       <label>Mlipa zaka<select name="is_zaka_payer"><option value="false">Hapana</option><option value="true" ${p?.is_zaka_payer ? 'selected' : ''}>Ndiyo</option></select></label>
       <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased', ...(p?.membership_status === 'removed' ? ['removed'] : [])].map(s => `<option value="${s}" ${p?.membership_status === s ? 'selected' : ''}>${P.MEMBER_STATUS[s]}${s === 'active' && p?.membership_status === 'removed' ? ' (mrudishe kwenye rejista)' : ''}</option>`).join('')}</select></label>
@@ -411,7 +411,7 @@
 
       el.querySelector('[data-newuser]').addEventListener('click', async () => {
         let person = null;
-        const v = await P.modal({ title: 'Mtumiaji mpya', wide: true, body: `<div class="pm-form">
+        const v = await P.modal({ title: 'Mtumiaji mpya', wide: true, body: `<div class="pm-form pm-user-form">
             <label class="pm-span2">Jina kamili<input name="full_name" required></label>
             <label>Namba ya simu (ya kuingia)<input name="phone" required inputmode="tel" placeholder="mf. 0712 345 678"></label>
             ${pwField}
@@ -630,3 +630,4 @@
     },
   };
 })();
+
