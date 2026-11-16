@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3d5650" />
+  <title>Jisajili | Mfumo wa Parokia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0,1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/parish.css" />
+  <style>
+    :root { --ink:#26332f; --muted:#6b7c77; --line:#dfe7e4; --primary:#3d5650; --deep:#2c403b; --gold:#d4a72c; --canvas:#e6eeeb; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:var(--canvas); font-family:Montserrat,system-ui,sans-serif; }
+    .signup { min-height:100vh; display:grid; grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr); }
+    .signup__intro { position:sticky; top:0; height:100vh; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:clamp(2rem,5vw,4rem); color:#fff; background:linear-gradient(150deg,var(--primary),var(--deep)); }
+    .signup__intro::after { content:""; position:absolute; width:330px; height:330px; right:-150px; bottom:-120px; border:42px solid rgba(212,167,44,.17); border-radius:50%; animation:orbit 10s ease-in-out infinite alternate; }
+    .brand { position:relative; z-index:1; }
+    .brand__mark { display:grid; place-items:center; width:58px; height:58px; border:2px solid var(--gold); border-radius:50%; color:var(--gold); }
+    .brand__mark .material-symbols-outlined { font-size:30px; }
+    .eyebrow { margin:1.5rem 0 .5rem; color:#efc34f; font-size:.72rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .signup__intro h1 { max-width:14ch; margin:0 0 1rem; font-size:clamp(2rem,3.5vw,3rem); line-height:1.12; }
+    .signup__intro p { max-width:40ch; color:rgba(255,255,255,.8); line-height:1.65; }
+    .intro-note { position:relative; z-index:1; font-size:.8rem; color:rgba(255,255,255,.65); }
+    .signup__main { padding:clamp(1rem,4vw,3rem); }
+    .signup__card { width:min(100%,860px); margin:0 auto; padding:clamp(1.25rem,3.5vw,2.5rem); border:1px solid rgba(255,255,255,.85); border-radius:24px; background:#fff; box-shadow:0 18px 45px rgba(35,57,51,.11); animation:card-in .55s cubic-bezier(.2,.75,.25,1) both; }
+    .topline { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; }
+    .topline h2 { margin:0; color:var(--primary); font-size:1.3rem; }
+    .topline a { display:inline-flex; align-items:center; gap:.3rem; color:var(--primary); font-size:.82rem; font-weight:700; text-decoration:none; }
+    .step { display:flex; align-items:center; gap:.7rem; margin:1.2rem 0 .8rem; color:var(--primary); font-size:.96rem; font-weight:700; }
+    .step__number { display:grid; place-items:center; flex:0 0 30px; height:30px; border-radius:50%; background:#f6e7b8; color:#654f16; font-size:.8rem; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.9rem 1rem; }
+    label { display:flex; flex-direction:column; gap:.38rem; color:var(--muted); font-size:.77rem; font-weight:700; }
+    input,select { width:100%; min-width:0; padding:.78rem .85rem; border:1px solid #d6e0dc; border-radius:12px; background:#fbfdfc; color:var(--ink); font:inherit; font-size:.9rem; outline:none; transition:border-color .18s,box-shadow .18s,background .18s; }
+    input:focus,select:focus { border-color:var(--gold); background:#fff; box-shadow:0 0 0 4px rgba(212,167,44,.14); }
+    .wide { grid-column:1/-1; }
+    .hint { margin:.5rem 0 0; color:var(--muted); font-size:.78rem; line-height:1.55; }
+    .choice { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem; }
+    .choice label { display:flex; flex-direction:row; align-items:center; gap:.55rem; padding:.85rem; border:1px solid var(--line); border-radius:12px; background:#fbfdfc; cursor:pointer; color:var(--ink); font-size:.84rem; }
+    .choice input { width:1rem; height:1rem; padding:0; accent-color:var(--primary); }
+    .conditional { padding:1rem; border:1px solid var(--line); border-radius:16px; background:#f8faf9; animation:slide-in .28s ease both; }
+    .members { display:grid; gap:.8rem; }
+    .member { position:relative; padding:1rem; border:1px solid var(--line); border-radius:16px; background:#fff; animation:slide-in .35s ease both; }
+    .member__head { display:flex; align-items:center; justify-content:space-between; gap:.8rem; margin-bottom:.85rem; }
+    .member__head strong { color:var(--primary); font-size:.9rem; }
+    .remove { display:inline-flex; align-items:center; gap:.2rem; border:0; border-radius:999px; padding:.38rem .65rem; color:#a93f51; background:#fff1f3; font:inherit; font-size:.73rem; font-weight:700; cursor:pointer; }
+    .add { display:inline-flex; align-items:center; gap:.35rem; margin-top:.75rem; padding:.65rem .9rem; border:1px dashed #9aaea8; border-radius:999px; background:#f7faf9; color:var(--primary); font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
+    .consent { margin:1rem 0; padding:.85rem 1rem; border-left:3px solid var(--gold); border-radius:8px; background:#fff9e9; color:#655321; font-size:.78rem; line-height:1.55; }
+    .notice { display:none; margin:1rem 0; padding:.85rem 1rem; border-radius:12px; font-size:.83rem; line-height:1.5; }
+    .notice.show { display:block; animation:slide-in .25s ease both; }
+    .notice--error { color:#8e2839; background:#fff0f2; border:1px solid #f2c8cf; }
+    .notice--ok { color:#24614e; background:#eef9f3; border:1px solid #bfe7d0; }
+    .notice--warn { color:#745815; background:#fff9e9; border:1px solid #f1df9e; }
+    .actions { display:flex; align-items:center; justify-content:flex-end; gap:.7rem; margin-top:1.2rem; padding-top:1.1rem; border-top:1px solid var(--line); }
+    .submit { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:46px; padding:.75rem 1.2rem; border:0; border-radius:999px; color:#fff; background:var(--primary); font:inherit; font-weight:700; cursor:pointer; transition:transform .18s,box-shadow .18s,background .18s; }
+    .submit:hover { transform:translateY(-2px); background:var(--deep); box-shadow:0 8px 18px rgba(44,64,59,.2); }
+    .submit:disabled { opacity:.6; cursor:wait; transform:none; box-shadow:none; }
+    .success { display:none; text-align:center; padding:2rem 1rem; animation:card-in .4s ease both; }
+    .success.show { display:block; }
+    .success__icon { display:grid; place-items:center; width:68px; height:68px; margin:0 auto 1rem; border-radius:50%; background:#e5f5ec; color:#23744f; }
+    .success__icon .material-symbols-outlined { font-size:36px; }
+    .success h2 { color:var(--primary); }
+    .success p { color:var(--muted); line-height:1.6; }
+    .success a { display:inline-flex; align-items:center; gap:.4rem; margin-top:1rem; padding:.8rem 1.1rem; border-radius:999px; background:var(--primary); color:white; font-weight:700; text-decoration:none; }
+    @keyframes card-in { from { opacity:0; transform:translateY(14px) scale(.99); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes slide-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes orbit { from { transform:translate(0,0) rotate(-5deg); } to { transform:translate(-12px,-12px) rotate(7deg); } }
+    @media (max-width:760px) { .signup { grid-template-columns:1fr; } .signup__intro { position:relative; height:auto; min-height:210px; padding:1.4rem 1.25rem 2rem; } .brand__mark { width:44px;height:44px; } .brand__mark .material-symbols-outlined {font-size:24px} .eyebrow {margin:.8rem 0 .3rem} .signup__intro h1 {font-size:1.55rem;margin-bottom:.35rem} .signup__intro p {font-size:.84rem;margin:.25rem 0} .intro-note {display:none} .signup__main {padding:.8rem} .topline {align-items:flex-start} }
+    @media (max-width:520px) { .grid {grid-template-columns:1fr} .choice {grid-template-columns:1fr} .signup__card {padding:1.1rem;border-radius:18px} .actions .submit {width:100%} }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after {animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important} }
+  </style>
+</head>
+<body>
+  <main class="signup">
+    <aside class="signup__intro">
+      <div class="brand">
+        <div class="brand__mark"><span class="material-symbols-outlined">church</span></div>
+        <p class="eyebrow">Mfumo wa Parokia</p>
+        <h1>Jisajili kama muumini</h1>
+        <p>Chagua eneo lako na jaza taarifa zako. Kila mtu atasajiliwa kwa namba yake ya simu.</p>
+      </div>
+      <p class="intro-note">Akaunti ya usajili huu ni ya muumini. Nafasi za uongozi hutolewa na Msimamizi wa Mfumo.</p>
+    </aside>
+    <section class="signup__main">
+      <div class="signup__card">
+        <div class="topline"><h2>Usajili wa muumini</h2><a href="login.html"><span class="material-symbols-outlined">arrow_back</span>Ingia</a></div>
+        <div id="form-wrap">
+          <div id="sms-warning" class="notice notice--warn" role="status"></div>
+          <form id="signup" novalidate>
+            <div class="step"><span class="step__number">1</span>Chagua eneo lako</div>
+            <div class="grid">
+              <label>Kigango<select name="kigango_id" required><option value="">Inapakia vigango…</option></select></label>
+              <label>Jumuiya<select name="jumuiya_id" required disabled><option value="">Chagua kigango kwanza</option></select></label>
+            </div>
+            <div class="step"><span class="step__number">2</span>Hali ya familia</div>
+            <div class="choice" role="radiogroup" aria-label="Je, wewe ni mkuu wa familia?">
+              <label><input type="radio" name="is_head" value="yes" required> Ndiyo, mimi ni mkuu wa familia</label>
+              <label><input type="radio" name="is_head" value="no" required> Hapana, nitaingia familia iliyopo</label>
+            </div>
+            <div id="new-family" class="conditional grid" hidden>
+              <label class="wide">Jina la familia mpya<input name="new_family_name" maxlength="120" placeholder="mf. Familia ya Mwakalinga"></label>
+              <p class="hint wide">Wewe utawekwa kama mkuu wa familia. Unaweza kuongeza mwenzi au wanafamilia wengine hapa chini.</p>
+            </div>
+            <div id="existing-family" class="conditional" hidden>
+              <label>Familia yako<select name="family_id" disabled><option value="">Chagua jumuiya kwanza</option></select></label>
+              <p class="hint">Orodha inaonyesha majina ya familia za jumuiya uliyochagua tu.</p>
+            </div>
+            <div class="step"><span class="step__number">3</span>Taarifa za watu watakaopewa akaunti</div>
+            <p class="hint" style="margin:-.25rem 0 .8rem">Kila mtu atapata akaunti yake. Mfumo utatengeneza nenosiri la muda na kulituma kwa SMS kwenye namba yake.</p>
+            <div id="members" class="members"></div>
+            <button type="button" id="add-member" class="add" hidden><span class="material-symbols-outlined">person_add</span>Ongeza mwanafamilia</button>
+            <label class="consent"><span style="display:flex;flex-direction:row;align-items:flex-start;gap:.6rem"><input name="consent" type="checkbox" required style="width:1rem;flex:0 0 1rem;margin:.1rem 0 0;accent-color:var(--primary)"><span>Nina ruhusa ya kuingiza taarifa na namba za simu za watu ninaowasajilia. Nenosiri la muda litatumwa kwa SMS; kila mtu atalibadilisha atakapoingia mara ya kwanza.</span></span></label>
+            <div id="notice" class="notice" role="alert"></div>
+            <div class="actions"><button type="submit" id="submit" class="submit"><span class="material-symbols-outlined">how_to_reg</span><span id="submit-label">Sajili na tuma SMS</span></button></div>
+          </form>
+        </div>
+        <section id="success" class="success" aria-live="polite">
+          <div class="success__icon"><span class="material-symbols-outlined">mark_email_read</span></div>
+          <h2>Usajili umekamilika</h2>
+          <p id="success-message"></p>
+          <a href="login.html"><span class="material-symbols-outlined">login</span>Ingia kwenye mfumo</a>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script>
+  (() => {
+    const form = document.getElementById('signup');
+    const kigango = form.elements.kigango_id, jumuiya = form.elements.jumuiya_id;
+    const isHead = [...form.querySelectorAll('[name=is_head]')];
+    const familyNew = document.getElementById('new-family'), familyExisting = document.getElementById('existing-family');
+    const familySelect = form.elements.family_id, familyName = form.elements.new_family_name;
+    const members = document.getElementById('members'), addMember = document.getElementById('add-member');
+    const notice = document.getElementById('notice'), submit = document.getElementById('submit');
+    const rels = [['BABA','Baba'],['MAMA','Mama'],['MTOTO','Mtoto'],['MJUKUU','Mjukuu'],['BIBI','Bibi'],['BABU','Babu'],['KAKA','Kaka'],['DADA','Dada'],['MJOMBA','Mjomba'],['SHANGAZI','Shangazi'],['MWINGINE','Mwingine']];
+    let rowId = 0, currentFamilyRows = [];
+    const say = (text, type='error') => { notice.textContent = text; notice.className = `notice notice--${type} show`; };
+    const clear = () => { notice.className = 'notice'; notice.textContent = ''; };
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const setOptions = (el, rows, blank) => { el.innerHTML = `<option value="">${blank}</option>` + rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join(''); };
+    function addRow(isFirst=false) {
+      if (members.children.length >= (isHead.some(x=>x.checked&&x.value==='yes') ? 12 : 1)) return;
+      const id = ++rowId, row = document.createElement('section'); row.className='member'; row.dataset.member=id;
+      row.innerHTML = `<div class="member__head"><strong>${isFirst?'Taarifa zako':`Mwanafamilia ${members.children.length+1}`}</strong>${isFirst?'':`<button type="button" class="remove" data-remove="${id}"><span class="material-symbols-outlined">close</span>Ondoa</button>`}</div>
+        <div class="grid">
+          <label class="wide">Jina kamili<input name="full_name" required maxlength="120" autocomplete="name" placeholder="mf. Asha Mwakalinga"></label>
+          <label>Uhusiano na familia<select name="relationship" required>${rels.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label>
+          <label>Jinsi<select name="gender"><option value="">Chagua…</option><option value="female">Ke</option><option value="male">Me</option></select></label>
+          <label>Umri (miaka)<input name="age" type="number" min="0" max="120" required inputmode="numeric" placeholder="mf. 35"></label>
+          <label>Namba ya simu<input name="phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="mf. 0712 345 678"></label>
+        </div>`;
+      members.appendChild(row);
+      row.querySelector('[data-remove]')?.addEventListener('click',()=>{row.remove(); relabel();});
+      relabel();
+    }
+    function relabel(){ [...members.children].forEach((el,i)=>{el.querySelector('strong').textContent=i===0?'Taarifa zako':`Mwanafamilia ${i+1}`;}); }
+    function syncFamily(){
+      const head=isHead.find(x=>x.checked)?.value==='yes';
+      familyNew.hidden=!head; familyExisting.hidden=!isHead.some(x=>x.checked)||head;
+      familyName.required=head; familySelect.required=isHead.some(x=>x.checked)&&!head;
+      addMember.hidden=!head; 
+      if(!head) while(members.children.length>1) members.lastElementChild.remove();
+      relabel();
+    }
+    isHead.forEach(r=>r.addEventListener('change',()=>{clear();syncFamily();}));
+    addMember.addEventListener('click',()=>addRow());
+    kigango.addEventListener('change',async()=>{
+      jumuiya.disabled=true; setOptions(jumuiya,[],'Inapakia jumuiya…');
+      familySelect.disabled=true; setOptions(familySelect,[],'Chagua jumuiya kwanza');
+      try {
+        const {data,error}=await supabase.from('org_units').select('id,name,parent_id').eq('unit_type','jumuiya').eq('parent_id',kigango.value).eq('is_active',true).order('name');
+        if(error) throw error;
+        setOptions(jumuiya,data.map(x=>({id:x.id,name:x.name})),'Chagua jumuiya…'); jumuiya.disabled=false;
+      } catch { setOptions(jumuiya,[],'Imeshindikana kupakia jumuiya'); say('Orodha ya jumuiya haikupatikana. Hakiki mtandao ujaribu tena.'); }
+    });
+    async function loadFamilies(){
+      if(isHead.find(x=>x.checked)?.value==='yes' || !jumuiya.value) return;
+      familySelect.disabled=true; setOptions(familySelect,[],'Inapakia familia…');
+      try {
+        const {data,error}=await supabase.rpc('public_signup_families',{p_jumuiya:jumuiya.value});
+        if(error) throw error;
+        setOptions(familySelect,(data||[]).map(x=>({id:x.id,name:`${x.family_name}${x.family_code?` · Na. ${x.family_code}`:''}`})),data?.length?'Chagua familia yako…':'Hakuna familia hai kwenye jumuiya hii');
+        familySelect.disabled=!data?.length;
+        if(!data?.length) say('Hakuna familia ya kuchagua. Mwombe kiongozi wa familia aanzishe familia kwanza.','warn'); else clear();
+      } catch { setOptions(familySelect,[],'Imeshindikana kupakia familia'); say('Orodha ya familia haikupatikana. Jaribu tena.'); }
+    }
+    jumuiya.addEventListener('change',loadFamilies);
+    isHead.forEach(r=>r.addEventListener('change',()=>{if(r.checked&&r.value==='no') loadFamilies();}));
+    fetch('api/register').then(r=>r.json()).then(x=>{ if(!x.configured){ const w=document.getElementById('sms-warning'); w.textContent='Usajili wa akaunti kwa SMS haujawezeshwa bado. Wasiliana na Msimamizi wa Mfumo.'; w.classList.add('show'); } })
+      .catch(()=>{ const w=document.getElementById('sms-warning'); w.textContent='Huduma ya usajili haipatikani kwenye mazingira haya.'; w.classList.add('show'); });
+    supabase.from('org_units').select('id,name').eq('unit_type','kigango').eq('is_active',true).order('name').then(({data,error})=>{
+      if(error) throw error; setOptions(kigango,(data||[]).map(x=>({id:x.id,name:x.name})),'Chagua kigango…');
+    }).catch(()=>{setOptions(kigango,[],'Imeshindikana kupakia vigango');say('Orodha ya vigango haikupatikana. Hakiki mtandao ujaribu tena.');});
+    addRow(true);
+
+    form.addEventListener('submit',async e=>{
+      e.preventDefault(); clear();
+      if(!form.reportValidity()) return;
+      const head=isHead.find(x=>x.checked)?.value==='yes';
+      if(!head&&!familySelect.value){say('Chagua familia unayoishi nayo.');return;}
+      const entries=[...members.querySelectorAll('.member')].map(row=>({
+        full_name:row.querySelector('[name=full_name]').value.trim(), phone:row.querySelector('[name=phone]').value.trim(),
+        gender:row.querySelector('[name=gender]').value, age:Number(row.querySelector('[name=age]').value), relationship:row.querySelector('[name=relationship]').value,
+      }));
+      const normalized=entries.map(x=>x.phone.replace(/\D/g,''));
+      if(new Set(normalized).size!==normalized.length){say('Kila mtu aandike namba yake ya simu tofauti.');return;}
+      const payload={consent:form.elements.consent.checked,kigango_id:kigango.value,jumuiya_id:jumuiya.value,family_id:head?null:familySelect.value,
+        new_family_name:head?familyName.value.trim():null,head_index:head?0:null,members:entries};
+      submit.disabled=true; document.getElementById('submit-label').textContent='Inatengeneza akaunti…';
+      try {
+        const r=await fetch('api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        const result=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(result.error||'Usajili haujakamilika. Jaribu tena.');
+        document.getElementById('form-wrap').hidden=true;
+        const success=document.getElementById('success'); success.classList.add('show');
+        const message=result.sms_sent===result.sms_total
+          ? `Akaunti ${result.members} zimetengenezwa. Taarifa za kuingia zimetumwa kwa SMS kwenda kwenye simu za kila mtu. Kila mtu abadilishe nenosiri la muda atakapoingia kwanza.`
+          : `Akaunti zimetengenezwa, lakini SMS zimefika kwa ${result.sms_sent} kati ya ${result.sms_total}. ${result.sms_failed_names?.length?`SMS hazikufika kwa: ${result.sms_failed_names.join(', ')}. `:''}Wasiliana na Msimamizi wa Mfumo kwa namba ambazo hazikupokea SMS.`;
+        document.getElementById('success-message').textContent=message;
+      } catch(err){say(err.message||'Usajili umeshindikana. Jaribu tena.');submit.disabled=false;document.getElementById('submit-label').textContent='Sajili na tuma SMS';}
+    });
+  })();
+  </script>
+</body>
+</html>

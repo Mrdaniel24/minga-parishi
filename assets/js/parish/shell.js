@@ -40,6 +40,7 @@
   PM.guard = async function () {
     const { data: { session } = {} } = await supabase.auth.getSession();
     if (!session) { location.replace(LOGIN); return null; }
+    if (session.user?.user_metadata?.must_change_password) { location.replace(new URL('../reset.html?required=1', location.href).href); return null; }
     const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
     if (error || !profile) {
       await supabase.auth.signOut();

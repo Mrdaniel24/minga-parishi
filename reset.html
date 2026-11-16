@@ -56,7 +56,7 @@
   <section class="form-side">
     <form class="card" id="reset" novalidate>
       <h2>Weka nenosiri jipya</h2>
-      <p class="sub">Chagua nenosiri lenye herufi 8 au zaidi.</p>
+      <p class="sub" id="reset-sub">Chagua nenosiri lenye herufi 8 au zaidi.</p>
       <div class="msg" id="msg" role="alert"></div>
       <label>Nenosiri jipya
         <span class="field"><span class="material-symbols-outlined">lock</span>
@@ -75,13 +75,15 @@
 (() => {
   const form = document.getElementById('reset'), msg = document.getElementById('msg'), go = document.getElementById('go');
   const say = (t, ok) => { msg.textContent = t; msg.className = 'msg show-msg' + (ok ? ' ok' : ''); };
+  const required = new URLSearchParams(location.search).has('required');
+  if (required) document.getElementById('reset-sub').textContent = 'Nenosiri la muda limefika kwa SMS. Tengeneza lako kabla ya kuendelea.';
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const a = form.p1.value, b = form.p2.value;
     if (a.length < 8) { say('Nenosiri liwe na herufi 8 au zaidi.'); return; }
     if (a !== b) { say('Manenosiri mawili hayalingani.'); return; }
     go.disabled = true;
-    const { error } = await supabase.auth.updateUser({ password: a });
+    const { error } = await supabase.auth.updateUser({ password: a, data: { must_change_password: false } });
     go.disabled = false;
     if (error) { say(/session|auth/i.test(error.message) ? 'Kiungo kimeisha muda. Omba kiungo kipya kwenye ukurasa wa kuingia.' : error.message); return; }
     say('Nenosiri limebadilishwa. Unapelekwa kwenye mfumo…', true);
