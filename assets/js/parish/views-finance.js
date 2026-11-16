@@ -498,7 +498,6 @@
       P.go('#/units');
     },
   };
-
   /* ================= MICHANGO NA KAMPENI (kanuni za kila mwaka) ================= */
   const KTABS = [['', 'Zote'], ['mavuno', 'Mavuno'], ['ujenzi', 'Ujenzi'], ['special', 'Maalumu'], ['other', 'Mingine']];
   const kindOf = k => ['mavuno', 'ujenzi', 'special'].includes(k) ? k : 'other';
@@ -829,4 +828,5 @@
     },
   };
 })();
+
 
