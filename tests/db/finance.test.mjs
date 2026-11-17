@@ -313,3 +313,4 @@ test('scheduled report snapshots summarise posted records without creating trans
   await db.val(`select public.generate_report_snapshot('outstanding_pledges')`);
 });
 
+

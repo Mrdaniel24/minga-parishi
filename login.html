@@ -68,9 +68,8 @@
       .form-side { padding: 1rem; margin-top: -1.25rem; align-items: flex-start; }
     }
   </style>
-  <link rel="stylesheet" href="assets/css/premium-refinements.css" />
 </head>
-<body class="auth-page login-page">
+<body>
   <section class="side">
     <div style="position:relative;z-index:1">
       <p class="eyebrow" data-diocese>Mfumo wa Parokia</p>
@@ -86,13 +85,13 @@
   </section>
 
   <section class="form-side">
-    <form class="card" id="login" autocomplete="off" novalidate>
+    <form class="card" id="login" novalidate>
       <h2 id="title">Ingia</h2>
       <p class="sub" id="sub">Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.</p>
       <div class="msg" id="msg" role="alert"></div>
       <label>Namba ya simu
         <span class="field"><span class="material-symbols-outlined">smartphone</span>
-          <input type="tel" name="phone" inputmode="tel" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="mf. 0712 345 678" aria-describedby="phone-help"><small id="phone-help" class="field-hint">Tumia namba ile uliyosajiliwa nayo.</small></span>
+          <input type="tel" name="phone" inputmode="tel" autocomplete="username" required placeholder="mf. 0712 345 678" aria-describedby="phone-help"><small id="phone-help" class="field-hint">Tumia namba ile uliyosajiliwa nayo.</small></span>
       </label>
       <label id="pw-wrap">Nenosiri
         <span class="field"><span class="material-symbols-outlined">lock</span>

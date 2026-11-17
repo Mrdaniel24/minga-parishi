@@ -53,3 +53,4 @@ returns jsonb language sql stable set search_path = public as $$
 $$;
 
 notify pgrst, 'reload schema';
+

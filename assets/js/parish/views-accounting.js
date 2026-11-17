@@ -252,18 +252,11 @@
         cols = [{ key: 'receipt_no', label: 'Risiti' }, { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'status', label: 'Hali' }];
         foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
       } else if (r === 'zaka') {
-        const validLevels = ['parishioner', 'family', 'jumuiya', 'kigango'];
-        const zakaLevel = validLevels.includes(level) ? level : 'jumuiya';
-        rows = await P.rpc('zaka_grid_tree', { p_year: year, p_level: zakaLevel, p_scope: scope || null });
-        const months = P.MONTHS.map((m, i) => ({ key: `m${String(i + 1).padStart(2, '0')}`, label: m.slice(0, 3), sum: P.tzs, cls: 'pm-num' }));
-        cols = [{ key: 'group_name', label: ({ parishioner: 'Muumini', family: 'Familia', jumuiya: 'Jumuiya', kigango: 'Kigango' })[zakaLevel] },
-          ...(zakaLevel === 'parishioner' || zakaLevel === 'family' ? [{ key: 'jumuiya_name', label: 'Jumuiya' }] : []),
-          ...months, { key: 'total', label: 'Jumla', fmt: P.tzs, sum: P.tzs, cls: 'pm-num pm-strong' },
-          { key: 'months_paid', label: 'Miezi imelipwa', fmt: P.num, cls: 'pm-num' }, { key: 'months_unpaid', label: 'Miezi iliyobaki', fmt: P.num, cls: 'pm-num' }];
-        const scU = scope ? { unit: scope } : {};
-        cols = cols.map(c => months.includes(c) ? { ...c, fmt: (v, x) => P.txMoney(v, { title: `Zaka ${year} — ${x.group_name}`, sub: c.label, ...scU, ...(zakaLevel === 'family' ? { family: x.group_id } : zakaLevel === 'parishioner' ? { parishioner: x.group_id } : { unit: x.group_id }), kinds: ['zaka'], zaka_year: year, period_month: `${year}-${c.key.slice(1)}-01` }, P.tzs) } : c);
-        foot = { group_name: '<b>JUMLA</b>', ...Object.fromEntries(months.map(m => [m.key, P.tzs(P.sum(rows, m.key))])), total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>` };
-        sub = `${scopeLbl} · Zaka ${year} · ${({ parishioner: 'kwa waumini', family: 'kwa familia', jumuiya: 'kwa jumuiya', kigango: 'kwa vigango' })[zakaLevel]}`;
+        if (year !== P.year()) P.setYear(year);
+        const su = scope && P.ref.unitsById[scope];
+        P.go(su?.unit_type === 'jumuiya' ? `#/jumuiya?id=${su.id}&tab=zaka`
+          : su?.unit_type === 'kigango' ? `#/kigango?id=${su.id}` : '#/units');
+        return;
       }
       out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
         `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
