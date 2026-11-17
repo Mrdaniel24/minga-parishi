@@ -82,6 +82,19 @@ html { font-family: Montserrat, system-ui, sans-serif; text-rendering: optimizeL
   letter-spacing: .12em !important;
 }
 
+/* The desktop menu stays usable when a parish has many report and office links. */
+.app-shell #sidebar {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245,190,34,.72) rgba(0,63,50,.18);
+  overscroll-behavior: contain;
+}
+.app-shell #sidebar::-webkit-scrollbar { width: 9px; }
+.app-shell #sidebar::-webkit-scrollbar-track { background: rgba(0,63,50,.16); border-radius: 999px; }
+.app-shell #sidebar::-webkit-scrollbar-thumb { background: linear-gradient(var(--login-gold, #f5be22), #d89d0c); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+.app-shell #sidebar::-webkit-scrollbar-thumb:hover { background: #ffd65a; background-clip: padding-box; }
+
 /* Softer panels, forms and controls across the app. */
 .app-shell .pm-card,
 .app-shell .main-responsive .rounded-xl.bg-surface-container-lowest,

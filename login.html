@@ -6,9 +6,10 @@
   <title>Ingia | Mfumo wa Parokia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0..1&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/css/parish.css"/>
+  <link rel="stylesheet" href="assets/css/login-premium.css"/>
   <style>
     :root { --ink: #26332f; --muted: #6b7c77; --line: #dfe7e4; --primary: #3d5650; --primary-deep: #2c403b; --gold: #d4a72c; --canvas: #e6eeeb; }
     * { box-sizing: border-box; }
@@ -69,24 +70,38 @@
     }
   </style>
 </head>
-<body>
-  <section class="side">
-    <div style="position:relative;z-index:1">
-      <p class="eyebrow" data-diocese>Mfumo wa Parokia</p>
-      <h1 data-parish>Mfumo wa Usimamizi wa Parokia</h1>
-      <p>Waumini, zaka, michango, risiti na ripoti — mahali pamoja. Kila malipo yanaandikwa mara moja tu.</p>
-      <ul class="points">
-        <li><span class="material-symbols-outlined">family_restroom</span>Familia, jumuiya na vigango</li>
-        <li><span class="material-symbols-outlined">receipt_long</span>Risiti papo hapo</li>
-        <li><span class="material-symbols-outlined">bar_chart</span>Ripoti za kusoma kanisani</li>
-      </ul>
-    </div>
-    <p class="foot">© <span data-year></span> · Mfumo wa Usimamizi wa Parokia</p>
-  </section>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-story" id="login-story" tabindex="0" aria-label="Maelezo ya Mfumo wa Parokia">
+      <div class="login-brand"><span class="login-brand__mark"><span class="material-symbols-outlined">church</span></span><span data-diocese>Mfumo wa Parokia</span></div>
+      <div class="login-slides" aria-live="polite">
+        <article class="login-slide is-active" data-slide="0">
+          <img class="login-slide__image" src="assets/images/login-family.png" alt="Familia ikiwa pamoja nyumbani" />
+          <div class="login-slide__shade"></div>
+          <div class="login-slide__copy"><p class="login-slide__eyebrow">Mfumo wa Parokia</p><h1>Usimamizi Rahisi wa <span>Familia na Waumini</span></h1><p>Sajili familia, simamia taarifa za waumini na uunganishe jumuiya zote katika mfumo mmoja.</p></div>
+        </article>
+        <article class="login-slide" data-slide="1">
+          <img class="login-slide__image" src="assets/images/login-receipt.png" alt="Mtu akiangalia risiti ya malipo kwenye simu" />
+          <div class="login-slide__shade"></div>
+          <div class="login-slide__copy"><p class="login-slide__eyebrow">Michango na malipo</p><h1>Kila Mchango Una Thamani. <span>Kila Malipo</span> Yana Kumbukumbu.</h1><p>Rekodi zaka na michango, toa risiti kwa urahisi na fuatilia malipo yote kwa usahihi.</p></div>
+        </article>
+        <article class="login-slide" data-slide="2">
+          <img class="login-slide__image" src="assets/images/login-dashboard.png" alt="Dashibodi ya ripoti na takwimu" />
+          <div class="login-slide__shade"></div>
+          <div class="login-slide__copy"><p class="login-slide__eyebrow">Ripoti na takwimu</p><h1>Fanya Maamuzi kwa <span>Taarifa Sahihi</span></h1><p>Pata ripoti za makusanyo, fuatilia mwenendo wa mapato na simamia shughuli za parokia kwa ufanisi.</p></div>
+        </article>
+      </div>
+      <div class="login-story__tools" aria-label="Udhibiti wa slides">
+        <button class="login-story__arrow" type="button" data-slide-prev aria-label="Slide iliyopita"><span class="material-symbols-outlined">arrow_back</span></button>
+        <div class="login-dots"><button class="login-dot is-active" type="button" data-slide-dot="0" aria-label="Fungua slide 1" aria-pressed="true"></button><button class="login-dot" type="button" data-slide-dot="1" aria-label="Fungua slide 2" aria-pressed="false"></button><button class="login-dot" type="button" data-slide-dot="2" aria-label="Fungua slide 3" aria-pressed="false"></button></div>
+        <button class="login-story__arrow" type="button" data-slide-next aria-label="Slide inayofuata"><span class="material-symbols-outlined">arrow_forward</span></button>
+      </div>
+    </section>
 
-  <section class="form-side">
-    <form class="card" id="login" novalidate>
-      <h2 id="title">Ingia</h2>
+    <section class="login-form-side">
+    <form class="login-card" id="login" novalidate>
+      <div class="login-card__mark"><span class="material-symbols-outlined">church</span></div>
+      <h2 id="title">Karibu Tena</h2>
       <p class="sub" id="sub">Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.</p>
       <div class="msg" id="msg" role="alert"></div>
       <label>Namba ya simu
@@ -104,8 +119,37 @@
       <p class="help">Huna akaunti? Akaunti zinaundwa na Msimamizi wa Mfumo wa Parokia. Wasiliana naye akupe akaunti na nafasi yako.</p>
       <p class="help" style="margin-top:.5rem;padding-top:.75rem">Wewe ni muumini? <a href="register.html" style="color:var(--primary);font-weight:800">Jisajili hapa</a></p>
     </form>
-  </section>
+    </section>
+  </main>
 
+<script>
+(() => {
+  const story = document.getElementById('login-story');
+  if (!story) return;
+  const slides = [...story.querySelectorAll('[data-slide]')];
+  const dots = [...story.querySelectorAll('[data-slide-dot]')];
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let index = 0, timer = null, paused = false;
+  const show = next => {
+    index = (next + slides.length) % slides.length;
+    slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+    dots.forEach((dot, i) => { const active = i === index; dot.classList.toggle('is-active', active); dot.setAttribute('aria-pressed', String(active)); });
+  };
+  const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+  const start = () => { stop(); if (!paused && !reduced.matches) timer = setInterval(() => show(index + 1), 6000); };
+  story.querySelector('[data-slide-prev]').addEventListener('click', () => { show(index - 1); start(); });
+  story.querySelector('[data-slide-next]').addEventListener('click', () => { show(index + 1); start(); });
+  dots.forEach(dot => dot.addEventListener('click', () => { show(Number(dot.dataset.slideDot)); start(); }));
+  story.addEventListener('mouseenter', () => { paused = true; stop(); });
+  story.addEventListener('mouseleave', () => { paused = false; start(); });
+  story.addEventListener('focusin', stop);
+  story.addEventListener('focusout', e => { if (!story.contains(e.relatedTarget)) start(); });
+  story.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { e.preventDefault(); show(index - 1); start(); } if (e.key === 'ArrowRight') { e.preventDefault(); show(index + 1); start(); } });
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  reduced.addEventListener?.('change', start);
+  start();
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
@@ -116,7 +160,8 @@
   const msg = document.getElementById('msg');
   const go = document.getElementById('go');
   const say = (text, ok) => { msg.textContent = text; msg.className = 'msg show-msg' + (ok ? ' ok' : ''); };
-  document.querySelector('[data-year]').textContent = new Date().getFullYear();
+  const yearSlot = document.querySelector('[data-year]');
+  if (yearSlot) yearSlot.textContent = new Date().getFullYear();
 
   const params = new URLSearchParams(location.search);
   if (params.get('e') === 'inactive') say('Akaunti yako imesimamishwa. Wasiliana na Msimamizi wa Mfumo.');
