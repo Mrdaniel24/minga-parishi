@@ -110,6 +110,13 @@ body { color: var(--brand-emerald); }
   color: var(--brand-mint) !important;
 }
 .app-shell a, .app-shell .pm-linkbtn, .app-shell .pm-tabs a.is-active { color: var(--brand-forest); }
+.pm-search__results { background: var(--brand-mint) !important; }
+.pm-search__section + .pm-search__section { border-top: 1px solid rgba(0, 63, 50, .14); }
+.pm-search__heading { margin: 0; padding: .45rem .8rem .25rem; color: var(--brand-forest); background: rgba(0, 92, 64, .08); font-size: .72rem; font-weight: 700; }
+.pm-search__results button { color: var(--brand-emerald) !important; background: var(--brand-mint) !important; }
+.pm-search__results button:hover { background: rgba(0, 92, 64, .1) !important; }
+.pm-search__results button small { color: rgba(0, 63, 50, .7) !important; }
+.pm-search__results .material-symbols-outlined { color: var(--brand-forest) !important; }
 .app-shell input:focus, .app-shell select:focus, .app-shell textarea:focus,
 .app-shell button:focus-visible, .app-shell a:focus-visible {
   outline-color: var(--brand-gold) !important;

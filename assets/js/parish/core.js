@@ -100,11 +100,40 @@
     (blank !== null ? `<option value="">${P.esc(blank)}</option>` : '') +
     items.map(i => `<option value="${P.esc(i[value])}" ${String(i[value]) === String(selected) ? 'selected' : ''}>${P.esc(typeof label === 'function' ? label(i) : i[label])}</option>`).join('');
   P.unitOptions = (types = ['kigango', 'jumuiya', 'group'], opts = {}) => {
-    const groups = types.map(t => {
-      const lbl = { kigango: 'Vigango', jumuiya: 'Jumuiya', group: 'Vyama na Kanda' }[t] || t;
-      return `<optgroup label="${lbl}">${P.options(P.unitsOf(t), { label: 'label', selected: opts.selected })}</optgroup>`;
-    }).join('');
-    return (opts.blank !== undefined ? `<option value="">${P.esc(opts.blank)}</option>` : '') + groups;
+    const selected = opts.selected;
+    const bothLevels = types.includes('kigango') && types.includes('jumuiya');
+    const groups = [];
+    if (bothLevels) {
+      const kigango = P.unitsOf('kigango');
+      const jumuiya = P.unitsOf('jumuiya');
+      kigango.forEach(k => groups.push(`<optgroup label="Kigango cha ${P.esc(k.name)}">
+        <option value="${P.esc(k.id)}" ${String(k.id) === String(selected) ? 'selected' : ''}>Kigango chenyewe</option>
+        ${jumuiya.filter(j => j.parent_id === k.id).map(j => `<option value="${P.esc(j.id)}" ${String(j.id) === String(selected) ? 'selected' : ''}>Jumuiya ya ${P.esc(j.name)}</option>`).join('')}
+      </optgroup>`));
+      const orphan = jumuiya.filter(j => !kigango.some(k => k.id === j.parent_id));
+      if (orphan.length) groups.push(`<optgroup label="Jumuiya zisizo na kigango">${orphan.map(j => `<option value="${P.esc(j.id)}" ${String(j.id) === String(selected) ? 'selected' : ''}>Jumuiya ya ${P.esc(j.name)}</option>`).join('')}</optgroup>`);
+    } else {
+      types.forEach(t => {
+        if (t === 'group') return;
+        const units = P.unitsOf(t);
+        if (t === 'jumuiya') {
+          const parents = P.unitsOf('kigango');
+          parents.forEach(k => {
+            const children = units.filter(j => j.parent_id === k.id);
+            if (children.length) groups.push(`<optgroup label="Kigango cha ${P.esc(k.name)}">${P.options(children, { label: j => `Jumuiya ya ${j.name}`, selected })}</optgroup>`);
+          });
+          const orphan = units.filter(j => !parents.some(k => k.id === j.parent_id));
+          if (orphan.length) groups.push(`<optgroup label="Jumuiya zisizo na kigango">${P.options(orphan, { label: j => `Jumuiya ya ${j.name}`, selected })}</optgroup>`);
+          return;
+        }
+        const lbl = { kigango: 'Vigango', group: 'Vyama na Kanda' }[t] || t;
+        const label = t === 'kigango' ? k => `Kigango cha ${k.name}` : 'label';
+        if (units.length) groups.push(`<optgroup label="${lbl}">${P.options(units, { label, selected })}</optgroup>`);
+      });
+    }
+    if (types.includes('group')) groups.push(`<optgroup label="Vyama na Kanda">${P.options(P.unitsOf('group'), { selected })}</optgroup>`);
+    const options = groups.join('');
+    return (opts.blank !== undefined ? `<option value="">${P.esc(opts.blank)}</option>` : '') + options;
   };
   P.catOptions = (kinds, opts = {}) => P.options(P.ref.cats.filter(c => c.is_active && (!kinds || kinds.includes(c.kind)) && c.code !== 'TRANSFER'),
     { label: 'name_sw', ...opts });
@@ -169,15 +198,21 @@
   P.cascadeHtml = ({ kigango = '', jumuiya = '', allLabel = 'Zote' } = {}) => {
     const kig = P.unitsOf('kigango');
     const jum = P.unitsOf('jumuiya');
-    return `<label>Kigango<select name="kigango" data-cascade-k>${P.options(kig, { blank: allLabel, selected: kigango })}</select></label>
-      <label>Jumuiya<select name="jumuiya" data-cascade-j><option value="">${P.esc(allLabel)}</option>${jum.map(j =>
-        `<option value="${j.id}" data-k="${j.parent_id}" ${j.id === jumuiya ? 'selected' : ''}>${P.esc(j.name)}</option>`).join('')}</select></label>`;
+    const jumGroups = kig.map(k => {
+      const children = jum.filter(j => j.parent_id === k.id);
+      return children.length ? `<optgroup label="Kigango cha ${P.esc(k.name)}">${children.map(j =>
+        `<option value="${j.id}" data-k="${j.parent_id}" ${j.id === jumuiya ? 'selected' : ''}>${P.esc(j.name)}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+    const orphanJumuiya = jum.filter(j => !kig.some(k => k.id === j.parent_id));
+    return `<label>Kigango<select name="kigango" data-cascade-k>${P.options(kig, { blank: allLabel, label: k => `Kigango cha ${k.name}`, selected: kigango })}</select></label>
+      <label>Jumuiya<select name="jumuiya" data-cascade-j><option value="">${P.esc(allLabel)}</option>${jumGroups}${orphanJumuiya.length ? `<optgroup label="Jumuiya zisizo na kigango">${orphanJumuiya.map(j => `<option value="${j.id}" data-k="${j.parent_id}" ${j.id === jumuiya ? 'selected' : ''}>${P.esc(j.name)}</option>`).join('')}</optgroup>` : ''}</select></label>`;
   };
   P.wireCascade = root => {
     const k = root.querySelector('[data-cascade-k]'), j = root.querySelector('[data-cascade-j]');
     if (!k || !j) return;
     const sync = () => {
       [...j.options].forEach(o => { if (o.value) o.hidden = !!k.value && o.dataset.k !== k.value; });
+      [...j.querySelectorAll('optgroup')].forEach(g => { g.hidden = ![...g.options].some(o => !o.hidden); });
       if (j.selectedOptions[0] && j.selectedOptions[0].hidden) j.value = '';
     };
     k.addEventListener('change', sync); sync();
@@ -278,7 +313,7 @@
   };
 
   /* search box for parishioners / families / communities used by payment & pledge forms */
-  P.payerPicker = (root, { onPick, jumuiya } = {}) => {
+  P.payerPicker = (root, { onPick, jumuiya, types = ['parishioner', 'family', 'kigango', 'jumuiya', 'group'] } = {}) => {
     const input = root.querySelector('[data-payer-search]');
     const list = root.querySelector('[data-payer-results]');
     let t;
@@ -288,19 +323,30 @@
       if (v.length < 2) { list.innerHTML = ''; return; }
       t = setTimeout(async () => {
         const like = `%${v}%`;
-        const [people, fams] = await Promise.all([
-          (jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)').eq('jumuiya_id', jumuiya)
-                   : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).neq('membership_status', 'removed').ilike('full_name', like).limit(jumuiya ? 15 : 8),
-          (jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
-                   : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5),
-        ].map(P.q)).catch(() => [[], []]);
-        const units = P.ref.units.filter(u => u.is_active && u.unit_type !== 'parish' && (!jumuiya || u.id === jumuiya) && u.name.toLowerCase().includes(v.toLowerCase())).slice(0, 5);
+        const requests = [];
+        if (types.includes('parishioner')) requests.push(P.q((jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)').eq('jumuiya_id', jumuiya)
+          : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).neq('membership_status', 'removed').ilike('full_name', like).limit(jumuiya ? 15 : 8)).catch(() => []));
+        else requests.push(Promise.resolve([]));
+        if (types.includes('family')) requests.push(P.q((jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
+          : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5)).catch(() => []));
+        else requests.push(Promise.resolve([]));
+        const [people, fams] = await Promise.all(requests);
+        const unitTypes = types.filter(t => ['kigango', 'jumuiya', 'group'].includes(t));
+        const units = P.ref.units.filter(u => u.is_active && unitTypes.includes(u.unit_type) && (!jumuiya || u.id === jumuiya)
+          && u.name.toLowerCase().includes(v.toLowerCase())).slice(0, 8);
         const j = id => P.ref.unitsById[id] ? P.ref.unitsById[id].label : '';
-        list.innerHTML = [
-          ...people.map(p => `<button type="button" data-kind="parishioner" data-id="${p.id}" data-name="${P.esc(p.full_name)}"><span class="material-symbols-outlined">person</span>${P.esc(p.full_name)}<small>${P.esc(p.families?.family_name || '')} · ${P.esc(j(p.jumuiya_id))}</small></button>`),
-          ...fams.map(f => `<button type="button" data-kind="family" data-id="${f.id}" data-name="${P.esc(f.family_name)}"><span class="material-symbols-outlined">family_restroom</span>${P.esc(f.family_name)}<small>${P.esc(j(f.jumuiya_id))}</small></button>`),
-          ...units.map(u => `<button type="button" data-kind="org_unit" data-id="${u.id}" data-name="${P.esc(u.name)}"><span class="material-symbols-outlined">groups</span>${P.esc(u.label)}<small>${u.unit_type}</small></button>`),
-        ].join('') || `<p class="pm-muted pm-pad">Hakuna aliyepatikana — andika jina la mlipaji moja kwa moja.</p>`;
+        const section = (title, rows) => rows.length ? `<div class="pm-search__section"><p class="pm-search__heading">${title}</p>${rows.join('')}</div>` : '';
+        const personRows = people.map(p => `<button type="button" data-kind="parishioner" data-id="${p.id}" data-name="${P.esc(p.full_name)}"><span class="material-symbols-outlined">person</span>${P.esc(p.full_name)}<small>${P.esc(p.families?.family_name || '')}${p.jumuiya_id ? ` · ${P.esc(j(p.jumuiya_id))}` : ''}</small></button>`);
+        const familyRows = fams.map(f => `<button type="button" data-kind="family" data-id="${f.id}" data-name="${P.esc(f.family_name)}"><span class="material-symbols-outlined">family_restroom</span>${P.esc(f.family_name)}<small>${P.esc(j(f.jumuiya_id))}</small></button>`);
+        const unitRows = type => units.filter(u => u.unit_type === type).map(u => {
+          const parent = P.ref.unitsById[u.parent_id];
+          const label = type === 'kigango' ? `Kigango cha ${u.name}` : type === 'jumuiya' ? `Jumuiya ya ${u.name}` : u.name;
+          const context = type === 'jumuiya' && parent ? `Kigango cha ${parent.name}` : ({ group: 'Chama / Kanda' })[type] || '';
+          return `<button type="button" data-kind="org_unit" data-id="${u.id}" data-name="${P.esc(u.name)}"><span class="material-symbols-outlined">${type === 'kigango' ? 'account_tree' : 'groups'}</span>${P.esc(label)}${context ? `<small>${P.esc(context)}</small>` : ''}</button>`;
+        });
+        list.innerHTML = [section('Waumini', personRows), section('Familia', familyRows), section('Vigango', unitRows('kigango')),
+          section('Jumuiya', unitRows('jumuiya')), section('Vyama na Kanda', unitRows('group'))].join('')
+          || `<p class="pm-muted pm-pad">Hakuna aliyepatikana — andika jina la mlipaji moja kwa moja.</p>`;
       }, 250);
     });
     list.addEventListener('click', e => {

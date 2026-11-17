@@ -353,7 +353,7 @@
           <label>Kitengo<select name="org_unit_id" required>${P.unitOptions(['kigango', 'jumuiya', 'group'], { blank: 'Chagua…' })}${(() => { const r = P.ref.units.find(u => u.unit_type === 'parish'); return `<option value="${r.id}">Parokia</option>`; })()}</select></label>
           <label class="pm-span2">Jina (tafuta kwenye rejista au andika)<div class="pm-search"><input data-payer-search name="holder_name" required autocomplete="off"><div data-payer-results class="pm-search__results"></div></div></label>
           <label>Simu<input name="phone"></label><label>Kuanzia<input name="starts_on" type="date" value="${P.today()}"></label></div>`,
-          onOpen: m => P.payerPicker(m, { onPick: p => { person = p.kind === 'parishioner' ? p.id : null; } }) });
+          onOpen: m => P.payerPicker(m, { types: ['parishioner'], onPick: p => { person = p.id; } }) });
         if (!v) return;
         await P.q(P.from('leadership_assignments').insert({ ...v, parishioner_id: person, phone: v.phone || null, starts_on: v.starts_on || null }));
         Toast.success('Kiongozi amehifadhiwa.'); P.reload();
@@ -432,7 +432,7 @@
             ${roleFields(true)}
             <label class="pm-span2">Muumini wa rejista (hiari — kama ni muumini anayeona michango yake)<div class="pm-search"><input data-payer-search name="who" autocomplete="off"><div data-payer-results class="pm-search__results"></div></div></label>
             <label class="pm-span2">Barua pepe (hiari, kwa mawasiliano tu)<input name="email" type="email"></label></div>`,
-          onOpen: m => { wirePw(m); P.payerPicker(m, { onPick: p => { person = p.kind === 'parishioner' ? p.id : null; } }); } });
+          onOpen: m => { wirePw(m); P.payerPicker(m, { types: ['parishioner'], onPick: p => { person = p.id; } }); } });
         if (!v) return;
         const r = await P.rpc('admin_create_user', { p: { full_name: v.full_name, phone: v.phone, email: v.email || null, password: v.password,
           role_code: v.role_code || null, org_unit_id: v.role_code ? (v.org_unit_id || null) : null, parishioner_id: person } });
@@ -478,7 +478,7 @@
         await P.q(P.from('parish_user_roles').delete().eq('id', b.dataset.revoke)); P.reload();
       }));
       let person = null;
-      P.payerPicker(el.querySelector('[data-link]'), { onPick: p => { person = p.kind === 'parishioner' ? p.id : null; } });
+      P.payerPicker(el.querySelector('[data-link]'), { types: ['parishioner'], onPick: p => { person = p.id; } });
       el.querySelector('[data-link]').addEventListener('submit', async e => {
         e.preventDefault();
         if (!person) { Toast.error('Chagua muumini (si familia) kutoka kwenye orodha.'); return; }
