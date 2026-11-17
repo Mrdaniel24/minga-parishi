@@ -1,0 +1,143 @@
+/* Minga Parishi official palette. Alpha variants below are transparent
+   versions of these same four colors, not extra brand colors. */
+:root {
+  --brand-forest: #005c40;
+  --brand-emerald: #003f32;
+  --brand-gold: #f5be22;
+  --brand-mint: #f3f8f5;
+
+  --kh-sidebar: var(--brand-emerald) !important;
+  --kh-sidebar-deep: var(--brand-emerald) !important;
+  --kh-gold: var(--brand-gold) !important;
+  --kh-gold-soft: rgba(245, 190, 34, .18) !important;
+  --kh-teal: var(--brand-forest) !important;
+  --kh-canvas: var(--brand-mint) !important;
+  --kh-card: var(--brand-mint) !important;
+  --kh-line: rgba(0, 63, 50, .14) !important;
+  --kh-ink: var(--brand-emerald) !important;
+  --kh-muted: rgba(0, 63, 50, .72) !important;
+
+  --pm-ink: var(--brand-emerald) !important;
+  --pm-muted: rgba(0, 63, 50, .72) !important;
+  --pm-line: rgba(0, 63, 50, .14) !important;
+  --pm-card: var(--brand-mint) !important;
+  --pm-primary: var(--brand-emerald) !important;
+  --pm-gold: var(--brand-gold) !important;
+  --pm-gold-soft: rgba(245, 190, 34, .2) !important;
+  --pm-teal: var(--brand-forest) !important;
+  --pm-rose: var(--brand-emerald) !important;
+
+  --premium-ink: var(--brand-emerald) !important;
+  --premium-muted: rgba(0, 63, 50, .72) !important;
+  --premium-line: rgba(0, 63, 50, .14) !important;
+  --premium-green: var(--brand-forest) !important;
+  --premium-gold: var(--brand-gold) !important;
+
+  --login-forest: var(--brand-forest) !important;
+  --login-emerald: var(--brand-emerald) !important;
+  --login-gold: var(--brand-gold) !important;
+  --login-soft-gold: var(--brand-gold) !important;
+  --login-mint: var(--brand-mint) !important;
+  --login-ink: var(--brand-emerald) !important;
+  --login-muted: rgba(0, 63, 50, .72) !important;
+  --login-line: rgba(0, 63, 50, .14) !important;
+
+  --ink: var(--brand-emerald) !important;
+  --muted: rgba(0, 63, 50, .72) !important;
+  --line: rgba(0, 63, 50, .14) !important;
+  --primary: var(--brand-forest) !important;
+  --primary-deep: var(--brand-emerald) !important;
+  --gold: var(--brand-gold) !important;
+  --canvas: var(--brand-mint) !important;
+  --green: var(--brand-forest) !important;
+  --green-deep: var(--brand-emerald) !important;
+}
+
+html, .app-shell { background-color: var(--brand-mint) !important; }
+body { color: var(--brand-emerald); }
+.app-shell { background: var(--brand-mint) !important; }
+#sidebar, .mobile-header { background-color: var(--brand-emerald) !important; }
+#sidebar, #sidebar .kh-profile__name, #sidebar .nav-item,
+#sidebar .nav-link, #sidebar [data-action="logout"],
+.mobile-header, .mobile-header h1 { color: var(--brand-mint) !important; }
+#sidebar .nav-item, #sidebar .nav-link { color: rgba(243, 248, 245, .86) !important; }
+#sidebar .kh-profile__role { color: var(--brand-gold) !important; background: rgba(245, 190, 34, .16) !important; }
+#sidebar .nav-item-active, #sidebar .nav-link-active, #sidebar a.active-nav {
+  color: var(--brand-emerald) !important;
+  background: var(--brand-mint) !important;
+}
+#sidebar .kh-profile__avatar { background: var(--brand-emerald) !important; }
+.kh-topbar, body > header.sticky, .main-responsive > header.sticky {
+  background: rgba(243, 248, 245, .94) !important;
+  border-color: rgba(0, 63, 50, .14) !important;
+}
+.main-responsive .rounded-xl.bg-white,
+.main-responsive .rounded-2xl.bg-white,
+.main-responsive .rounded-3xl.bg-white,
+.main-responsive .bg-surface-container-lowest,
+.pm-card, .pm-kpi, .pm-finance-details,
+.pm-member-info > div, .pm-modal__box, .kh-topbar {
+  background-color: var(--brand-mint) !important;
+}
+.app-shell .pm-member-hero {
+  background: linear-gradient(112deg, var(--brand-emerald), var(--brand-forest)) !important;
+}
+.app-shell .pm-member-hero__icon { color: var(--brand-emerald) !important; background: var(--brand-gold) !important; }
+.app-shell .pm-member-eyebrow,
+.app-shell .pm-member-hero__place .material-symbols-outlined { color: var(--brand-gold) !important; }
+.app-shell .pm-member-empty,
+.app-shell .pm-pledges-card,
+.pm-notice, .pm-alert--warn, .pm-badge--gold {
+  color: var(--brand-emerald) !important;
+  background: rgba(245, 190, 34, .16) !important;
+  border-color: rgba(245, 190, 34, .55) !important;
+}
+.pm-alert--error, .pm-toast--error, .pm-btn--danger {
+  color: var(--brand-emerald) !important;
+  background: rgba(0, 63, 50, .08) !important;
+  border-color: rgba(0, 63, 50, .3) !important;
+}
+.pm-alert--success, .pm-alert--info, .pm-toast--success, .pm-toast--info {
+  color: var(--brand-emerald) !important;
+  background: rgba(0, 92, 64, .1) !important;
+  border-color: rgba(0, 92, 64, .3) !important;
+}
+.pm-btn--primary, .pm-chip.is-active, .pm-progress span,
+.app-shell .main-responsive button[class*="bg-primary"],
+.app-shell .main-responsive a[class*="bg-primary"] {
+  background-color: var(--brand-forest) !important;
+  border-color: var(--brand-forest) !important;
+  color: var(--brand-mint) !important;
+}
+.app-shell a, .app-shell .pm-linkbtn, .app-shell .pm-tabs a.is-active { color: var(--brand-forest); }
+.app-shell input:focus, .app-shell select:focus, .app-shell textarea:focus,
+.app-shell button:focus-visible, .app-shell a:focus-visible {
+  outline-color: var(--brand-gold) !important;
+}
+.login-page { color: var(--brand-emerald) !important; background: var(--brand-emerald) !important; }
+.login-card { color: var(--brand-emerald) !important; background: rgba(243, 248, 245, .94) !important; }
+.login-card h2, .login-card label { color: var(--brand-emerald) !important; }
+.login-card .field > .material-symbols-outlined,
+.login-card .show { color: rgba(0, 63, 50, .62) !important; }
+.login-card .msg, .login-card .msg.ok {
+  color: var(--brand-emerald) !important;
+  background: rgba(0, 92, 64, .1) !important;
+  border-color: rgba(0, 92, 64, .3) !important;
+}
+.register-page .button--primary, .register-page .success a {
+  color: var(--brand-emerald) !important;
+  background: var(--brand-gold) !important;
+  border-color: var(--brand-gold) !important;
+}
+.register-page { background-color: var(--brand-emerald) !important; }
+.register-page .answer input, .register-page .answer select { color: var(--brand-mint) !important; }
+.register-page .answer select option { color: var(--brand-emerald) !important; background: var(--brand-mint) !important; }
+.register-page .notice, .register-page .notice--error, .register-page .notice--success {
+  color: var(--brand-mint) !important;
+  background: rgba(0, 63, 50, .82) !important;
+  border-color: rgba(245, 190, 34, .55) !important;
+}
+.reset-help { color: var(--brand-emerald) !important; background: rgba(0, 92, 64, .1) !important; }
+.pm-receipt-page { color: var(--brand-emerald) !important; background: var(--brand-mint) !important; }
+.pm-receipt, .pm-receipt-tools { background-color: var(--brand-mint) !important; }
+
