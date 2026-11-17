@@ -41,7 +41,6 @@ module.exports = async (req, res) => {
   const prov = provider();
   if (req.method === 'GET') return json(res, 200, { configured: !!prov && !!SERVICE_KEY, provider: prov && prov.label, sender: prov && prov.sender });
   if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' });
-  if (!prov) return json(res, 503, { error: 'Usajili wa SMS haujawekwa bado. Wasiliana na Msimamizi wa Mfumo.' });
   if (!SERVICE_KEY) return json(res, 503, { error: 'Usajili wa akaunti haujakamilishwa kwenye server. Wasiliana na Msimamizi wa Mfumo.' });
   const body = await getBody(req);
   if (!body || JSON.stringify(body).length > 45000) return json(res, 400, { error: 'Taarifa za usajili hazisomeki.' });
@@ -108,6 +107,7 @@ module.exports = async (req, res) => {
   }
 
   const deliveries = await Promise.all(created.map(async ({ member, password }) => {
+    if (!prov) return { name: member.full_name, sent: false };
     const text = `Mfumo wa Parokia: Akaunti yako iko tayari. Namba ya kuingia: +${member.phone}. Nenosiri la muda: ${password}. Badilisha nenosiri baada ya kuingia.`;
     try {
       const sent = await sendChunk(prov, text, [member.phone]);
@@ -116,5 +116,5 @@ module.exports = async (req, res) => {
   }));
   const sent = deliveries.filter(x => x.sent).length;
   return json(res, 200, { ok: true, family_id: result.family_id, members: result.members, sms_sent: sent,
-    sms_total: created.length, sms_failed_names: deliveries.filter(x => !x.sent).map(x => x.name), provider: prov.label, sender: prov.sender });
+    sms_total: created.length, sms_configured: !!prov, sms_failed_names: deliveries.filter(x => !x.sent).map(x => x.name), provider: prov?.label || null, sender: prov?.sender || null });
 };
