@@ -91,10 +91,10 @@
   .login-dot.is-active { width: .9rem; }
   .login-form-side { display: flex; justify-content: center; padding: 0 1.25rem; margin: 0; background: transparent; }
   .login-card { width: 100%; max-width: 21rem; min-width: 0; padding: 1.2rem 1.25rem; border-radius: 1rem; background: rgba(255,255,255,.82); box-shadow: 0 .8rem 2rem rgba(0,63,50,.2); }
-  .login-card__mark { width: 2rem; height: 2rem; margin-bottom: .45rem; border-radius: .6rem; }
+  .login-card__mark { width: 2rem; height: 2rem; margin: 0 auto .45rem; border-radius: .6rem; }
   .login-card__mark .material-symbols-outlined { font-size: 1.1rem; }
-  .login-card h2 { font-size: 1.3rem; }
-  .login-card .sub { margin: .25rem 0 .55rem; font-size: .76rem; line-height: 1.35; }
+  .login-card h2 { font-size: 1.3rem; text-align: center; }
+  .login-card .sub { margin: .25rem 0 .55rem; font-size: .76rem; line-height: 1.35; text-align: center; }
   .login-card label { margin-bottom: .45rem; font-size: .7rem; }
   .login-card input, .login-card button[type=submit] { min-height: 2.4rem; }
   .login-card input { padding-top: .5rem; padding-bottom: .5rem; font-size: 1rem; }
