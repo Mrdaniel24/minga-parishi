@@ -12,12 +12,13 @@
 .login-page {
   min-height: 100vh;
   margin: 0;
+  display: block !important;
   color: var(--login-ink);
   background: var(--login-mint);
   font-family: Inter, Montserrat, system-ui, sans-serif;
   overflow-x: hidden;
 }
-.login-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(360px, .9fr); }
+.login-shell { width: 100%; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr); }
 .login-story { position: relative; min-height: 100vh; overflow: hidden; isolation: isolate; color: #fff; background: var(--login-emerald); }
 .login-story::before, .login-story::after { content: ''; position: absolute; pointer-events: none; z-index: 3; border-radius: 50%; }
 .login-story::before { width: 38rem; height: 38rem; left: -24rem; bottom: -26rem; border: 2rem solid rgba(245,190,34,.4); box-shadow: 0 0 0 1.2rem rgba(245,190,34,.08); }
@@ -70,5 +71,33 @@
 .login-card .msg.ok { color: #1b6d49; background: #effaf4; border-color: #bde8cd; }
 .login-card .reset-help { margin: .65rem 0 0; padding: .7rem .8rem; border-radius: .7rem; color: var(--login-muted); background: var(--login-mint); font-size: .76rem; line-height: 1.5; }
 @media (max-width: 920px) { .login-shell { grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); } .login-slide h1 { font-size: clamp(2rem, 4vw, 3.25rem); } .login-brand { left: 2.2rem; } .login-slide__copy, .login-story__tools { left: 2.2rem; } }
-@media (max-width: 720px) { .login-shell { display: block; } .login-story { min-height: 17rem; height: 37vh; } .login-brand { top: 1.2rem; left: 1.2rem; font-size: 1rem; } .login-slide__copy { left: 1.2rem; right: 1.2rem; bottom: 2.1rem; } .login-slide__eyebrow { margin-bottom: .5rem; font-size: .62rem; } .login-slide h1 { max-width: 18ch; font-size: clamp(1.55rem, 7vw, 2.2rem); } .login-slide p { display: none; } .login-story__tools { left: 1.2rem; bottom: .8rem; } .login-story__arrow { width: 2.1rem; height: 2.1rem; } .login-form-side { display: block; padding: 1rem; margin-top: -1.2rem; position: relative; border-radius: 1.35rem 1.35rem 0 0; } .login-card { width: 100%; padding: 1.35rem; border-radius: 1.15rem; } }
+@media (max-width: 720px) {
+  .login-shell { display: block; }
+  .login-story { min-height: 0; height: 12.8rem; }
+  .login-brand { top: .9rem; left: 1rem; font-size: .88rem; }
+  .login-brand__mark { width: 1.9rem; height: 1.9rem; border-radius: .65rem; }
+  .login-brand__mark .material-symbols-outlined { font-size: 1.15rem; }
+  .login-slide__copy { left: 1rem; right: 1rem; bottom: 2.35rem; }
+  .login-slide__eyebrow { display: none; }
+  .login-slide h1 { max-width: 19ch; font-size: clamp(1.35rem, 6.5vw, 1.9rem); line-height: 1.08; }
+  .login-slide p { display: none; }
+  .login-story__tools { left: 1rem; bottom: .65rem; gap: .55rem; }
+  .login-story__arrow { width: 1.9rem; height: 1.9rem; }
+  .login-story__arrow .material-symbols-outlined { font-size: 1.1rem; }
+  .login-dot { width: .42rem; height: .42rem; }
+  .login-dot.is-active { width: 1.15rem; }
+  .login-form-side { display: block; padding: .65rem .75rem 1rem; margin-top: -.8rem; position: relative; border-radius: 1rem 1rem 0 0; }
+  .login-card { width: 100%; padding: 1rem; border-radius: .95rem; box-shadow: 0 .8rem 2rem rgba(0,63,50,.1); }
+  .login-card__mark { width: 2.35rem; height: 2.35rem; margin-bottom: .85rem; border-radius: .7rem; }
+  .login-card__mark .material-symbols-outlined { font-size: 1.25rem; }
+  .login-card h2 { font-size: 1.45rem; }
+  .login-card .sub { margin: .4rem 0 1.1rem; font-size: .8rem; line-height: 1.4; }
+  .login-card label { margin-bottom: .75rem; font-size: .72rem; }
+  .login-card input, .login-card button[type=submit] { min-height: 2.85rem; }
+  .login-card input { padding-top: .65rem; padding-bottom: .65rem; font-size: .88rem; }
+  .login-card .field-hint { display: none; }
+  .login-card .link { margin-top: .85rem; font-size: .76rem; }
+  .login-card .help { margin-top: .9rem; padding-top: .75rem; font-size: .7rem; line-height: 1.35; }
+  .login-card .help + .help { margin-top: .45rem; padding-top: .55rem; }
+}
 @media (prefers-reduced-motion: reduce) { .login-slide, .login-card, .login-slide.is-active .login-slide__copy > * { animation: none !important; transition: none !important; } }

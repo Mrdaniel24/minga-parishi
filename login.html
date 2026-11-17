@@ -129,6 +129,7 @@
   const slides = [...story.querySelectorAll('[data-slide]')];
   const dots = [...story.querySelectorAll('[data-slide-dot]')];
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const canHover = window.matchMedia('(hover: hover)').matches;
   let index = 0, timer = null, paused = false;
   const show = next => {
     index = (next + slides.length) % slides.length;
@@ -140,8 +141,10 @@
   story.querySelector('[data-slide-prev]').addEventListener('click', () => { show(index - 1); start(); });
   story.querySelector('[data-slide-next]').addEventListener('click', () => { show(index + 1); start(); });
   dots.forEach(dot => dot.addEventListener('click', () => { show(Number(dot.dataset.slideDot)); start(); }));
-  story.addEventListener('mouseenter', () => { paused = true; stop(); });
-  story.addEventListener('mouseleave', () => { paused = false; start(); });
+  if (canHover) {
+    story.addEventListener('mouseenter', () => { paused = true; stop(); });
+    story.addEventListener('mouseleave', () => { paused = false; start(); });
+  }
   story.addEventListener('focusin', stop);
   story.addEventListener('focusout', e => { if (!story.contains(e.relatedTarget)) start(); });
   story.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { e.preventDefault(); show(index - 1); start(); } if (e.key === 'ArrowRight') { e.preventDefault(); show(index + 1); start(); } });
