@@ -7,7 +7,7 @@
   <title>Jisajili | Mfumo wa Parokia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..600,0,1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/parish.css">
   <style>
@@ -23,10 +23,57 @@
     .review{display:grid;gap:.55rem;max-width:560px}.review__line{display:flex;justify-content:space-between;gap:1rem;padding:.7rem .85rem;border-radius:12px;background:#f6f9f7;font-size:.77rem}.review__line span:first-child{color:var(--muted)}.review__line strong{text-align:right}.success{display:none;text-align:center;padding:3rem 1rem;animation:pop-in .35s ease}.success.show{display:block}.success__icon{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 1rem;border-radius:50%;background:#e7f6ed;color:#23744f}.success h2{color:var(--green)}.success p{color:var(--muted);line-height:1.65}.success a{display:inline-flex;align-items:center;gap:.4rem;margin-top:.8rem;padding:.8rem 1.1rem;border-radius:99px;background:var(--green);color:white;font-weight:700;text-decoration:none}
     @keyframes card-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}@keyframes question-in{from{opacity:0;transform:translateX(16px) scale(.99)}to{opacity:1;transform:none}}@keyframes pop-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
     @media(max-width:520px){body{padding:.7rem}.card{min-height:calc(100dvh - 1.4rem);border-radius:22px;padding:1.15rem}.question-wrap{min-height:0;flex:1}.top h1{font-size:.93rem}.button{padding:.65rem .85rem}.question p{font-size:.8rem}}
+    /* Full-screen guided registration, visually matched to the sign-in slideshow. */
+    body.register-page{display:block;min-height:100svh;padding:0;overflow-x:hidden;color:#fff;font-family:Inter,system-ui,sans-serif;background:radial-gradient(ellipse at 12% 18%,rgba(31,168,159,.28),transparent 42%),radial-gradient(ellipse at 90% 86%,rgba(245,190,34,.14),transparent 34%),linear-gradient(135deg,#003f32,#005c40 55%,#173d32)}
+    body.register-page::before,body.register-page::after{content:"";position:fixed;pointer-events:none;border-radius:50%;z-index:0}
+    body.register-page::before{width:36rem;height:36rem;left:-25rem;bottom:-25rem;border:2rem solid rgba(245,190,34,.25);box-shadow:0 0 0 1rem rgba(245,190,34,.07)}
+    body.register-page::after{width:28rem;height:28rem;right:-20rem;top:-18rem;border:1px solid rgba(255,255,255,.12);box-shadow:0 0 0 3rem rgba(255,255,255,.025),0 0 0 6rem rgba(255,255,255,.02)}
+    body.register-page .page{position:relative;z-index:1;width:100%;max-width:1120px;min-height:100svh;margin:0 auto;padding:1.25rem clamp(1rem,5vw,4rem);display:flex;flex-direction:column}
+    body.register-page .brand{margin:0 0 1.5rem;color:#fff;font-size:.9rem;letter-spacing:.08em}
+    body.register-page .brand__mark{color:var(--login-gold,#f5be22);border-color:var(--login-gold,#f5be22);background:rgba(255,255,255,.08)}
+    body.register-page .card{flex:1;width:100%;min-height:0;margin:0 auto;padding:0 0 1.25rem;overflow:visible;display:flex;flex-direction:column;justify-content:stretch;border:0;border-radius:0;background:transparent;box-shadow:none;animation:none}
+    body.register-page .card::before{display:none}
+    body.register-page #form-wrap{min-height:0;flex:1;display:flex;flex-direction:column}
+    body.register-page .top{padding:0 0 1rem;border-bottom:1px solid rgba(255,255,255,.22)}
+    body.register-page .top h1{color:rgba(255,255,255,.82);font-size:.82rem;font-weight:600;letter-spacing:.04em}
+    body.register-page .top a{color:#fff;font-size:.82rem}
+    body.register-page .progress{margin:1rem 0 0}
+    body.register-page .progress__meta{color:rgba(255,255,255,.72);font-size:.72rem;font-weight:500}
+    body.register-page .progress__track{height:4px;background:rgba(255,255,255,.2)}
+    body.register-page .progress__bar{background:var(--login-gold,#f5be22)}
+    body.register-page .question-wrap{flex:1;min-height:300px;padding:2rem 0;align-content:center;justify-items:center;text-align:center}
+    body.register-page .question{width:100%;animation:question-in .42s cubic-bezier(.2,.75,.25,1) both}
+    body.register-page .question__icon{display:none}
+    body.register-page .question h2{max-width:24ch;margin:0 auto;color:#fff;font-size:clamp(2rem,5.8vw,3.6rem);line-height:1.13;letter-spacing:-.04em;font-weight:700}
+    body.register-page .question p{max-width:54ch;margin:.8rem auto 1.8rem;color:rgba(255,255,255,.76);font-size:.98rem;line-height:1.6}
+    body.register-page .answer,body.register-page .choices,body.register-page .review{width:min(100%,600px);max-width:600px;margin:0 auto;text-align:left}
+    body.register-page .answer input,body.register-page .answer select{min-height:58px;border:1px solid rgba(255,255,255,.5);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:1rem;box-shadow:none}
+    body.register-page .answer select option{color:#26332f;background:#fff}
+    body.register-page .answer input::placeholder{color:rgba(255,255,255,.58)}
+    body.register-page .answer input:focus,body.register-page .answer select:focus{border-color:var(--login-gold,#f5be22);background:rgba(255,255,255,.16);box-shadow:0 0 0 4px rgba(245,190,34,.16);transform:none}
+    body.register-page .choices{gap:.55rem}
+    body.register-page .choice{min-height:56px;border:1px solid rgba(255,255,255,.35);border-radius:14px;background:rgba(255,255,255,.07);color:#fff;font-size:.9rem;font-weight:500}
+    body.register-page .choice:hover,body.register-page .choice:has(input:checked){border-color:var(--login-gold,#f5be22);background:rgba(245,190,34,.13);box-shadow:none;transform:none}
+    body.register-page .choice input{accent-color:var(--login-gold,#f5be22)}
+    body.register-page .review__line{border-bottom:1px solid rgba(255,255,255,.2);border-radius:0;background:transparent;color:#fff;font-size:.88rem}
+    body.register-page .review__line span:first-child{color:rgba(255,255,255,.66)}
+    body.register-page .review__line strong{color:#fff}
+    body.register-page .notice{width:min(100%,600px);margin:0 auto 1rem}
+    body.register-page .actions{justify-content:center;gap:.75rem;margin-top:0;padding:1rem 0 0;border-top:1px solid rgba(255,255,255,.22)}
+    body.register-page .actions #spacer{display:none}
+    body.register-page .button{min-height:48px;padding:.75rem 1.25rem;border:1px solid rgba(255,255,255,.42);background:transparent;color:#fff;font-size:.88rem}
+    body.register-page .button--primary{border-color:var(--login-gold,#f5be22);background:var(--login-gold,#f5be22);color:#173d32;box-shadow:0 8px 22px rgba(0,0,0,.14);font-weight:700}
+    body.register-page .button--primary:hover{background:#ffd65a}
+    body.register-page .success{width:min(100%,640px);margin:auto;color:#fff}
+    body.register-page .success h2{color:#fff;font-size:clamp(1.8rem,5vw,2.8rem)}
+    body.register-page .success p{color:rgba(255,255,255,.8)}
+    body.register-page .success__icon{background:rgba(245,190,34,.17);color:var(--login-gold,#f5be22)}
+    body.register-page .success a{background:var(--login-gold,#f5be22);color:#173d32}
+    @media(max-width:600px){body.register-page .page{padding:.9rem 1rem}.brand{margin-bottom:1rem!important}.card{padding-bottom:.6rem!important}.top{padding-bottom:.7rem!important}.progress{margin-top:.8rem!important}.question-wrap{min-height:250px;padding:1.25rem 0!important}.question h2{font-size:clamp(1.8rem,8vw,2.5rem)!important}.question p{margin:.6rem auto 1.2rem!important;font-size:.88rem!important}.answer input,.answer select{min-height:54px!important}.choice{min-height:52px!important}.actions{padding-top:.75rem!important}.button{min-height:46px!important}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
   </style>
 </head>
-<body>
+<body class="register-page">
   <main class="page">
     <div class="brand"><span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M6 21V10l6-4 6 4v11M9 21v-6h6v6M12 2v6m-3-3h6"/></svg></span><span>MFUMO WA PAROKIA</span></div>
     <section class="card" id="wizard-card">
