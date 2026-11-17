@@ -44,9 +44,9 @@
           <label>Aliyelipwa<input name="payee"></label>
           <label>Njia<select name="payment_method">${['cash', 'cheque', 'bank_transfer', 'mobile_money'].map(k => `<option value="${k}">${P.METHODS[k]}</option>`).join('')}</select></label>
           <label>Namba ya kumbukumbu<input name="reference_no"></label>
-          <label>Tukio (hiari)<input name="event_note" placeholder="mf. Sherehe ya somo"></label></div>` });
+        </div>` });
         if (!v) return;
-        const r = await P.rpc('record_expense', { p: { ...v, idempotency_key: key, amount: Number(v.amount), description: v.event_note ? `${v.description} (${v.event_note})` : v.description } });
+        const r = await P.rpc('record_expense', { p: { ...v, idempotency_key: key, amount: Number(v.amount) } });
         Toast.success(`Imerekodiwa (Na. ${r.txn_no}) — inasubiri idhini.`); P.reload();
       });
     },
