@@ -96,6 +96,17 @@ html { font-family: Inter, system-ui, sans-serif; text-rendering: optimizeLegibi
 .app-shell .pm-pledges-card small { color: #786c50; }
 .app-shell .pm-pledges-card strong { margin-left: auto; color: #465b54; font-variant-numeric: tabular-nums; text-align: right; }
 .app-shell .pm-pledges-card:hover { border-color: #d4a72c; background: #fff6df; }
+/* Use the familiar parish body font and naturally spaced digits for money. */
+.app-shell .pm-kpi h3,
+.app-shell .pm-finance-list b,
+.app-shell .pm-pledges-card strong,
+.app-shell .pm-num,
+.app-shell .pm-txlink {
+  font-family: 'Montserrat', Arial, sans-serif !important;
+  font-variant-numeric: proportional-nums !important;
+  font-feature-settings: 'tnum' 0, 'pnum' 1 !important;
+  letter-spacing: normal !important;
+}
 .app-shell .pm-member-hero { position: relative; display: flex; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: 1.2rem 1.35rem; overflow: hidden; border-radius: 20px; color: #fff; background: linear-gradient(112deg, #075943, #0d7659 66%, #2b8c6d); box-shadow: 0 14px 30px rgba(8,85,63,.16); }
 .app-shell .pm-member-hero::after { content: ''; position: absolute; right: -2rem; top: -3.8rem; width: 12rem; height: 12rem; border: 1rem solid rgba(244,190,35,.22); border-radius: 50%; pointer-events: none; }
 .app-shell .pm-member-hero__icon { z-index: 1; flex: 0 0 3.25rem; height: 3.25rem; display: grid; place-items: center; border-radius: 15px; color: #075943; background: #f8e8ad; }
