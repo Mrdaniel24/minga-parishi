@@ -244,7 +244,14 @@ button.kh-topbar__btn { border: 0; cursor: pointer; }
 .pm-unit dd.is-due { color: var(--pm-rose); }
 .pm-unit .pm-progress { margin-top: .8rem; }
 .pm-unit-mobile-list { display: none; }
+.pm-unit-name-list { display: none; }
 @media (max-width: 640px) {
+  .pm-units-desktop { display: none; }
+  .pm-unit-name-list { display: block; margin: 0 0 1rem; border-top: 1px solid var(--pm-line); }
+  .pm-unit-name-list > a { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 3.4rem; padding: .65rem .15rem; border-bottom: 1px solid var(--pm-line); color: var(--pm-ink); text-decoration: none; }
+  .pm-unit-name-list > a > span:first-child { display: flex; flex-direction: column; gap: .1rem; font-weight: 600; }
+  .pm-unit-name-list small { color: var(--pm-muted); font-size: .75rem; font-weight: 400; }
+  .pm-unit-name-list .material-symbols-outlined { color: var(--pm-forest, var(--pm-primary)); flex: 0 0 auto; }
   .pm-units { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
   .pm-unit { min-width: 0; padding: .9rem 1rem; border-color: var(--pm-line); }
   .pm-unit h3 { font-size: 1rem; overflow-wrap: anywhere; }

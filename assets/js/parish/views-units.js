@@ -246,7 +246,11 @@
           ${P.kpi('Waliyopangiwa', P.tzs(tot('pledged')), 'assignment')}
           ${P.kpi('Bado kulipwa', P.tzs(tot('outstanding')), 'pending_actions', 'pm-kpi--rose')}
         </section>
-        <section class="pm-units">${rows.map(k => {
+        <nav class="pm-unit-name-list" aria-label="Orodha ya vigango">${rows.map(k => {
+          const nJ = P.ref.units.filter(u => u.parent_id === k.unit_id && u.unit_type === 'jumuiya' && u.is_active).length;
+          return `<a href="#/kigango?id=${k.unit_id}"><span>Kigango cha ${P.esc(k.unit_name)}<small>${nJ} jumuiya</small></span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></a>`;
+        }).join('')}</nav>
+        <section class="pm-units pm-units-desktop">${rows.map(k => {
           const nJ = P.ref.units.filter(u => u.parent_id === k.unit_id && u.unit_type === 'jumuiya' && u.is_active).length;
           const pct = Number(k.pledged) ? Math.round(Number(k.paid) / Number(k.pledged) * 100) : null;
           return `<a class="pm-unit" href="#/kigango?id=${k.unit_id}">
