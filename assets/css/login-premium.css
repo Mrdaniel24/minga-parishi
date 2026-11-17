@@ -73,32 +73,32 @@
 @media (min-width: 721px) and (max-height: 760px) { .login-card { padding: 1.5rem 1.8rem; } .login-card__mark { margin-bottom: .8rem; width: 2.5rem; height: 2.5rem; } .login-card .sub { margin-bottom: 1.2rem; } .login-card .help { margin-top: .9rem; padding-top: .8rem; } }
 @media (max-width: 920px) { .login-slide h1 { font-size: 2rem; } .login-brand { left: 2rem; } .login-slide__copy, .login-story__tools { left: 2rem; } .login-slide__copy { right: 49%; top: 32%; } .login-slide p { font-size: .9rem; } .login-card { min-width: 20rem; padding: 1.5rem; } }
 @media (max-width: 720px) {
-  .login-shell { display: flex; flex-direction: column; justify-content: center; padding: 7.5rem 0 2rem; }
-  .login-story { min-height: 0; height: auto; }
+  .login-shell { display: flex; flex-direction: column; justify-content: flex-start; gap: 1rem; padding: 6.2rem 0 1.25rem; }
+  .login-story { position: absolute; inset: 0; min-height: 100%; height: 100%; }
   .login-brand { top: .9rem; left: 1rem; font-size: .88rem; }
   .login-brand__mark { width: 1.9rem; height: 1.9rem; border-radius: .65rem; }
   .login-brand__mark .material-symbols-outlined { font-size: 1.15rem; }
-  .login-slide__copy { display: none; }
+  .login-slide__copy { display: block; top: 1rem; left: 1rem; right: 1rem; max-width: none; }
   .login-slide__eyebrow { display: none; }
-  .login-slide h1 { max-width: 19ch; font-size: clamp(1.35rem, 6.5vw, 1.9rem); line-height: 1.08; }
+  .login-slide h1 { max-width: 24ch; font-size: clamp(1.2rem, 5vw, 1.55rem); line-height: 1.15; }
   .login-slide p { display: none; }
-  .login-story__tools { left: auto; right: 1rem; top: 4.2rem; bottom: auto; gap: .55rem; }
-  .login-story__arrow { width: 1.9rem; height: 1.9rem; }
-  .login-story__arrow .material-symbols-outlined { font-size: 1.1rem; }
-  .login-dot { width: .42rem; height: .42rem; }
-  .login-dot.is-active { width: 1.15rem; }
-  .login-form-side { display: flex; justify-content: center; padding: 0 1.5rem; margin: 0; }
-  .login-card { width: 100%; max-width: 20rem; min-width: 0; padding: 1.25rem; border-radius: 1.1rem; box-shadow: 0 .8rem 2rem rgba(0,63,50,.2); }
-  .login-card__mark { width: 2.35rem; height: 2.35rem; margin-bottom: .85rem; border-radius: .7rem; }
-  .login-card__mark .material-symbols-outlined { font-size: 1.25rem; }
-  .login-card h2 { font-size: 1.45rem; }
-  .login-card .sub { margin: .4rem 0 1.1rem; font-size: .8rem; line-height: 1.4; }
-  .login-card label { margin-bottom: .75rem; font-size: .72rem; }
-  .login-card input, .login-card button[type=submit] { min-height: 2.85rem; }
-  .login-card input { padding-top: .65rem; padding-bottom: .65rem; font-size: 1rem; }
+  .login-story__tools { left: auto; right: 1rem; top: 1rem; bottom: auto; gap: .4rem; }
+  .login-story__arrow { width: 1.55rem; height: 1.55rem; }
+  .login-story__arrow .material-symbols-outlined { font-size: .95rem; }
+  .login-dot { width: .35rem; height: .35rem; }
+  .login-dot.is-active { width: .9rem; }
+  .login-form-side { display: flex; justify-content: center; padding: 0 1.25rem; margin: 0; }
+  .login-card { width: 100%; max-width: 18rem; min-width: 0; padding: 1rem; border-radius: 1rem; box-shadow: 0 .8rem 2rem rgba(0,63,50,.2); }
+  .login-card__mark { width: 2rem; height: 2rem; margin-bottom: .55rem; border-radius: .6rem; }
+  .login-card__mark .material-symbols-outlined { font-size: 1.1rem; }
+  .login-card h2 { font-size: 1.3rem; }
+  .login-card .sub { margin: .3rem 0 .7rem; font-size: .76rem; line-height: 1.35; }
+  .login-card label { margin-bottom: .55rem; font-size: .7rem; }
+  .login-card input, .login-card button[type=submit] { min-height: 2.55rem; }
+  .login-card input { padding-top: .5rem; padding-bottom: .5rem; font-size: 1rem; }
   .login-card .field-hint { display: none; }
-  .login-card .link { margin-top: .85rem; font-size: .76rem; }
-  .login-card .help { margin-top: .9rem; padding-top: .75rem; font-size: .7rem; line-height: 1.35; }
-  .login-card .help + .help { margin-top: .45rem; padding-top: .55rem; }
+  .login-card .link { margin-top: .65rem; font-size: .73rem; }
+  .login-card .help { margin-top: .65rem; padding-top: .55rem; font-size: .66rem; line-height: 1.3; }
+  .login-card .help + .help { margin-top: .35rem; padding-top: .45rem; }
 }
 @media (prefers-reduced-motion: reduce) { .login-slide, .login-card, .login-slide.is-active .login-slide__copy > * { animation: none !important; transition: none !important; } }
