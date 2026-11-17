@@ -283,7 +283,7 @@
     async render(el, params) {
       const isFam = !!params.family, id = params.family || params.parishioner;
       const who = isFam ? await P.q(P.from('families').select('family_name,jumuiya_id').eq('id', id).single())
-                        : await P.q(P.from('parishioners').select('full_name,jumuiya_id,family_id').eq('id', id).single());
+                        : await P.q(P.from('parishioners').select('full_name,jumuiya_id,family_id,relationship,phone').eq('id', id).single());
       const name = isFam ? who.family_name : who.full_name;
       const col = isFam ? 'family_id' : 'parishioner_id';
       // a person's statement also shows what was paid and pledged by their family (Mavuno/Ujenzi are family pledges)
@@ -297,19 +297,33 @@
       const notices = P.selfOnly && P.selfOnly() ? await P.announcementsHtml() : '';
       const tx = [...tx0, ...ftx].sort((a, b) => String(b.txn_date).localeCompare(String(a.txn_date)));
       const pl = [...pl0, ...fpl];
+      const isMember = !!(P.selfOnly && P.selfOnly());
+      const totalPaid = P.sum(tx, 'net_amount'), totalPledged = P.sum(pl, 'pledged'), totalOutstanding = P.sum(pl, 'outstanding');
       const byCat = {};
       tx.forEach(t => { const k = `${t.category_name} ${t.campaign_year || t.financial_year}`; byCat[k] = (byCat[k] || 0) + Number(t.net_amount); });
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">${P.esc(name)}</h1><p class="pm-muted">${P.esc(P.ref.unitsById[who.jumuiya_id]?.label || '')}</p></div>
+      const memberHero = isMember ? `<section class="pm-member-hero"><div class="pm-member-hero__icon"><span class="material-symbols-outlined">waving_hand</span></div>
+          <div class="pm-member-hero__copy"><p class="pm-member-eyebrow">AKAUNTI YA MUUMINI</p><h1>Karibu, ${P.esc(name)}</h1>
+            <p>Angalia taarifa zako za parokia, michango na ahadi zako sehemu moja.</p></div>
+          <div class="pm-member-hero__place"><span class="material-symbols-outlined">location_on</span>${P.esc(P.ref.unitsById[who.jumuiya_id]?.label || 'Parokia ya Minga')}</div></section>` : '';
+      const memberInfo = isMember ? `<section class="pm-member-info"><div><span class="material-symbols-outlined">person</span><small>Jina</small><b>${P.esc(name)}</b></div>
+          <div><span class="material-symbols-outlined">call</span><small>Namba ya simu</small><b>${P.esc(who.phone || 'Haijawekwa')}</b></div>
+          <div><span class="material-symbols-outlined">family_restroom</span><small>Uhusiano kwenye familia</small><b>${P.esc(who.relationship || 'Muumini')}</b></div></section>
+        <div class="pm-member-kpis">${P.kpi('Michango iliyorekodiwa', P.tzs(totalPaid), 'volunteer_activism', 'pm-kpi--teal')}
+          ${P.kpi('Ahadi za michango', P.tzs(totalPledged), 'handshake', 'pm-kpi--gold')}
+          ${P.kpi('Salio la ahadi', P.tzs(totalOutstanding), 'pending_actions')}</div>
+        ${!tx.length && !pl.length ? `<div class="pm-member-empty"><span class="material-symbols-outlined">info</span><div><b>Bado hakuna taarifa za michango</b>
+          <p>Michango au ahadi zitaonekana hapa baada ya kurekodiwa na parokia. Ukiwa tayari umelipa, wasiliana na msimamizi wa parokia ahakiki jina na namba yako ya simu.</p></div></div>` : ''}` : '';
+      el.innerHTML = `<div class="pm-head"><div>${isMember ? '' : `<h1 class="pm-h1">${P.esc(name)}</h1><p class="pm-muted">${P.esc(P.ref.unitsById[who.jumuiya_id]?.label || '')}</p>`}</div>
         <div class="pm-actions">${P.selfOnly && P.selfOnly() ? '' : '<button class="pm-btn" onclick="history.back()">Rudi</button>'}<button class="pm-btn" data-print>Chapa</button></div></div>
         ${notices}
-        ${P.reportHeader('Taarifa ya michango', name)}
+        ${isMember ? memberHero + memberInfo : P.reportHeader('Taarifa ya michango', name)}
         <section class="pm-card"><h3 class="pm-h3">Ahadi</h3>${P.table(pl, [{ key: 'campaign_name', label: 'Kampeni' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
           { key: 'paid', label: 'Amelipa', fmt: P.tzs, cls: 'pm-num' }, { key: 'outstanding', label: 'Deni', fmt: P.tzs, cls: 'pm-num pm-strong' },
-          { key: 'excess', label: 'Ziada', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' }, { key: 'completion_pct', label: '%', fmt: P.pct }], { empty: 'Hakuna ahadi.' })}</section>
-        <section class="pm-card"><h3 class="pm-h3">Muhtasari kwa aina</h3>${P.table(Object.entries(byCat).map(([k, v]) => ({ k, v })), [{ key: 'k', label: 'Aina / mwaka' }, { key: 'v', label: 'Jumla', fmt: P.tzs, cls: 'pm-num' }])}</section>
+          { key: 'excess', label: 'Ziada', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' }, { key: 'completion_pct', label: '%', fmt: P.pct }], { empty: isMember ? 'Bado hakuna ahadi zilizowekwa.' : 'Hakuna ahadi.' })}</section>
+        <section class="pm-card"><h3 class="pm-h3">Muhtasari kwa aina</h3>${P.table(Object.entries(byCat).map(([k, v]) => ({ k, v })), [{ key: 'k', label: 'Aina / mwaka' }, { key: 'v', label: 'Jumla', fmt: P.tzs, cls: 'pm-num' }], { empty: isMember ? 'Michango yako itaonekana hapa ikisharekodiwa.' : 'Hakuna michango.' })}</section>
         <section class="pm-card"><h3 class="pm-h3">Malipo yote</h3>${P.table(tx, [{ key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'category_name', label: 'Aina' },
           { key: 'campaign_name', label: 'Kampeni' }, { key: 'period_month', label: 'Mwezi wa zaka', fmt: v => v ? v.slice(0, 7) : '' },
-          { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'receipt_no', label: 'Risiti', html: r => P.esc(r.receipt_no || (r.legacy_receipt_no ? 'Excel #' + r.legacy_receipt_no : '—')) }])}</section>`;
+          { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'receipt_no', label: 'Risiti', html: r => P.esc(r.receipt_no || (r.legacy_receipt_no ? 'Excel #' + r.legacy_receipt_no : '—')) }], { empty: isMember ? 'Bado hakuna malipo yaliyoingizwa kwenye akaunti hii.' : 'Hakuna malipo.' })}</section>`;
       el.querySelector('[data-print]').addEventListener('click', () => P.print('Taarifa ya michango ' + name));
     },
   };
