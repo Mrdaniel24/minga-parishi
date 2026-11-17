@@ -243,6 +243,24 @@ button.kh-topbar__btn { border: 0; cursor: pointer; }
 .pm-unit dd { margin: 0; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
 .pm-unit dd.is-due { color: var(--pm-rose); }
 .pm-unit .pm-progress { margin-top: .8rem; }
+@media (max-width: 640px) {
+  .pm-units { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+  .pm-unit { min-width: 0; padding: .9rem 1rem; border-color: var(--pm-line); }
+  .pm-unit h3 { font-size: 1rem; overflow-wrap: anywhere; }
+  .pm-unit dl { grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .65rem; }
+  .pm-unit-community-list { padding: .9rem !important; }
+  .pm-unit-community-list > .pm-h3 { line-height: 1.35; }
+  .pm-unit-community-list > .pm-h3 small { display: block; margin-top: .2rem; }
+  .pm-unit-community-list > .pm-table-wrap { display: none; }
+  .pm-unit-mobile-list { display: grid; gap: .65rem; }
+  .pm-unit-mobile-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem .8rem; padding: .85rem; border: 1px solid var(--pm-line); border-radius: 14px; background: var(--pm-card); color: var(--pm-ink); text-decoration: none; }
+  .pm-unit-mobile-card > strong { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-bottom: .45rem; border-bottom: 1px solid var(--pm-line); color: var(--pm-primary); font-size: 1rem; overflow-wrap: anywhere; }
+  .pm-unit-mobile-card > strong .material-symbols-outlined { flex: 0 0 auto; color: var(--pm-gold); }
+  .pm-unit-mobile-card > span { display: flex; min-width: 0; flex-direction: column; gap: .12rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .pm-unit-mobile-card small { color: var(--pm-muted); font-size: .7rem; }
+  .pm-unit-mobile-card b { font-size: .9rem; font-weight: 600; }
+}
+.pm-unit-mobile-list { display: none; }
 .pm-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
 .pm-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem .8rem; border-radius: 999px; font-size: .8rem; font-weight: 800; text-decoration: none;
   background: #eef3f1; color: var(--pm-primary); border: 1px solid transparent; }

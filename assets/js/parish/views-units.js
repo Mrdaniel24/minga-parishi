@@ -296,17 +296,23 @@
           ${P.kpi('Bado kulipwa', P.tzs(s('outstanding')), 'pending_actions', 'pm-kpi--rose')}
         </section>
         ${P.reportHeader(`Kigango cha ${k.name} — ${year}`)}
-        <section class="pm-card"><h3 class="pm-h3">Jumuiya za kigango hiki <small class="pm-muted">— bonyeza jumuiya kuingia ndani</small></h3>
+        <section class="pm-card pm-unit-community-list"><h3 class="pm-h3">Jumuiya za kigango hiki <small class="pm-muted">— bonyeza jumuiya kuingia ndani</small></h3>
+          <div class="pm-unit-mobile-list">${rows.map(r => `<a class="pm-unit-mobile-card" href="#/jumuiya?id=${r.unit_id}">
+            <strong>${P.esc(r.unit_name)}<span class="material-symbols-outlined">chevron_right</span></strong>
+            <span><small>Familia</small><b>${P.num(r.families)}</b></span>
+            <span><small>Waumini</small><b>${P.num(r.parishioners)}</b></span>
+            <span><small>Makusanyo yote</small><b>${P.tzs(r.income)}</b></span>
+          </a>`).join('')}</div>
           ${P.table(rows, [
             { key: 'unit_name', label: 'Jumuiya', html: r => `<a class="pm-link" href="#/jumuiya?id=${r.unit_id}">${P.esc(r.unit_name)}</a>` },
             { key: 'families', label: 'Familia', fmt: P.num, cls: 'pm-num' }, { key: 'parishioners', label: 'Waumini', fmt: P.num, cls: 'pm-num' },
-            { key: 'zaka', label: 'Zaka', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'zaka'), cls: 'pm-num' },
-            { key: 'mavuno', label: 'Mavuno', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'mavuno'), cls: 'pm-num' },
-            { key: 'ujenzi', label: 'Ujenzi', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'ujenzi'), cls: 'pm-num' },
             { key: 'income', label: 'Makusanyo yote', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`), cls: 'pm-num pm-strong' },
-            { key: 'pledged', label: 'Pangiwa', fmt: P.tzs, cls: 'pm-num' }, { key: 'outstanding', label: 'Bado', html: r => due(r.outstanding), cls: 'pm-num' },
-            { key: 'pct', label: '%', html: r => Number(r.pledged) ? `${P.pct(Number(r.paid) / Number(r.pledged) * 100)} ${P.progress(Number(r.paid) / Number(r.pledged) * 100)}` : '—' }],
-            { foot, empty: 'Kigango hiki hakina jumuiya bado.' })}</section>
+            { key: 'zaka', label: 'Zaka', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'zaka'), cls: 'pm-num pm-unit-extra' },
+            { key: 'mavuno', label: 'Mavuno', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'mavuno'), cls: 'pm-num pm-unit-extra' },
+            { key: 'ujenzi', label: 'Ujenzi', fmt: (v, r) => tx(v, r.unit_id, `Jumuiya ya ${r.unit_name}`, 'ujenzi'), cls: 'pm-num pm-unit-extra' },
+            { key: 'pledged', label: 'Pangiwa', fmt: P.tzs, cls: 'pm-num pm-unit-extra' }, { key: 'outstanding', label: 'Bado', html: r => due(r.outstanding), cls: 'pm-num pm-unit-extra' },
+            { key: 'pct', label: '%', html: r => Number(r.pledged) ? `${P.pct(Number(r.paid) / Number(r.pledged) * 100)} ${P.progress(Number(r.paid) / Number(r.pledged) * 100)}` : '—', cls: 'pm-unit-extra' }],
+            { foot, cls: 'pm-unit-community-table', empty: 'Kigango hiki hakina jumuiya bado.' })}</section>
         <section class="pm-card"><h3 class="pm-h3">Michango ${year} — kigango chote</h3>
           ${contribTable(contrib, k, { link: r => `#/mchango?id=${r.campaign_id}&k=${k.id}`, actions: r => r.own_target && canPledge() ? `<button class="pm-btn pm-btn--sm" data-edit="${r.campaign_id}">Badilisha</button>` : '' })}</section>
         <section class="pm-card"><div class="pm-row"><h3 class="pm-h3">Malipo ya kigango chenyewe ${year}</h3><small class="pm-muted">${P.tzs(own)}</small></div>
