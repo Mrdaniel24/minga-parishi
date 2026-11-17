@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   const prov = provider();
   if (req.method === 'GET') return json(res, 200, { configured: !!prov && !!SERVICE_KEY, provider: prov && prov.label, sender: prov && prov.sender });
   if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' });
-  if (!SERVICE_KEY) return json(res, 503, { error: 'Usajili wa akaunti haujakamilishwa kwenye server. Wasiliana na Msimamizi wa Mfumo.' });
+  if (!SERVICE_KEY) return json(res, 503, { error: 'Usajili haujakamilika kwenye server. Msimamizi aweke SUPABASE_SERVICE_ROLE_KEY kwenye Vercel > Settings > Environment Variables (Production), kisha afanye Redeploy.' });
   const body = await getBody(req);
   if (!body || JSON.stringify(body).length > 45000) return json(res, 400, { error: 'Taarifa za usajili hazisomeki.' });
   if (body.consent !== true) return json(res, 400, { error: 'Thibitisha kuwa una ruhusa ya kuingiza taarifa za watu hawa.' });

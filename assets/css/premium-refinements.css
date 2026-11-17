@@ -68,7 +68,7 @@ html { font-family: Inter, system-ui, sans-serif; text-rendering: optimizeLegibi
   font-size: clamp(1.55rem, 2.3vw, 2rem) !important;
 }
 .app-shell .font-black, .app-shell .font-extrabold { font-weight: 600 !important; }
-.app-shell .font-bold { font-weight: 500 !important; }
+.app-shell .font-bold { font-weight: 600 !important; }
 .app-shell .pm-strong, .app-shell .pm-ok { font-weight: 600 !important; }
 .app-shell .pm-eyebrow, .app-shell .pm-kpi p {
   font-size: .78rem !important;
@@ -76,6 +76,26 @@ html { font-family: Inter, system-ui, sans-serif; text-rendering: optimizeLegibi
   letter-spacing: .015em !important;
   text-transform: none !important;
 }
+.app-shell .pm-dashboard-section { margin: 0 0 1.35rem; }
+.app-shell .pm-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 0 0 .8rem; }
+.app-shell .pm-section-heading h2, .app-shell .pm-section-heading h3 { margin: 0; color: var(--pm-primary); font-size: 1.05rem; font-weight: 650; letter-spacing: -.015em; }
+.app-shell .pm-section-heading p { margin: .18rem 0 0; color: #657770; font-size: .82rem; }
+.app-shell .pm-kpis { margin-bottom: .8rem; }
+.app-shell .pm-kpis--people { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.app-shell .pm-kpis--finance { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.app-shell .pm-kpi { border: 1px solid #e0e8e4; border-radius: 15px !important; box-shadow: 0 4px 16px rgba(34,57,50,.055) !important; }
+.app-shell .pm-finance-details { margin: .15rem 0 .8rem; padding: 1rem 1.1rem !important; border: 1px solid #e0e8e4 !important; box-shadow: 0 4px 16px rgba(34,57,50,.055) !important; }
+.app-shell .pm-finance-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; }
+.app-shell .pm-finance-list > div { display: flex; align-items: center; justify-content: space-between; gap: .8rem; min-width: 0; padding: .7rem 0; border-top: 1px solid #e7eeea; }
+.app-shell .pm-finance-list > div > span { display: inline-flex; align-items: center; gap: .55rem; color: #465b54; font-size: .9rem; }
+.app-shell .pm-finance-list .material-symbols-outlined { color: #74877f; font-size: 1.15rem; }
+.app-shell .pm-finance-list b { color: var(--pm-primary); font-size: .95rem; text-align: right; font-variant-numeric: tabular-nums; }
+.app-shell .pm-pledges-card { display: flex; align-items: center; gap: .8rem; min-width: 0; padding: .9rem 1rem; border: 1px solid #e7d8ac; border-radius: 15px; background: #fffaf0; color: #57451b; text-decoration: none; }
+.app-shell .pm-pledges-card > .material-symbols-outlined { color: #a67a17; }
+.app-shell .pm-pledges-card > span:nth-child(2) { display: grid; gap: .15rem; }
+.app-shell .pm-pledges-card small { color: #786c50; }
+.app-shell .pm-pledges-card strong { margin-left: auto; color: #465b54; font-variant-numeric: tabular-nums; text-align: right; }
+.app-shell .pm-pledges-card:hover { border-color: #d4a72c; background: #fff6df; }
 .app-shell #sidebar .nav-item, .app-shell #sidebar .nav-link,
 .app-shell #sidebar .nav-item-active, .app-shell #sidebar .nav-link-active {
   font-weight: 500 !important;
@@ -193,6 +213,26 @@ html { font-family: Inter, system-ui, sans-serif; text-rendering: optimizeLegibi
 
 @media (max-width: 640px) {
   .app-shell { font-size: 14px; }
+  .app-shell #pm-view { padding-left: .9rem; padding-right: .9rem; }
+  .app-shell .pm-head { align-items: flex-start; margin-bottom: 1rem; }
+  .app-shell .pm-head .pm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .app-shell .pm-head .pm-actions .pm-btn { justify-content: center; min-height: 42px; padding: .55rem .65rem; white-space: normal; text-align: center; }
+  .app-shell .pm-kpis--people, .app-shell .pm-kpis--finance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .app-shell .pm-kpi { min-height: 100px; padding: .85rem !important; }
+  .app-shell .pm-kpi p { max-width: calc(100% - 1.25rem); padding-right: 0; font-size: .77rem !important; }
+  .app-shell .pm-kpi h3 { font-size: clamp(1rem, 4.6vw, 1.2rem) !important; overflow-wrap: anywhere; }
+  .app-shell .pm-kpi .material-symbols-outlined { top: .55rem; right: .55rem; font-size: 1.1rem; }
+  .app-shell .pm-section-heading { margin-bottom: .65rem; }
+  .app-shell .pm-finance-details { padding: .85rem !important; }
+  .app-shell .pm-finance-list { grid-template-columns: 1fr; }
+  .app-shell .pm-finance-list > div { padding: .62rem 0; }
+  .app-shell .pm-finance-list > div > span { font-size: .85rem; }
+  .app-shell .pm-finance-list b { font-size: .86rem; }
+  .app-shell .pm-pledges-card { align-items: flex-start; flex-wrap: wrap; }
+  .app-shell .pm-pledges-card strong { width: 100%; margin: 0 0 0 2rem; text-align: left; }
+  .app-shell .pm-grid2 { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+  .app-shell .pm-card { padding: 1rem; }
+  .app-shell .pm-table { min-width: 680px; }
   .app-shell .main-responsive .text-5xl,
   .app-shell .main-responsive .text-4xl { font-size: 1.55rem !important; line-height: 1.25 !important; }
   .registration-page .card { min-height: calc(100dvh - 1.4rem); }

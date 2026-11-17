@@ -23,23 +23,36 @@
           <a class="pm-btn" href="#/units"><span class="material-symbols-outlined">account_tree</span>Vigango na Jumuiya</a><a class="pm-btn" href="#/reports"><span class="material-symbols-outlined">bar_chart</span>Ripoti</a></div></div>
         ${notices}
         ${(d.alerts || []).length ? `<div class="pm-alert pm-alert--warn"><b>Tahadhari za uhakiki:</b> ${(d.alerts).map(a => `${P.esc(a.description)} (${a.problem_count})`).join(' · ')} — <a href="#/reconciliation">angalia</a></div>` : ''}
-        <section class="pm-kpis">
+        <section class="pm-dashboard-section" aria-labelledby="pm-people-title">
+          <div class="pm-section-heading"><div><h2 id="pm-people-title">Watu na maeneo</h2><p>Muhtasari wa parokia yako</p></div></div>
+          <div class="pm-kpis pm-kpis--people">
           ${P.kpi('Waumini', P.num(c.parishioners), 'groups')}
           ${P.kpi('Familia', P.num(c.families), 'family_restroom')}
           ${P.kpi('Jumuiya', P.num(c.jumuiya), 'diversity_3')}
           ${P.kpi('Vigango', P.num(c.vigango), 'account_tree')}
+          </div>
         </section>
-        <section class="pm-kpis">
+        <section class="pm-dashboard-section" aria-labelledby="pm-finance-title">
+          <div class="pm-section-heading"><div><h2 id="pm-finance-title">Muhtasari wa fedha</h2><p>Mapato na matumizi ya mwaka ${year}</p></div></div>
+          <div class="pm-kpis pm-kpis--finance">
           ${P.kpi('Makusanyo ya mwezi huu', year === ym.getFullYear() ? dtx(t.income_month, 'Makusanyo ya mwezi huu', { from: mFrom, to: mTo }) : P.tzs(t.income_month), 'today', 'pm-kpi--teal')}
           ${P.kpi(`Makusanyo ${year}`, dtx(t.income_year, `Makusanyo ${year}`, { year }), 'savings', 'pm-kpi--teal')}
           ${P.kpi('Matumizi', `<a class="pm-link" href="#/expenses">${P.tzs(t.expenses_year)}</a>`, 'payments')}
           ${P.kpi('Fedha zilizopo', P.tzs(t.cash_available), 'account_balance_wallet', 'pm-kpi--gold')}
-          ${P.kpi('Zaka', dtx(t.zaka, `Zaka (malipo ya ${year})`, { year, kinds: ['zaka'] }), 'calendar_month')}
-          ${P.kpi('Mavuno', dtx(t.mavuno, `Mavuno ${year}`, { year, kinds: ['mavuno'] }), 'agriculture')}
-          ${P.kpi('Ujenzi', dtx(t.ujenzi, `Ujenzi ${year}`, { year, kinds: ['ujenzi'] }), 'construction')}
-          ${P.kpi('Sadaka', dtx(t.sadaka, `Sadaka ${year}`, { year, kinds: ['sadaka'] }), 'church')}
-          ${P.kpi('Michango maalumu', dtx(t.special, `Michango maalumu ${year}`, { year, kinds: ['special', 'shukrani'] }), 'volunteer_activism')}
-          ${P.kpi('Ahadi ambazo hazijalipwa', `<a class="pm-link" href="#/reports?r=outstanding${scope ? '&scope=' + scope : ''}">${P.tzs(t.outstanding_pledges)}</a>`, 'pending_actions', 'pm-kpi--rose')}
+          </div>
+          <div class="pm-finance-details pm-card">
+            <div class="pm-section-heading"><div><h3>Makusanyo kwa kundi</h3><p>Gusa kiasi kuona miamala husika</p></div></div>
+            <div class="pm-finance-list">
+              <div><span><i class="material-symbols-outlined">calendar_month</i>Zaka</span><b>${dtx(t.zaka, `Zaka (malipo ya ${year})`, { year, kinds: ['zaka'] })}</b></div>
+              <div><span><i class="material-symbols-outlined">agriculture</i>Mavuno</span><b>${dtx(t.mavuno, `Mavuno ${year}`, { year, kinds: ['mavuno'] })}</b></div>
+              <div><span><i class="material-symbols-outlined">construction</i>Ujenzi</span><b>${dtx(t.ujenzi, `Ujenzi ${year}`, { year, kinds: ['ujenzi'] })}</b></div>
+              <div><span><i class="material-symbols-outlined">church</i>Sadaka</span><b>${dtx(t.sadaka, `Sadaka ${year}`, { year, kinds: ['sadaka'] })}</b></div>
+              <div><span><i class="material-symbols-outlined">volunteer_activism</i>Michango maalumu</span><b>${dtx(t.special, `Michango maalumu ${year}`, { year, kinds: ['special', 'shukrani'] })}</b></div>
+            </div>
+          </div>
+          <a class="pm-pledges-card" href="#/reports?r=outstanding${scope ? '&scope=' + scope : ''}">
+            <span class="material-symbols-outlined">pending_actions</span><span><b>Ahadi ambazo hazijalipwa</b><small>Fungua ripoti ya ahadi</small></span><strong>${P.tzs(t.outstanding_pledges)}</strong>
+          </a>
         </section>
         <section class="pm-grid2">
           <div class="pm-card"><h3 class="pm-h3">Mwenendo wa makusanyo ${year}</h3><canvas id="pm-trend" height="220"></canvas></div>
