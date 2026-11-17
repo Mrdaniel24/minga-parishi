@@ -70,15 +70,21 @@
         </section>`;
       const edit = async (u) => {
         const v = await P.modal({ title: u ? `Hariri ${u.name}` : 'Ongeza kitengo', body: `<div class="pm-form">
-          <label>Aina<select name="unit_type" ${u ? 'disabled' : ''}>${['kigango', 'jumuiya', 'group'].map(t => `<option ${u && u.unit_type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label>Aina<select name="unit_type" ${u ? 'disabled' : ''}>${[['kigango', 'Kigango'], ['jumuiya', 'Jumuiya'], ['group', 'Chama / Kanda / Kamati']].map(([t, label]) => `<option value="${t}" ${u && u.unit_type === t ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
           <label>Jina<input name="name" required value="${P.esc(u?.name || '')}"></label>
-          <label>Ndani ya (kwa jumuiya: kigango)<select name="parent_id">${P.unitOptions(['kigango'], { blank: '— Parokia —', selected: u?.parent_id })}</select></label>
-          <label>Hali<select name="is_active"><option value="true">Hai</option><option value="false" ${u && !u.is_active ? 'selected' : ''}>Haitumiki</option></select></label></div>` });
+          <label data-unit-parent hidden>Jumuiya hii iko chini ya kigango gani?<select name="parent_id">${P.unitOptions(['kigango'], { blank: 'Chagua kigango…', selected: u?.parent_id })}</select></label>
+          <label>Hali<select name="is_active"><option value="true">Hai</option><option value="false" ${u && !u.is_active ? 'selected' : ''}>Haitumiki</option></select></label></div>`,
+          onOpen(m) {
+            const type = m.querySelector('[name=unit_type]'), parent = m.querySelector('[data-unit-parent]'), parentSelect = m.querySelector('[name=parent_id]');
+            const syncParent = () => { const needsParent = type.value === 'jumuiya'; parent.hidden = !needsParent; parentSelect.required = needsParent; if (!needsParent) parentSelect.value = ''; };
+            type.addEventListener('change', syncParent); syncParent();
+          } });
         if (!v) return;
         const root = P.ref.units.find(x => x.unit_type === 'parish');
-        const row = { name: v.name, is_active: v.is_active === 'true', parent_id: v.parent_id || root.id };
+        const unitType = u?.unit_type || v.unit_type;
+        const row = { name: v.name, is_active: v.is_active === 'true', parent_id: unitType === 'jumuiya' ? (v.parent_id || root.id) : root.id };
         if (u) await P.q(P.from('org_units').update(row).eq('id', u.id));
-        else await P.q(P.from('org_units').insert({ ...row, parish_id: P.ref.parish.id, unit_type: v.unit_type }));
+        else await P.q(P.from('org_units').insert({ ...row, parish_id: P.ref.parish.id, unit_type: unitType }));
         await P.loadRef(true); Toast.success('Imehifadhiwa. Historia ya miamala ya zamani inabaki kama ilivyo.'); P.reload();
       };
       el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => edit(P.ref.unitsById[b.dataset.edit])));
@@ -123,8 +129,7 @@
       <label>Jinsi<select name="gender"><option value="">—</option><option value="male" ${p?.gender === 'male' ? 'selected' : ''}>Me</option><option value="female" ${p?.gender === 'female' ? 'selected' : ''}>Ke</option></select></label>
       <label>Uhusiano<input name="relationship" list="pm-rel" value="${P.esc(p?.relationship || '')}"><datalist id="pm-rel">${['BABA', 'MAMA', 'MTOTO', 'MJUKUU', 'BIBI', 'BABU', 'KAKA', 'DADA', 'MJOMBA', 'SHANGAZI'].map(x => `<option>${x}</option>`).join('')}</datalist></label>
       <label>Simu<input name="phone" value="${P.esc(p?.phone || '')}"></label>
-      <label>Umri (miaka)<input name="age" type="number" min="0" max="120" inputmode="numeric" value="${age}" placeholder="mf. 34"><small>Umri na mwaka wa kuzaliwa hujazana wenyewe.</small></label>
-      <label>Mwaka wa kuzaliwa<input name="birth_year" type="number" min="1900" max="2100" value="${P.esc(p?.birth_year || '')}"></label>
+      <label>Umri (miaka)<input name="age" type="number" min="0" max="120" inputmode="numeric" value="${age}" placeholder="mf. 34"><small>Mwaka wa kuzaliwa utahesabiwa kutokana na umri.</small></label>
       <label>Mlipa zaka<select name="is_zaka_payer"><option value="false">Hapana</option><option value="true" ${p?.is_zaka_payer ? 'selected' : ''}>Ndiyo</option></select></label>
       <label>Hali<select name="membership_status">${['active', 'inactive', 'moved', 'deceased', ...(p?.membership_status === 'removed' ? ['removed'] : [])].map(s => `<option value="${s}" ${p?.membership_status === s ? 'selected' : ''}>${P.MEMBER_STATUS[s]}${s === 'active' && p?.membership_status === 'removed' ? ' (mrudishe kwenye rejista)' : ''}</option>`).join('')}</select></label>
       ${p?.membership_status === 'removed' ? `<p class="pm-span2 pm-alert">Ameondolewa kwenye rejista${p.removed_on ? ' ' + P.date(String(p.removed_on).slice(0, 10)) : ''}${p.removed_reason ? ': ' + P.esc(p.removed_reason) : ''}. Chagua "Hai" kumrudisha.</p>` : ''}
@@ -140,15 +145,12 @@
         const mv = m.querySelector('[data-moveperson]'), del = m.querySelector('[data-delperson]');
         mv && mv.addEventListener('click', () => { m.querySelector('[data-close]').click(); P.movePerson(p, fam); });
         del && del.addEventListener('click', () => { m.querySelector('[data-close]').click(); P.deletePerson(p); });
-        // age and year of birth fill each other
-        const a = m.querySelector('[name=age]'), y = m.querySelector('[name=birth_year]');
-        a.addEventListener('input', () => { y.value = a.value !== '' ? P.thisYear() - Number(a.value) : ''; });
-        y.addEventListener('input', () => { a.value = Number(y.value) > 1900 ? P.thisYear() - Number(y.value) : ''; });
         m.querySelectorAll('[data-title]').forEach(c => c.addEventListener('change', () => { if (c.checked) titles.add(c.dataset.title); else titles.delete(c.dataset.title); }));
       } });
     if (!v) return;
+    const ageValue = v.age === '' ? null : Number(v.age);
     delete v.age;
-    const row = { ...v, birth_year: v.birth_year ? Number(v.birth_year) : null, is_zaka_payer: v.is_zaka_payer === 'true', gender: v.gender || null };
+    const row = { ...v, birth_year: ageValue === null ? null : P.thisYear() - ageValue, is_zaka_payer: v.is_zaka_payer === 'true', gender: v.gender || null };
     const target = families.find(x => x.id === (row.family_id || fam.id)) || fam;
     row.family_id = target.id; row.jumuiya_id = target.jumuiya_id;
     let id = p?.id;
