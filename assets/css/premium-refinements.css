@@ -1,0 +1,182 @@
+/* Shared visual refinements for the member, sign-in and parish app screens. */
+:root {
+  --premium-ink: #26332f;
+  --premium-muted: #71817c;
+  --premium-line: #e3ebe7;
+  --premium-green: #3d5650;
+  --premium-gold: #d4a72c;
+  --premium-ease: cubic-bezier(.2,.75,.25,1);
+}
+
+html { font-family: Montserrat, system-ui, sans-serif; text-rendering: optimizeLegibility; }
+.app-shell, .auth-page { font-family: Montserrat, system-ui, sans-serif !important; color: var(--premium-ink); }
+.app-shell { background-color: #e8efec !important; }
+
+/* Material Symbols needs its ligature settings; otherwise names like
+   "arrow_back" are painted as ordinary words in the interface. */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* The dashboard's floating background moves gently and stays low contrast. */
+.app-shell::before, .app-shell::after {
+  will-change: transform;
+  animation: premium-orbit 30s ease-in-out infinite alternate;
+}
+.app-shell::before {
+  background: radial-gradient(circle at 42% 40%, rgba(212,167,44,.2), rgba(212,167,44,.035) 65%, transparent 72%) !important;
+  opacity: 1 !important;
+}
+.app-shell::after {
+  background: radial-gradient(circle at 45% 45%, rgba(201,221,214,.7), rgba(214,227,222,.22) 65%, transparent 74%) !important;
+  animation-delay: -14s;
+}
+
+/* Headings remain clear without making every line compete for attention. */
+.app-shell h1, .app-shell h2, .app-shell h3, .app-shell h4,
+.app-shell .pm-h1, .app-shell .pm-h2, .app-shell .pm-h3,
+.app-shell .pm-kpi h3, .app-shell .pm-unit h3,
+.app-shell .main-responsive h2.text-4xl,
+.app-shell .main-responsive h2.text-5xl,
+.app-shell .main-responsive h3.text-5xl {
+  font-weight: 600 !important;
+  letter-spacing: -.018em !important;
+  line-height: 1.32;
+}
+.app-shell .main-responsive h2.text-4xl,
+.app-shell .main-responsive h2.text-5xl,
+.app-shell .main-responsive h3.text-5xl {
+  font-size: clamp(1.55rem, 2.3vw, 2rem) !important;
+}
+.app-shell .font-black, .app-shell .font-extrabold { font-weight: 600 !important; }
+.app-shell .font-bold { font-weight: 500 !important; }
+.app-shell .pm-strong, .app-shell .pm-ok { font-weight: 600 !important; }
+.app-shell .pm-eyebrow, .app-shell .pm-kpi p {
+  font-size: .78rem !important;
+  font-weight: 500 !important;
+  letter-spacing: .015em !important;
+  text-transform: none !important;
+}
+.app-shell #sidebar .nav-item, .app-shell #sidebar .nav-link,
+.app-shell #sidebar .nav-item-active, .app-shell #sidebar .nav-link-active {
+  font-weight: 500 !important;
+  letter-spacing: .035em !important;
+}
+.app-shell #sidebar .kh-nav-h {
+  font-size: .68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: .12em !important;
+}
+
+/* Softer panels, forms and controls across the app. */
+.app-shell .pm-card,
+.app-shell .main-responsive .rounded-xl.bg-surface-container-lowest,
+.app-shell .main-responsive .rounded-2xl.bg-surface-container-lowest,
+.app-shell .main-responsive .rounded-3xl.bg-surface-container-lowest,
+.app-shell .main-responsive .rounded-xl.bg-white,
+.app-shell .main-responsive .rounded-2xl.bg-white,
+.app-shell .main-responsive .rounded-3xl.bg-white {
+  border: 1px solid rgba(255,255,255,.82) !important;
+  box-shadow: 0 12px 34px -22px rgba(34,57,50,.28) !important;
+}
+.app-shell .pm-card { border-radius: 18px !important; }
+.app-shell .main-responsive table { font-size: .875rem; }
+.app-shell .main-responsive thead th, .app-shell .pm-table th {
+  font-size: .75rem !important;
+  font-weight: 500 !important;
+  letter-spacing: .015em !important;
+  text-transform: none !important;
+  color: #71817c !important;
+}
+.app-shell .main-responsive tbody tr { transition: background-color .2s ease; }
+.app-shell .main-responsive tbody tr:hover td { background: #f8faf9; }
+.app-shell .main-responsive input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.app-shell .main-responsive select, .app-shell .main-responsive textarea {
+  font-family: inherit;
+  font-weight: 400;
+  border-color: #dfe8e4;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.app-shell .pm-filters label, .app-shell .pm-form label {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+.app-shell .pm-btn, .app-shell .main-responsive button,
+.app-shell .main-responsive a[class*="bg-primary"] {
+  font-weight: 500 !important;
+  transition: transform .2s var(--premium-ease), box-shadow .2s ease,
+    background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.app-shell .pm-btn:hover, .app-shell .main-responsive button:hover,
+.app-shell .main-responsive a[class*="bg-primary"]:hover { transform: translateY(-1px); }
+.app-shell .pm-tabs a { font-weight: 500 !important; }
+
+/* Content arrives by hash navigation; let it settle in softly. */
+.app-shell #pm-view > * { animation: premium-rise .34s var(--premium-ease) both; }
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+
+/* Tone down the sign-in page's heavy weights while preserving its layout. */
+.login-page .side h1 { font-weight: 600 !important; letter-spacing: -.025em; line-height: 1.16; }
+.login-page .card h2 { font-weight: 600 !important; font-size: 1.4rem; }
+.login-page .eyebrow { font-weight: 600; letter-spacing: .1em; }
+.login-page .points li { font-weight: 500; }
+.login-page label { font-weight: 500; letter-spacing: 0; }
+.login-page button[type=submit] { font-weight: 600; }
+.login-page .link, .login-page .help a { font-weight: 600 !important; }
+.login-page .side::after { opacity: .75; }
+
+/* Registration wizard uses the same quiet type scale and ambient motion. */
+.registration-page::before, .registration-page::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  width: min(48vw, 500px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(2px);
+  animation: premium-orbit 32s ease-in-out infinite alternate;
+}
+.registration-page::before { top: -28%; left: -17%; background: radial-gradient(circle, rgba(212,167,44,.11), transparent 68%); }
+.registration-page::after { right: -18%; bottom: -30%; background: radial-gradient(circle, rgba(61,86,80,.1), transparent 68%); animation-delay: -16s; }
+.registration-page .brand { font-weight: 600; letter-spacing: .025em; }
+.registration-page .top h1 { font-weight: 600; }
+.registration-page .question h2 { font-weight: 600; letter-spacing: -.02em; }
+.registration-page .question p { font-weight: 400; }
+.registration-page .choice { font-weight: 500; }
+.registration-page .button { font-weight: 500; }
+.registration-page .button--primary { font-weight: 600; }
+
+@keyframes premium-orbit {
+  from { transform: translate3d(0,0,0) scale(1); }
+  to { transform: translate3d(18px,-14px,0) scale(1.035); }
+}
+@keyframes premium-rise {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .app-shell { font-size: 14px; }
+  .app-shell .main-responsive .text-5xl,
+  .app-shell .main-responsive .text-4xl { font-size: 1.55rem !important; line-height: 1.25 !important; }
+  .registration-page .card { min-height: calc(100dvh - 1.4rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

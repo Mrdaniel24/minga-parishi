@@ -25,11 +25,22 @@
     .foot { font-size: .78rem; color: rgba(255, 255, 255, .55); position: relative; z-index: 1; }
     .form-side { display: flex; align-items: center; justify-content: center; padding: clamp(1.5rem, 4vw, 3rem); }
     .card { width: 100%; max-width: 400px; background: #fff; border-radius: 24px; padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: 0 1px 2px rgba(31, 52, 47, .04), 0 18px 40px -18px rgba(31, 52, 47, .25); }
+    .side > div { animation: rise-in .7s cubic-bezier(.2,.75,.25,1) both; }
+    .side::after { animation: ring-drift 9s ease-in-out infinite alternate; }
+    .card { animation: card-in .65s cubic-bezier(.2,.75,.25,1) both; }
+    .card > label, .card > button, .card > .help { animation: rise-in .5s ease both; }
+    .card > label:nth-of-type(1) { animation-delay: .08s; }
+    .card > label:nth-of-type(2) { animation-delay: .14s; }
+    .card > #go { animation-delay: .2s; }
+    @keyframes card-in { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ring-drift { from { transform: translate3d(0,0,0) rotate(-8deg); } to { transform: translate3d(-14px,-12px,0) rotate(8deg); } }
     .card h2 { margin: 0 0 .3rem; font-size: 1.5rem; font-weight: 900; color: var(--primary); }
     .card .sub { margin: 0 0 1.6rem; color: var(--muted); font-size: .92rem; }
     label { display: block; font-size: .78rem; font-weight: 800; color: var(--muted); margin-bottom: 1rem; letter-spacing: .02em; }
     .field { position: relative; margin-top: .4rem; }
     .field .material-symbols-outlined { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%); color: #9aaaa5; font-size: 1.2rem; pointer-events: none; }
+    .field-hint { display: block; margin: .38rem 0 0 2.6rem; color: var(--muted); font-size: .72rem; font-weight: 500; }
     input { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); padding: .8rem .9rem .8rem 2.6rem; border: 1.5px solid var(--line); border-radius: 12px; background: #fbfcfc; outline: none; transition: border-color .15s, box-shadow .15s; }
     input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(61, 86, 80, .12); background: #fff; }
     .show { position: absolute; right: .5rem; top: 50%; transform: translateY(-50%); background: none; border: 0; color: #9aaaa5; cursor: pointer; padding: .3rem; display: flex; }
@@ -42,14 +53,12 @@
     .msg.ok { background: #ecfdf5; color: #166534; border-color: #a7f3d0; }
     .link { display: inline-block; margin-top: 1.1rem; font-size: .85rem; font-weight: 800; color: var(--primary); background: none; border: 0; cursor: pointer; padding: 0; }
     .help { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); line-height: 1.5; }
-    .demo { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px dashed var(--line); }
-    .demo h3 { margin: 0 0 .25rem; font-size: .8rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
-    .demo p { margin: 0 0 .8rem; font-size: .8rem; color: var(--muted); }
-    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
-    .demo-grid button { display: flex; align-items: center; gap: .45rem; text-align: left; font: inherit; font-size: .78rem; font-weight: 800; color: var(--primary);
-      background: #f4f8f6; border: 1px solid var(--line); border-radius: 10px; padding: .55rem .6rem; cursor: pointer; line-height: 1.2; }
-    .demo-grid button:hover { border-color: var(--primary); background: #fff; }
-    .demo-grid .material-symbols-outlined { font-size: 1.1rem; color: var(--gold); flex-shrink: 0; }
+    .reset-help { margin: .65rem 0 0; padding: .75rem; border-radius: 12px; background: #f4f8f6; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    button[type=submit]:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(44,64,59,.2); }
+    button[type=submit] { transition: background .2s, transform .2s, box-shadow .2s; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
     @media (max-width: 860px) {
       body { grid-template-columns: 1fr; }
       .side { padding: 1.75rem 1.25rem 2.25rem; }
@@ -59,8 +68,9 @@
       .form-side { padding: 1rem; margin-top: -1.25rem; align-items: flex-start; }
     }
   </style>
+  <link rel="stylesheet" href="assets/css/premium-refinements.css" />
 </head>
-<body>
+<body class="auth-page login-page">
   <section class="side">
     <div style="position:relative;z-index:1">
       <p class="eyebrow" data-diocese>Mfumo wa Parokia</p>
@@ -76,13 +86,13 @@
   </section>
 
   <section class="form-side">
-    <form class="card" id="login" novalidate>
+    <form class="card" id="login" autocomplete="off" novalidate>
       <h2 id="title">Ingia</h2>
       <p class="sub" id="sub">Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.</p>
       <div class="msg" id="msg" role="alert"></div>
       <label>Namba ya simu
         <span class="field"><span class="material-symbols-outlined">smartphone</span>
-          <input type="text" name="login" inputmode="tel" autocomplete="username" required placeholder="mf. 0712 345 678"></span>
+          <input type="tel" name="phone" inputmode="tel" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="mf. 0712 345 678" aria-describedby="phone-help"><small id="phone-help" class="field-hint">Tumia namba ile uliyosajiliwa nayo.</small></span>
       </label>
       <label id="pw-wrap">Nenosiri
         <span class="field"><span class="material-symbols-outlined">lock</span>
@@ -90,13 +100,10 @@
           <button type="button" class="show" id="show" aria-label="Onyesha nenosiri"><span class="material-symbols-outlined">visibility</span></button></span>
       </label>
       <button type="submit" id="go"><span class="material-symbols-outlined">login</span><span id="go-label">Ingia</span></button>
-      <button type="button" class="link" id="forgot">Umesahau nenosiri?</button>
-      <div class="demo" id="demo" hidden>
-        <h3>Demo</h3>
-        <p>Bonyeza nafasi uingie kama mtu huyo (nenosiri <b id="demo-pw"></b>). Kila nafasi inaona sehemu yake tu.</p>
-        <div class="demo-grid" id="demo-grid"></div>
-      </div>
+      <button type="button" class="link" id="forgot" aria-expanded="false" aria-controls="reset-help">Umesahau nenosiri?</button>
+      <p class="reset-help" id="reset-help" hidden>Kwa usalama wa akaunti, wasiliana na Msimamizi wa Mfumo akupe nenosiri jipya. Hakuna kiungo cha barua pepe kinachotumika.</p>
       <p class="help">Huna akaunti? Akaunti zinaundwa na Msimamizi wa Mfumo wa Parokia. Wasiliana naye akupe akaunti na nafasi yako.</p>
+      <p class="help" style="margin-top:.5rem;padding-top:.75rem">Wewe ni muumini? <a href="register.html" style="color:var(--primary);font-weight:800">Jisajili hapa</a></p>
     </form>
   </section>
 
@@ -126,30 +133,9 @@
     const i = form.password; i.type = i.type === 'password' ? 'text' : 'password';
   });
 
-  const cfg = window.PM_CONFIG || {};
-  if (cfg.DEMO && (cfg.DEMO_ACCOUNTS || []).length) {
-    document.getElementById('demo').hidden = false;
-    document.getElementById('demo-pw').textContent = cfg.DEMO_PASSWORD || '';
-    const grid = document.getElementById('demo-grid');
-    cfg.DEMO_ACCOUNTS.forEach(([email, label, icon]) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.innerHTML = `<span class="material-symbols-outlined">${icon || 'person'}</span><span></span>`;
-      b.lastChild.textContent = label;
-      b.title = email;
-      b.addEventListener('click', () => {
-        form.login.value = email; form.password.value = cfg.DEMO_PASSWORD || '';
-        if (resetMode) document.getElementById('forgot').click();
-        form.requestSubmit();
-      });
-      grid.appendChild(b);
-    });
-  }
-
   let resetMode = false;
-  // '0712 345 678' / '+255 712…' → '255712345678@simu.parokia.local'; an e-mail is used as typed
+  // Phone number only: Supabase auth uses a private alias generated from the phone.
   const toLogin = v => {
-    if (v.includes('@')) return v.toLowerCase();
     let d = v.replace(/\D/g, '');
     if (/^0[67]\d{8}$/.test(d)) d = '255' + d.slice(1);
     else if (/^[67]\d{8}$/.test(d)) d = '255' + d;
@@ -157,38 +143,31 @@
   };
   document.getElementById('forgot').addEventListener('click', () => {
     resetMode = !resetMode;
-    document.getElementById('pw-wrap').style.display = resetMode ? 'none' : '';
-    document.getElementById('title').textContent = resetMode ? 'Badilisha nenosiri' : 'Ingia';
-    document.getElementById('sub').textContent = resetMode ? 'Kama unaingia kwa namba ya simu, mwombe Msimamizi wa Mfumo akuwekee nenosiri jipya. Kama unaingia kwa barua pepe, iandike hapa tukutumie kiungo.' : 'Tumia namba yako ya simu na nenosiri ulilopewa na msimamizi wa mfumo.';
-    document.getElementById('go-label').textContent = resetMode ? 'Tuma kiungo' : 'Ingia';
-    document.getElementById('forgot').textContent = resetMode ? '← Rudi kuingia' : 'Umesahau nenosiri?';
+    const help = document.getElementById('reset-help');
+    help.hidden = !resetMode;
+    document.getElementById('forgot').setAttribute('aria-expanded', String(resetMode));
     msg.className = 'msg';
   });
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
     // a phone number signs in through the private address made from it (database migration 29)
-    const typed = form.login.value.trim();
+    const typed = form.phone.value.trim();
     const email = toLogin(typed);
     const password = form.password.value;
     if (!typed) { say('Andika namba yako ya simu.'); return; }
-    if (!email) { say('Namba ya simu si sahihi. Iandike kama 0712 345 678.'); return; }
+    if (!email) { say('Andika namba ya simu sahihi, kwa mfano 0712 345 678.'); return; }
+    if (resetMode) { say('Wasiliana na Msimamizi wa Mfumo akupe nenosiri jipya.'); return; }
     go.disabled = true;
     try {
-      if (resetMode) {
-        if (!typed.includes('@')) { say('Mwombe Msimamizi wa Mfumo (Watumiaji na Nafasi → Nenosiri) akuwekee nenosiri jipya. Mfumo hautumi SMS.'); return; }
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: new URL('reset.html', location.href).href });
-        if (error) throw error;
-        say('Kama barua pepe hii ina akaunti, kiungo kimetumwa. Angalia sanduku la barua (na spam).', true);
-      } else {
-        if (!password) { say('Andika nenosiri.'); return; }
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        location.replace(APP);
-      }
+      if (!password) { say('Andika nenosiri.'); return; }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (data.user?.user_metadata?.must_change_password) { location.replace('reset.html?required=1'); return; }
+      location.replace(APP);
     } catch (err) {
       const m = String(err && err.message || err);
-      say(/invalid login|invalid_credentials/i.test(m) ? (typed.includes('@') ? 'Barua pepe au nenosiri si sahihi.' : 'Namba ya simu au nenosiri si sahihi.')
+      say(/invalid login|invalid_credentials/i.test(m) ? 'Namba ya simu au nenosiri si sahihi.'
         : /email not confirmed/i.test(m) ? 'Barua pepe yako bado haijathibitishwa.'
         : /fetch|network/i.test(m) ? 'Hakuna mtandao. Jaribu tena.' : m);
     } finally {
