@@ -10,6 +10,8 @@
 </head>
 <body class="pm-receipt-page">
   <div class="pm-receipt-tools"><button class="pm-btn pm-btn--primary" id="print"><span class="material-symbols-outlined">print</span> Chapa / PDF</button>
+    <button class="pm-btn" id="send-sms" hidden><span class="material-symbols-outlined">sms</span> Tuma risiti kwa SMS</button>
+    <small id="sms-status" class="pm-muted" role="status"></small>
     <button class="pm-btn" onclick="window.close()">Funga</button></div>
   <article id="receipt" class="pm-receipt"><p class="pm-muted">Inapakia risiti…</p></article>
 
@@ -55,6 +57,40 @@
     document.getElementById('print').addEventListener('click', async () => {
       await supabase.rpc('mark_receipt_printed', { p_receipt: r.id }); window.print();
     });
+    const smsButton = document.getElementById('send-sms'), smsStatus = document.getElementById('sms-status');
+    try {
+      const { data: preview, error } = await supabase.rpc('receipt_sms_preview', { p_receipt_id: r.id });
+      if (error) throw error;
+      smsButton.hidden = false;
+      if (!preview?.phone) smsStatus.textContent = 'Namba haipo kwenye rejista; utaandika namba ya mpokeaji.';
+      const smsConfig = await fetch('../api/receipt-sms').then(response => response.json()).catch(() => ({}));
+      if (!smsConfig.configured) {
+        smsButton.disabled = true;
+        smsStatus.textContent = 'Mtoa huduma wa SMS hajasanidiwa bado; unaweza kuchapisha risiti.';
+      }
+      smsButton.addEventListener('click', async () => {
+        const phone = window.prompt('Namba ya simu ya kupokea risiti kwa SMS:', preview?.phone || '');
+        if (!phone) return;
+        smsButton.disabled = true;
+        smsStatus.textContent = 'Inatuma SMS…';
+        try {
+          const { data: { session: activeSession } } = await supabase.auth.getSession();
+          const response = await fetch('../api/receipt-sms', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${activeSession?.access_token || ''}` },
+            body: JSON.stringify({ receipt_id: r.id, phone, request_key: crypto.randomUUID() }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error || 'SMS haikutumwa.');
+          smsStatus.textContent = `Risiti imetumwa kwa SMS kupitia ${result.provider}.`;
+          smsButton.hidden = true;
+        } catch (error) {
+          smsStatus.textContent = error.message || 'SMS haikutumwa.';
+          smsButton.disabled = false;
+        }
+      });
+    } catch (error) {
+      smsStatus.textContent = error.message?.includes('Huna ruhusa') ? '' : 'SMS ya risiti haipatikani kwa sasa.';
+    }
   } catch (e) { box.innerHTML = `<p>${P.esc(e.message)}</p>`; }
 })();
 </script>

@@ -158,11 +158,13 @@
 
   /* ================= RIPOTI ================= */
   const REPORTS = [
-    ['collections', 'Makusanyo kwa kipindi (siku / wiki / mwezi / mwaka)'], ['monthly', 'Makusanyo ya kila mwezi (mwaka mzima)'],
-    ['by_level', 'Michango kwa familia / jumuiya / kigango / parokia'], ['campaign', 'Kampeni (Mavuno, Ujenzi, maalumu) kwa jumuiya/kigango'],
-    ['outstanding', 'Ahadi ambazo hazijalipwa'], ['income_expense', 'Mapato na matumizi'], ['funds', 'Salio la mifuko'],
-    ['yoy', 'Ulinganisho wa miaka'], ['receipts', 'Rejista ya risiti'], ['zaka', 'Zaka (Jan–Des)'],
+    ['Makusanyo', [['collections', 'Makusanyo kwa kipindi (siku / wiki / mwezi / mwaka)'], ['monthly', 'Makusanyo ya kila mwezi (mwaka mzima)'],
+      ['by_level', 'Michango kwa familia / jumuiya / kigango / parokia'], ['campaign', 'Kampeni kwa jumuiya / kigango'], ['outstanding', 'Ahadi ambazo hazijalipwa']]],
+    ['Zaka', [['zaka', 'Zaka kwa mwezi (Jan–Des)']]],
+    ['Fedha', [['income_expense', 'Mapato na matumizi'], ['funds', 'Salio la mifuko'], ['yoy', 'Ulinganisho wa miaka']]],
+    ['Risiti', [['receipts', 'Rejista ya risiti']]],
   ];
+  const reportItems = REPORTS.flatMap(([, items]) => items);
   V.reports = {
     title: 'Ripoti', perm: 'finance.read',
     async render(el, params) {
@@ -172,7 +174,7 @@
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Ripoti</h1><p class="pm-muted">Ripoti zote zinatoka kwenye kumbukumbu moja ya miamala — hakuna kunakili kati ya karatasi.</p></div>
         <div class="pm-actions"><button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button><button class="pm-btn" data-print><span class="material-symbols-outlined">picture_as_pdf</span>PDF / Chapa</button></div></div>
         <form class="pm-filters">
-          <label class="pm-wide">Ripoti<select name="r">${REPORTS.map(([k, v]) => `<option value="${k}" ${k === r ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+          <label class="pm-wide">Ripoti<select name="r">${REPORTS.map(([group, items]) => `<optgroup label="${group}">${items.map(([k, v]) => `<option value="${k}" ${k === r ? 'selected' : ''}>${v}</option>`).join('')}</optgroup>`).join('')}</select></label>
           <label>Kuanzia<input type="date" name="from" value="${from}"></label><label>Hadi<input type="date" name="to" value="${to}"></label>
           <label>Mwaka<input type="number" name="year" value="${year}"></label>
           <label>Ngazi<select name="level">${[['parish', 'Parokia'], ['kigango', 'Kigango'], ['jumuiya', 'Jumuiya'], ['family', 'Familia'], ['parishioner', 'Muumini']].map(([k, v]) => `<option value="${k}" ${k === level ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -183,7 +185,7 @@
         <section class="pm-card" data-out>${P.loading()}</section>`;
       el.querySelector('.pm-filters').addEventListener('submit', e => { e.preventDefault(); P.go('#/reports?' + new URLSearchParams(Object.fromEntries(new FormData(e.target)))); });
       const out = el.querySelector('[data-out]');
-      const title = REPORTS.find(x => x[0] === r)[1];
+      const title = reportItems.find(x => x[0] === r)?.[1] || 'Ripoti';
       const scopeLbl = scope ? P.ref.unitsById[scope].label : 'Parokia nzima';
       let rows = [], cols = [], foot = null, sub = scopeLbl, excel = null;
       // a total of the report opens the payments behind it (same filters as the report)
@@ -250,11 +252,18 @@
         cols = [{ key: 'receipt_no', label: 'Risiti' }, { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'status', label: 'Hali' }];
         foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
       } else if (r === 'zaka') {
-        if (year !== P.year()) P.setYear(year);
-        const su = scope && P.ref.unitsById[scope];
-        P.go(su?.unit_type === 'jumuiya' ? `#/jumuiya?id=${su.id}&tab=zaka`
-          : su?.unit_type === 'kigango' ? `#/kigango?id=${su.id}` : '#/units');
-        return;
+        const validLevels = ['parishioner', 'family', 'jumuiya', 'kigango'];
+        const zakaLevel = validLevels.includes(level) ? level : 'jumuiya';
+        rows = await P.rpc('zaka_grid_tree', { p_year: year, p_level: zakaLevel, p_scope: scope || null });
+        const months = P.MONTHS.map((m, i) => ({ key: `m${String(i + 1).padStart(2, '0')}`, label: m.slice(0, 3), sum: P.tzs, cls: 'pm-num' }));
+        cols = [{ key: 'group_name', label: ({ parishioner: 'Muumini', family: 'Familia', jumuiya: 'Jumuiya', kigango: 'Kigango' })[zakaLevel] },
+          ...(zakaLevel === 'parishioner' || zakaLevel === 'family' ? [{ key: 'jumuiya_name', label: 'Jumuiya' }] : []),
+          ...months, { key: 'total', label: 'Jumla', fmt: P.tzs, sum: P.tzs, cls: 'pm-num pm-strong' },
+          { key: 'months_paid', label: 'Miezi imelipwa', fmt: P.num, cls: 'pm-num' }, { key: 'months_unpaid', label: 'Miezi iliyobaki', fmt: P.num, cls: 'pm-num' }];
+        const scU = scope ? { unit: scope } : {};
+        cols = cols.map(c => months.includes(c) ? { ...c, fmt: (v, x) => P.txMoney(v, { title: `Zaka ${year} — ${x.group_name}`, sub: c.label, ...scU, ...(zakaLevel === 'family' ? { family: x.group_id } : zakaLevel === 'parishioner' ? { parishioner: x.group_id } : { unit: x.group_id }), kinds: ['zaka'], zaka_year: year, period_month: `${year}-${c.key.slice(1)}-01` }, P.tzs) } : c);
+        foot = { group_name: '<b>JUMLA</b>', ...Object.fromEntries(months.map(m => [m.key, P.tzs(P.sum(rows, m.key))])), total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>` };
+        sub = `${scopeLbl} · Zaka ${year} · ${({ parishioner: 'kwa waumini', family: 'kwa familia', jumuiya: 'kwa jumuiya', kigango: 'kwa vigango' })[zakaLevel]}`;
       }
       out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
         `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
