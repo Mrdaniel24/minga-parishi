@@ -134,6 +134,7 @@
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Watumiaji na Nafasi', 'admin_panel_settings', 'users', 'users.manage');
     a('Mipangilio ya Fedha', 'settings', 'settings', 'parish.configure');
+    a('Wasifu Wangu', 'manage_accounts', 'profile', null);
 
     const isActive = href => {
       const route = location.hash || '#/dashboard';

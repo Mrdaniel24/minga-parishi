@@ -8,8 +8,8 @@
   --premium-ease: cubic-bezier(.2,.75,.25,1);
 }
 
-html { font-family: Montserrat, system-ui, sans-serif; text-rendering: optimizeLegibility; }
-.app-shell, .auth-page { font-family: Montserrat, system-ui, sans-serif !important; color: var(--premium-ink); }
+html { font-family: Inter, system-ui, sans-serif; text-rendering: optimizeLegibility; }
+.app-shell, .auth-page { font-family: Inter, system-ui, sans-serif !important; color: var(--premium-ink); }
 .app-shell { background-color: #e8efec !important; }
 
 /* Material Symbols needs its ligature settings; otherwise names like
@@ -54,9 +54,14 @@ html { font-family: Montserrat, system-ui, sans-serif; text-rendering: optimizeL
 .app-shell .main-responsive h2.text-5xl,
 .app-shell .main-responsive h3.text-5xl {
   font-weight: 600 !important;
-  letter-spacing: -.018em !important;
-  line-height: 1.32;
+  letter-spacing: -.025em !important;
+  line-height: 1.25;
 }
+.app-shell .pm-head .pm-h1 { font-size: clamp(1.55rem, 2vw, 2rem) !important; font-weight: 600 !important; line-height: 1.2 !important; }
+.app-shell .pm-head .pm-muted { font-size: .92rem; line-height: 1.45; }
+.app-shell .pm-kpi { padding: 1.15rem 1.2rem !important; }
+.app-shell .pm-kpi p { font-size: .8rem !important; }
+.app-shell .pm-kpi h3 { font-size: clamp(1.12rem, 1.25vw, 1.3rem) !important; line-height: 1.28 !important; font-weight: 600 !important; }
 .app-shell .main-responsive h2.text-4xl,
 .app-shell .main-responsive h2.text-5xl,
 .app-shell .main-responsive h3.text-5xl {
@@ -74,8 +79,10 @@ html { font-family: Montserrat, system-ui, sans-serif; text-rendering: optimizeL
 .app-shell #sidebar .nav-item, .app-shell #sidebar .nav-link,
 .app-shell #sidebar .nav-item-active, .app-shell #sidebar .nav-link-active {
   font-weight: 500 !important;
-  letter-spacing: .035em !important;
+  letter-spacing: .01em !important;
 }
+.app-shell #sidebar .kh-profile__name { font-size: .9rem; font-weight: 600; letter-spacing: .015em; line-height: 1.3; }
+.app-shell #sidebar .kh-profile__role { font-size: .64rem; letter-spacing: .09em; }
 .app-shell #sidebar .kh-nav-h {
   font-size: .68rem !important;
   font-weight: 600 !important;

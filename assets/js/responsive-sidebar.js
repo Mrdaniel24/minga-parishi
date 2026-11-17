@@ -15,6 +15,7 @@
 
   // ── State ──────────────────────────────────────
   let isOpen = false;
+  let isCollapsed = false;
   let touchStartX = 0;
   let touchStartY = 0;
   let touchCurrentX = 0;
@@ -43,6 +44,26 @@
     if (isOpen) closeSidebar();
     else openSidebar();
   }
+
+  // Desktop collapse keeps a narrow icon rail; mobile continues to use the drawer.
+  function setCollapsed(collapsed) {
+    if (window.innerWidth < 768) return;
+    isCollapsed = !!collapsed;
+    document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+    try { localStorage.setItem('pm-sidebar-collapsed', isCollapsed ? '1' : '0'); } catch (_) { /* storage may be unavailable */ }
+    const button = document.querySelector('[data-sidebar-collapse]');
+    if (button) {
+      button.setAttribute('aria-expanded', String(!isCollapsed));
+      button.setAttribute('aria-label', isCollapsed ? 'Panua menyu' : 'Funga menyu');
+      button.title = isCollapsed ? 'Panua menyu' : 'Funga menyu';
+      const icon = button.querySelector('.material-symbols-outlined');
+      if (icon) icon.textContent = isCollapsed ? 'menu' : 'left_panel_close';
+    }
+  }
+  try { isCollapsed = localStorage.getItem('pm-sidebar-collapsed') === '1'; } catch (_) { /* storage may be unavailable */ }
+  if (isCollapsed && window.innerWidth >= 768) document.body.classList.add('sidebar-collapsed');
+  document.querySelector('[data-sidebar-collapse]')?.addEventListener('click', () => setCollapsed(!isCollapsed));
+  if (window.innerWidth >= 768) setCollapsed(isCollapsed);
 
   // ── Expose globally ───────────────────────────
   window.openSidebar = openSidebar;
@@ -160,6 +181,12 @@
     resizeTimer = setTimeout(() => {
       if (window.innerWidth >= 768 && isOpen) {
         closeSidebar();
+      }
+      if (window.innerWidth < 768 && isCollapsed) {
+        isCollapsed = false;
+        document.body.classList.remove('sidebar-collapsed');
+      } else if (window.innerWidth >= 768) {
+        document.body.classList.toggle('sidebar-collapsed', isCollapsed);
       }
     }, 150);
   });

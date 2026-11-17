@@ -361,6 +361,9 @@ body { font-family: 'Montserrat', sans-serif !important; line-height: 1.5; }
 .pm-att__opt--absent { color: var(--pm-rose); }
 
 /* choosing vigango / jumuiya for a notice or an SMS */
+.pm-profile-photo-wrap { width: 88px; height: 88px; display: grid; place-items: center; margin: 0 0 1.25rem; border-radius: 50%; overflow: hidden; background: var(--pm-soft, #f1f5f9); color: var(--pm-muted, #64748b); }
+.pm-profile-photo-wrap > img { width: 100%; height: 100%; object-fit: cover; }
+.pm-profile-photo-wrap > .material-symbols-outlined { font-size: 3.2rem; }
 .pm-unitpick { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .6rem 1rem; max-height: 40vh; overflow: auto;
   border: 1px solid var(--pm-line); border-radius: 14px; padding: .6rem .9rem; }
 .pm-unitpick > div { display: flex; flex-direction: column; gap: .15rem; font-size: .85rem; }
