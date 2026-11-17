@@ -14,11 +14,11 @@
   margin: 0;
   display: block !important;
   color: var(--login-ink);
-  background: var(--login-mint);
+  background: var(--login-emerald);
   font-family: Inter, Montserrat, system-ui, sans-serif;
   overflow-x: hidden;
 }
-.login-shell { position: relative; width: 100%; min-height: 100svh; display: grid; align-items: center; background: var(--login-emerald); }
+.login-shell { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; display: grid; align-items: center; background: var(--login-emerald); }
 .login-story { position: absolute; inset: 0; overflow: hidden; isolation: isolate; color: #fff; background: var(--login-emerald); }
 .login-story::before, .login-story::after { content: ''; position: absolute; pointer-events: none; z-index: 3; border-radius: 50%; }
 .login-story::before { width: 38rem; height: 38rem; left: -24rem; bottom: -26rem; border: 2rem solid rgba(245,190,34,.4); box-shadow: 0 0 0 1.2rem rgba(245,190,34,.08); }
@@ -93,7 +93,8 @@
   .login-dot { width: .35rem; height: .35rem; }
   .login-dot.is-active { width: .9rem; }
   .login-form-side { display: flex; justify-content: center; padding: 0 1.25rem; margin: 0; background: transparent; }
-  .login-credit { position: relative; right: auto; bottom: auto; align-self: center; margin: .15rem 0 .2rem; justify-content: center; font-size: .7rem; }
+  .login-credit { position: absolute; right: auto; bottom: max(.5rem, env(safe-area-inset-bottom)); left: 50%; align-self: auto; margin: 0; justify-content: center; font-size: .7rem; white-space: nowrap; transform: translateX(-50%); }
+  .login-story__tools { bottom: 2.35rem; }
   .login-card { width: 100%; max-width: 21rem; min-width: 0; padding: 1.2rem 1.25rem; border-radius: 1rem; background: rgba(255,255,255,.82); box-shadow: 0 .8rem 2rem rgba(0,63,50,.2); }
   .login-card__mark { width: 2rem; height: 2rem; margin: 0 auto .45rem; border-radius: .6rem; }
   .login-card__mark .material-symbols-outlined { font-size: 1.1rem; }
