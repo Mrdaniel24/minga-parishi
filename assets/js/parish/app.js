@@ -15,12 +15,15 @@
   };
 
   P.selfOnly = () => !P.access.platform_admin && !(P.access.permissions || []).length && !!P.access.parishioner_id;
+  const MEMBER_ROUTES = new Set(['member-home','member-giving','member-family','member-requests','member-link','profile']);
 
   let routeSeq = 0;
   async function route() {
     let raw = (location.hash || '#/dashboard').slice(2);
-    // a member (no staff permissions) sees only their own giving
-    if (P.selfOnly()) raw = `statement?parishioner=${P.access.parishioner_id}`;
+    if ((P.memberPortalMode || P.selfOnly()) && !MEMBER_ROUTES.has(raw.split('?')[0])) {
+      raw = P.access.parishioner_id ? 'member-home' : 'member-link';
+      history.replaceState(null, '', '#/' + raw);
+    }
     const [name, qs] = raw.split('?');
     const params = Object.fromEntries(new URLSearchParams(qs || ''));
     if (name === 'accounting' || name === 'reconciliation') history.replaceState(null, '', '#/dashboard');
@@ -65,32 +68,23 @@
     P.profile = profile;
     try {
       [P.access] = await Promise.all([P.rpc('my_parish_access'), P.loadRef()]);
+      P.memberContext = await P.rpc('member_portal_context');
     } catch (e) {
       document.getElementById('pm-view').innerHTML = `<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(e))}</div>`;
       return;
     }
     const staff = P.access.platform_admin || (P.access.permissions || []).length > 0;
-    if (!staff && (P.access.roles || []).length && !P.access.parishioner_id) {
-      document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Akaunti yako bado haijaunganishwa na jina lako</h2>
-        <p class="pm-muted">Ukiunganishwa na jina lako kwenye rejista ya parokia, hapa utaona zaka, ahadi na risiti zako. Mwombe Katibu wa Parokia akuunganishe (Watumiaji na Nafasi → Unganisha akaunti).</p>
-        <p class="mt-4"><button class="pm-btn" data-action="logout">Toka</button></p></div>`;
-      if (PM.applyAccess) PM.applyAccess(P.access);
-      return;
-    }
-    const hasRole = P.access.platform_admin || (P.access.roles || []).length > 0 || !!P.access.parishioner_id;
-    if (!hasRole) {
-      document.getElementById('pm-view').innerHTML = `<div class="pm-card pm-pad"><h2 class="pm-h2">Huna nafasi kwenye mfumo wa parokia</h2>
-        <p class="pm-muted">Akaunti yako (${P.esc(PM.loginLabel(profile))}) haijapewa nafasi bado (mf. Mhasibu, Katibu, Kiongozi wa Jumuiya). Mwombe Msimamizi wa Mfumo akupe nafasi, kisha ingia tena.</p>
-        <p class="mt-4"><button class="pm-btn" data-action="logout">Toka</button></p></div>`;
-      if (PM.applyAccess) PM.applyAccess(P.access);
-      return;
-    }
+    const hasMember = !!P.access.parishioner_id;
+    let savedMode = 'staff';
+    try { savedMode = localStorage.getItem('minga-portal-mode') || 'staff'; } catch (e) { /* storage may be disabled */ }
+    P.memberPortalMode = !staff || (hasMember && savedMode === 'member');
     const p = P.ref.parish;
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
     if (PM.applyAccess) PM.applyAccess(P.access);
     PM.fillYears && PM.fillYears(P.ref.years.map(y => y.label));
     // a kigango / jumuiya leader starts on their own community
-    if (!location.hash || location.hash === '#/dashboard') {
+    if (P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) history.replaceState(null, '', hasMember ? '#/member-home' : '#/member-link');
+    if (!P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) {
       const u = P.scopeUnit() && P.ref.unitsById[P.scopeUnit()];
       if (u && (u.unit_type === 'kigango' || u.unit_type === 'jumuiya')) history.replaceState(null, '', `#/${u.unit_type}?id=${u.id}`);
     }

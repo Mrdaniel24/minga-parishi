@@ -60,7 +60,7 @@
 
   // fills every [data-user-*] slot (the top bar may be built after the guard ran)
   // an account that signs in by phone shows its number, not its private sign-in address
-  PM.loginLabel = p => p && p.phone && String(p.email || '').endsWith('@simu.parokia.local') ? '+' + p.phone : (p && p.email) || '';
+  PM.loginLabel = p => p && p.phone && (!p.email || String(p.email).endsWith('@simu.parokia.local')) ? '+' + p.phone : (p && p.email) || '';
   PM.paintUser = function () {
     const p = PM.profile;
     if (p) {
@@ -110,8 +110,15 @@
 
     const R = '#/';
     const items = [];
-    const h = t => items.push({ h: t });
-    const a = (label, icon, href, perm) => items.push({ label, icon, href: R + href, perm });
+    const h = (t, portal = 'staff') => items.push({ h: t, portal });
+    const a = (label, icon, href, perm, portal = 'staff') => items.push({ label, icon, href: R + href, perm, portal });
+    h('Akaunti Yangu', 'member');
+    a('Nyumbani', 'home', 'member-home', 'member', 'member');
+    a('Michango Yangu', 'volunteer_activism', 'member-giving', 'member', 'member');
+    a('Familia Yangu', 'family_restroom', 'member-family', 'member', 'member');
+    a('Maombi Yangu', 'assignment', 'member-requests', 'member', 'member');
+    a('Unganisha na rejista', 'link', 'member-link', 'member', 'member');
+    a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
     h('Yangu');
     a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
@@ -135,6 +142,8 @@
     a('Watumiaji na Nafasi', 'admin_panel_settings', 'users', 'users.manage');
     a('Mipangilio ya Fedha', 'settings', 'settings', 'parish.configure');
     a('Wasifu Wangu', 'manage_accounts', 'profile', null);
+    h('Maombi ya Waumini');
+    a('Maombi ya familia', 'fact_check', 'member-requests-office', 'registry.write');
 
     const isActive = href => {
       const route = location.hash || '#/dashboard';
@@ -146,31 +155,62 @@
     const nav = sidebar.querySelector('#pm-nav');
     nav.classList.add('kh-nav');
     nav.innerHTML = items.map(i => i.h
-      ? `<p class="kh-nav-h" data-psection>${i.h}</p>`
-      : `<a class="nav-item${isActive(i.href) ? ' nav-item-active' : ''}" href="${i.href}" data-pperm="${i.perm}" hidden>
+      ? `<p class="kh-nav-h" data-psection data-portal="${i.portal}">${i.h}</p>`
+      : `<a class="nav-item${isActive(i.href) ? ' nav-item-active' : ''}" href="${i.href}" data-pperm="${i.perm}" data-portal="${i.portal || 'staff'}" hidden>
            <span class="material-symbols-outlined">${i.icon}</span><span>${i.label}</span></a>`).join('');
 
     // show only the links the user's parish roles allow
     PM.applyAccess = acc => {
+      PM.access = acc;
       const perms = new Set((acc && acc.permissions) || []);
       const any = acc && (acc.platform_admin || (acc.roles || []).length);
+      const memberMode = !!window.Parish?.memberPortalMode;
       nav.querySelectorAll('[data-pperm]').forEach(el => {
         const p = el.dataset.pperm;
-        const self = acc && !acc.platform_admin && !perms.size && !!acc.parishioner_id;
-        el.hidden = p === 'self' ? !self : !(acc && !self && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
+        const memberAllowed = p === 'member' && memberMode;
+        const staffAllowed = el.dataset.portal !== 'member' && !memberMode && (p === 'self' ? !!acc?.parishioner_id : !!acc && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
+        el.hidden = !(memberAllowed || staffAllowed);
       });
+      nav.querySelectorAll('[data-psection]').forEach(hd => { hd.hidden = hd.dataset.portal === 'member' ? !memberMode : memberMode; });
       nav.querySelectorAll('[data-psection]').forEach(hd => {
         let n = hd.nextElementSibling, show = false;
         while (n && n.tagName === 'A') { if (!n.hidden) show = true; n = n.nextElementSibling; }
         hd.hidden = !show;
       });
+      const mobile = document.querySelector('.mobile-bottom-nav');
+      if (mobile) mobile.innerHTML = memberMode
+        ? `<a href="#/member-home" class="bottom-nav-item"><span class="material-symbols-outlined">home</span><span>Nyumbani</span></a><a href="#/member-giving" class="bottom-nav-item"><span class="material-symbols-outlined">volunteer_activism</span><span>Michango</span></a><a href="#/member-family" class="bottom-nav-item"><span class="material-symbols-outlined">family_restroom</span><span>Familia</span></a><a href="#/member-requests" class="bottom-nav-item"><span class="material-symbols-outlined">assignment</span><span>Maombi</span></a>${accCanStaff(acc) ? '<button data-portal-mode-toggle class="bottom-nav-item"><span class="material-symbols-outlined">swap_horiz</span><span>Watumishi</span></button>' : '<button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>'}`
+        : `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Dashibodi</span></a><a href="#/units" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Vigango</span></a><a href="#/payments" class="bottom-nav-item"><span class="material-symbols-outlined">point_of_sale</span><span>Miamala</span></a><a href="#/reports" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`;
       const role = (acc && acc.roles || [])[0];
-      const label = acc && acc.platform_admin ? 'Msimamizi wa Mfumo'
+      const label = memberMode && !acc?.parishioner_id ? 'Unganisha na rejista'
+        : memberMode ? 'Muumini'
+        : acc && acc.platform_admin ? 'Msimamizi wa Mfumo'
         : acc && !(acc.permissions || []).length && acc.parishioner_id ? 'Muumini'
         : role ? (ROLE_SW[role.role] || role.role.replace(/_/g, ' ')) + (role.org_unit ? ` · ${role.org_unit}` : '') : 'Hana nafasi';
       PM.roleLabel = label;
+      PM.paintModeButton && PM.paintModeButton();
       PM.paintUser();
     };
+    const mode = document.createElement('button');
+    mode.type = 'button'; mode.className = 'nav-item member-mode-switch'; mode.dataset.modeToggle = '1'; mode.hidden = true;
+    mode.innerHTML = '<span class="material-symbols-outlined">swap_horiz</span><span data-mode-label>Member Portal</span>';
+    sidebar.querySelector('.mt-auto')?.prepend(mode);
+    PM.paintModeButton = () => {
+      const staff = accCanStaff(PM.access);
+      mode.hidden = !staff || !PM.access?.parishioner_id;
+      mode.querySelector('[data-mode-label]').textContent = window.Parish?.memberPortalMode ? 'Dashboard ya Watumishi' : 'Member Portal';
+    };
+    const accCanStaff = a => !!a && (a.platform_admin || (a.permissions || []).length > 0);
+    const switchPortal = () => {
+      if (!accCanStaff(PM.access) || !PM.access?.parishioner_id) return;
+      const P = window.Parish;
+      P.memberPortalMode = !P.memberPortalMode;
+      try { localStorage.setItem('minga-portal-mode', P.memberPortalMode ? 'member' : 'staff'); } catch (e) { /* interface still switches for this session */ }
+      PM.applyAccess(PM.access);
+      P.go(P.memberPortalMode ? '#/member-home' : '#/dashboard');
+    };
+    mode.addEventListener('click', switchPortal);
+    document.addEventListener('click', e => { if (e.target.closest('[data-portal-mode-toggle]')) switchPortal(); });
     window.addEventListener('hashchange', () => {
       nav.querySelectorAll('a.nav-item').forEach(el => el.classList.toggle('nav-item-active', isActive(el.getAttribute('href'))));
     });
@@ -220,6 +260,7 @@
     footer.innerHTML = `<span>© ${new Date().getFullYear()} <b data-parish-name>Parokia</b></span><span><span class="kh-footer__dot"></span>Mfumo wa Usimamizi wa Parokia</span>`;
     main.appendChild(footer);
     PM.paintUser();
+    PM.paintModeButton && PM.paintModeButton();
     if (window.Parish && window.Parish.ref) PM.fillYears(window.Parish.ref.years.map(y => y.label));
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMainChrome);

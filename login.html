@@ -118,7 +118,7 @@
       <button type="button" class="link" id="forgot" aria-expanded="false" aria-controls="reset-help">Umesahau nenosiri?</button>
       <p class="reset-help" id="reset-help" hidden>Kwa usalama wa akaunti, wasiliana na Msimamizi wa Mfumo akupe nenosiri jipya. Hakuna kiungo cha barua pepe kinachotumika.</p>
       <p class="help">Unahitaji msaada? Wasiliana na msimamizi wa parokia.</p>
-      <p class="help" style="margin-top:.5rem;padding-top:.75rem">Wewe ni muumini? <a href="register.html" style="color:var(--primary);font-weight:800">Jisajili hapa</a></p>
+      <p class="help" style="margin-top:.5rem;padding-top:.75rem">Wewe ni muumini? <a href="member-account.html" style="color:var(--primary);font-weight:800">Fungua akaunti kwa SMS</a> · <a href="register.html" style="color:var(--primary);font-weight:800">Tuma ombi la familia</a></p>
     </form>
     </section>
     <footer class="login-credit" aria-label="Taarifa za mtengenezaji">
@@ -213,7 +213,11 @@
     go.disabled = true;
     try {
       if (!password) { say('Andika nenosiri.'); return; }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error && /invalid login|invalid_credentials/i.test(String(error.message || ''))) {
+        const digits = typed.replace(/\D/g, ''), phone = /^0[67]\d{8}$/.test(digits) ? '+255' + digits.slice(1) : /^[67]\d{8}$/.test(digits) ? '+255' + digits : /^255\d{9,}$/.test(digits) ? '+' + digits : null;
+        if (phone) { const retry = await supabase.auth.signInWithPassword({ phone, password }); data = retry.data; error = retry.error; }
+      }
       if (error) throw error;
       if (data.user?.user_metadata?.must_change_password) { location.replace('reset.html?required=1'); return; }
       location.replace(APP);

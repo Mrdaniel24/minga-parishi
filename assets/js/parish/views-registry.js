@@ -288,18 +288,19 @@
                         : await P.q(P.from('parishioners').select('full_name,jumuiya_id,family_id,relationship,phone').eq('id', id).single());
       const name = isFam ? who.family_name : who.full_name;
       const col = isFam ? 'family_id' : 'parishioner_id';
-      // a person's statement also shows what was paid and pledged by their family (Mavuno/Ujenzi are family pledges)
-      const fam = !isFam && who.family_id;
+      const isMember = !!(P.memberPortalMode || (P.selfOnly && P.selfOnly()));
+      // Member finance is personal by default. Family-wide payments and pledges
+      // have their own page; a representative grant never shares another person's ledger.
+      const fam = !isMember && !isFam && who.family_id;
       const [tx0, pl0, ftx, fpl] = await Promise.all([
         P.q(P.from('v_ledger').select('*').eq(col, id).eq('status', 'posted').order('txn_date', { ascending: false }).limit(1000)),
         P.q(P.from('v_pledge_balances').select('*').eq(col, id).order('campaign_year', { ascending: false })),
         fam ? P.q(P.from('v_ledger').select('*').eq('family_id', who.family_id).is('parishioner_id', null).eq('status', 'posted').order('txn_date', { ascending: false }).limit(1000)) : [],
         fam ? P.q(P.from('v_pledge_balances').select('*').eq('family_id', who.family_id).order('campaign_year', { ascending: false })) : [],
       ]);
-      const notices = P.selfOnly && P.selfOnly() ? await P.announcementsHtml() : '';
+      const notices = isMember ? await P.announcementsHtml() : '';
       const tx = [...tx0, ...ftx].sort((a, b) => String(b.txn_date).localeCompare(String(a.txn_date)));
       const pl = [...pl0, ...fpl];
-      const isMember = !!(P.selfOnly && P.selfOnly());
       const totalPaid = P.sum(tx, 'net_amount'), totalPledged = P.sum(pl, 'pledged'), totalOutstanding = P.sum(pl, 'outstanding');
       const byCat = {};
       tx.forEach(t => { const k = `${t.category_name} ${t.campaign_year || t.financial_year}`; byCat[k] = (byCat[k] || 0) + Number(t.net_amount); });

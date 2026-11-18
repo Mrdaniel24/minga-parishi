@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#003f32"><title>Fungua akaunti | Minga Parishi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@300..600,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/brand-palette.css"><link rel="stylesheet" href="assets/css/login-premium.css">
+  <style>
+    body.member-account{min-height:100vh;background:var(--brand-mint);color:var(--brand-emerald);font-family:Inter,Arial,sans-serif;display:grid;place-items:center;padding:1rem}
+    .member-account__card{width:min(100%,540px);padding:clamp(1.25rem,5vw,2.5rem);border:1px solid rgba(0,63,50,.15);border-radius:1.4rem;background:#f3f8f5;box-shadow:0 24px 70px rgba(0,63,50,.14)}
+    .member-account__brand{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;font-weight:750}.member-account__brand span{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(245,190,34,.24);color:var(--brand-emerald)}
+    .member-account__card h1{margin:0;font-size:clamp(1.5rem,5vw,2rem);line-height:1.15}.member-account__card>p{color:rgba(0,63,50,.75);line-height:1.55}
+    .member-account__form{display:grid;gap:.9rem;margin-top:1.3rem}.member-account__form label{display:grid;gap:.35rem;font-weight:650}.member-account__form input{width:100%;min-height:48px;padding:.7rem .8rem;border:1px solid rgba(0,63,50,.22);border-radius:.75rem;background:#fff;color:var(--brand-emerald);font:inherit}.member-account__form button{min-height:50px;border:0;border-radius:.8rem;background:var(--brand-forest);color:var(--brand-mint);font:inherit;font-weight:750;cursor:pointer}.member-account__form button:disabled{opacity:.6}.member-account__message{display:none;margin-top:1rem;padding:.8rem 1rem;border-radius:.7rem;background:rgba(245,190,34,.2);line-height:1.45}.member-account__message.show{display:block}.member-account__message.error{background:rgba(0,63,50,.1)}.member-account__links{margin-top:1.2rem;font-size:.9rem}.member-account__links a{color:var(--brand-forest);font-weight:700}
+  </style>
+</head>
+<body class="member-account">
+  <main class="member-account__card">
+    <div class="member-account__brand"><span class="material-symbols-outlined">church</span><span>Minga Parishi · Member Portal</span></div>
+    <h1 id="heading">Fungua akaunti yako</h1>
+    <p id="intro">Weka namba yako, jina na nenosiri. Tutatuma msimbo wa SMS kuthibitisha umiliki wa simu. Akaunti hii haikuungi moja kwa moja na familia; Ofisi ya Parokia itakagua rekodi yako kwanza.</p>
+    <form class="member-account__form" id="account-form">
+      <label>Jina kamili<input name="full_name" autocomplete="name" required minlength="3" maxlength="120"></label>
+      <label>Namba ya simu<input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="0712 345 678"></label>
+      <label>Nenosiri<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+      <label>Thibitisha nenosiri<input name="password_confirm" type="password" autocomplete="new-password" required minlength="8"></label>
+      <button id="send" type="submit">Tuma msimbo wa SMS</button>
+      <label id="code-wrap" hidden>Msimbo wa SMS<input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"></label>
+      <button id="verify" type="button" hidden>Thibitisha namba na fungua akaunti</button>
+    </form>
+    <div class="member-account__message" id="message" role="status"></div>
+    <p class="member-account__links">Akaunti ipo tayari? <a href="login.html">Ingia hapa</a> · <a href="register.html">Omba kujiunga na familia</a></p>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
+  <script src="assets/js/config.js"></script><script src="assets/js/supabase-client.js"></script>
+  <script>
+  (()=>{
+    const form=document.getElementById('account-form'),msg=document.getElementById('message'),send=document.getElementById('send'),verify=document.getElementById('verify'),code=document.getElementById('code-wrap');let phone='',password='',fullName='';
+    const show=(text,error=false)=>{msg.textContent=text;msg.className='member-account__message show'+(error?' error':'')};let waiting=false;
+    const normalize=value=>{let d=String(value||'').replace(/\D/g,'');if(/^0[67]\d{8}$/.test(d))d='255'+d.slice(1);else if(/^[67]\d{8}$/.test(d))d='255'+d;return /^255[67]\d{8}$/.test(d)?`+${d}`:null};
+    form.addEventListener('submit',e=>{e.preventDefault();send.click()});
+    send.addEventListener('click',async e=>{e.preventDefault();if(waiting){send.disabled=true;try{const{error}=await supabase.auth.resend({type:'sms',phone});if(error)throw error;show('Msimbo mpya umetumwa kwa SMS.')}catch(err){show(err.message||'Msimbo haujatumwa tena. Subiri kidogo kisha jaribu.',true)}finally{send.disabled=false}return}if(!form.reportValidity())return;const d=new FormData(form);phone=normalize(d.get('phone'));password=String(d.get('password'));fullName=String(d.get('full_name')).trim();if(!phone){show('Andika namba sahihi ya simu ya Tanzania.',true);return}if(password!==String(d.get('password_confirm'))){show('Nenosiri halijathibitishwa.',true);return}send.disabled=true;try{const{data,error}=await supabase.auth.signUp({phone,password,options:{data:{full_name:fullName,phone:phone.replace('+','')},channel:'sms'}});if(error)throw error;if(data.user?.phone_confirmed_at){show('Namba hii tayari imethibitishwa. Ingia kwenye Member Portal.');send.hidden=true;return}waiting=true;code.hidden=false;verify.hidden=false;send.textContent='Tuma tena msimbo';show('Msimbo wa uthibitisho umetumwa. Ingiza msimbo uliopokea kwa SMS.')}catch(err){show(/phone.*disabled|sms.*provider|not configured|provider/i.test(err.message||'')?'Uthibitishaji wa SMS haujawezeshwa kwenye Supabase bado. Wasiliana na Msimamizi wa Mfumo.':err.message||'Ombi halijakamilika. Jaribu tena.',true)}finally{send.disabled=false}});
+    verify.addEventListener('click',async()=>{const token=String(new FormData(form).get('otp')||'').trim();if(!/^\d{6}$/.test(token)){show('Andika msimbo wa tarakimu 6.',true);return}verify.disabled=true;try{const{error}=await supabase.auth.verifyOtp({phone,token,type:'sms'});if(error)throw error;show('Simu imethibitishwa. Sasa utaomba kuunganisha akaunti na rekodi ya Parokia.');location.replace('parish/index.html#/member-link')}catch(err){show(err.message||'Msimbo si sahihi au muda wake umeisha.',true)}finally{verify.disabled=false}});
+  })();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 // Public self-registration for ordinary parish members. Secrets stay server-side.
 const crypto = require('node:crypto');
-const { provider, sendChunk } = require('./_sms-provider');
+const { provider } = require('./_sms-provider');
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gyntomzlvmwiywtsdoth.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const RELATIONSHIPS = new Set(['BABA','MAMA','MTOTO','MJUKUU','BIBI','BABU','KAKA','DADA','MJOMBA','SHANGAZI','MWINGINE']);
@@ -12,7 +12,6 @@ const normalizePhone = value => {
   return /^\d{10,15}$/.test(d) ? d : null;
 };
 const hash = value => crypto.createHmac('sha256', SERVICE_KEY).update(String(value)).digest('hex');
-const temporaryPassword = () => crypto.randomBytes(18).toString('base64url');
 const apiHeaders = () => ({ 'Content-Type': 'application/json', apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` });
 const json = (res, status, data) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
 
@@ -58,18 +57,18 @@ module.exports = async (req, res) => {
 
   const members = [];
   const phones = new Set();
-  for (const raw of body.members) {
+  for (const [index, raw] of body.members.entries()) {
     const full_name = String(raw?.full_name || '').trim().slice(0, 120);
-    const phone = normalizePhone(raw?.phone);
+    const phone = String(raw?.phone || '').trim() ? normalizePhone(raw.phone) : null;
     const gender = ['male','female'].includes(raw?.gender) ? raw.gender : null;
     const relationship = String(raw?.relationship || '').trim().toUpperCase();
     const age = Number(raw?.age);
     const birth_year = new Date().getFullYear() - age;
-    if (!full_name || !phone || !RELATIONSHIPS.has(relationship) || !Number.isInteger(age) || age < 0 || age > 120) {
-      return json(res, 400, { error: 'Kwa kila mtu jaza jina, simu sahihi, umri na uhusiano wake.' });
+    if (!full_name || (index === 0 && !phone) || (String(raw?.phone || '').trim() && !phone) || !RELATIONSHIPS.has(relationship) || !Number.isInteger(age) || age < 0 || age > 120) {
+      return json(res, 400, { error: 'Kwa mtu wa kwanza jaza simu ya mawasiliano; kwa kila mwanafamilia jaza jina, umri na uhusiano sahihi.' });
     }
-    if (phones.has(phone)) return json(res, 400, { error: 'Kila muumini lazima awe na namba yake ya simu tofauti.' });
-    phones.add(phone);
+    if (phone && phones.has(phone)) return json(res, 400, { error: 'Namba za simu zilizowekwa lazima ziwe tofauti.' });
+    if (phone) phones.add(phone);
     members.push({ full_name, phone, gender, age, birth_year, relationship });
   }
   if (!familyId && (headIndex < 0 || headIndex >= members.length)) return json(res, 400, { error: 'Chagua mkuu wa familia kwenye orodha.' });
@@ -77,23 +76,19 @@ module.exports = async (req, res) => {
 
   const ipHash = hash(clientIp(req));
   try {
-    for (const member of members) {
-      const allowed = await serviceRpc('consume_registration_attempt', { p_phone_hash: hash(member.phone), p_ip_hash: ipHash });
-      if (!allowed) return json(res, 429, { error: 'Usajili umefikia kikomo cha majaribio kwa sasa. Jaribu tena baada ya muda.' });
-    }
+    const allowed = await serviceRpc('consume_registration_attempt', { p_phone_hash: hash(members[0].phone), p_ip_hash: ipHash });
+    if (!allowed) return json(res, 429, { error: 'Usajili umefikia kikomo cha majaribio kwa sasa. Jaribu tena baada ya muda.' });
   } catch (e) {
     return json(res, 503, { error: 'Huduma ya usajili haipatikani kwa sasa.' });
   }
 
-  const created = members.map(member => ({ member, password: temporaryPassword() }));
-
   let result;
   try {
-    result = await serviceRpc('register_member_family', { p: {
-      kigango_id: kigangoId, jumuiya_id: jumuiyaId, family_id: familyId,
+    result = await serviceRpc('submit_public_family_request', { p: {
+      kigango_id: kigangoId, jumuiya_id: jumuiyaId, family_id: familyId, contact_name: members[0].full_name, contact_phone: members[0].phone,
       new_family_name: familyId ? null : newFamilyName, head_index: familyId ? null : headIndex,
-      members: created.map(x => ({ full_name: x.member.full_name, phone: x.member.phone, password: x.password,
-        gender: x.member.gender, birth_year: x.member.birth_year, relationship: x.member.relationship })),
+      members: members.map(x => ({ full_name: x.full_name, phone: x.phone, gender: x.gender,
+        birth_year: x.birth_year, relationship: x.relationship })),
     } });
   } catch (e) {
     const message = String(e.message || '');
@@ -106,15 +101,5 @@ module.exports = async (req, res) => {
     return json(res, 400, { error: friendly });
   }
 
-  const deliveries = await Promise.all(created.map(async ({ member, password }) => {
-    if (!prov) return { name: member.full_name, sent: false };
-    const text = `Mfumo wa Parokia: Akaunti yako iko tayari. Namba ya kuingia: +${member.phone}. Nenosiri la muda: ${password}. Badilisha nenosiri baada ya kuingia.`;
-    try {
-      const sent = await sendChunk(prov, text, [member.phone]);
-      return { name: member.full_name, sent: !!sent.ok };
-    } catch { return { name: member.full_name, sent: false }; }
-  }));
-  const sent = deliveries.filter(x => x.sent).length;
-  return json(res, 200, { ok: true, family_id: result.family_id, members: result.members, sms_sent: sent,
-    sms_total: created.length, sms_configured: !!prov, sms_failed_names: deliveries.filter(x => !x.sent).map(x => x.name), provider: prov?.label || null, sender: prov?.sender || null });
+  return json(res, 200, { ok: true, request_id: result, status: 'pending_review' });
 };
