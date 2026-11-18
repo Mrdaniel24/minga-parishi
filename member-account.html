@@ -9,16 +9,19 @@
   <style>
     body.member-account{min-height:100vh;background:var(--brand-mint);color:var(--brand-emerald);font-family:Inter,Arial,sans-serif;display:grid;place-items:center;padding:1rem}
     .member-account__card{width:min(100%,540px);padding:clamp(1.25rem,5vw,2.5rem);border:1px solid rgba(0,63,50,.15);border-radius:1.4rem;background:#f3f8f5;box-shadow:0 24px 70px rgba(0,63,50,.14)}
-    .member-account__brand{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;font-weight:750}.member-account__brand span{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(245,190,34,.24);color:var(--brand-emerald)}
+    .member-account__brand{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;font-weight:750}.member-account__brand>.material-symbols-outlined{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:rgba(245,190,34,.24);color:var(--brand-emerald)}
     .member-account__card h1{margin:0;font-size:clamp(1.5rem,5vw,2rem);line-height:1.15}.member-account__card>p{color:rgba(0,63,50,.75);line-height:1.55}
+    .member-account__registration{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;padding:.9rem 1rem;border:1px solid rgba(245,190,34,.7);border-radius:.9rem;background:rgba(245,190,34,.17);line-height:1.4}.member-account__registration a{color:var(--brand-emerald);font-weight:800;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+    @media(max-width:520px){.member-account__registration{display:grid;gap:.45rem}.member-account__registration a{white-space:normal}}
     .member-account__form{display:grid;gap:.9rem;margin-top:1.3rem}.member-account__form label{display:grid;gap:.35rem;font-weight:650}.member-account__form input{width:100%;min-height:48px;padding:.7rem .8rem;border:1px solid rgba(0,63,50,.22);border-radius:.75rem;background:#fff;color:var(--brand-emerald);font:inherit}.member-account__form button{min-height:50px;border:0;border-radius:.8rem;background:var(--brand-forest);color:var(--brand-mint);font:inherit;font-weight:750;cursor:pointer}.member-account__form button:disabled{opacity:.6}.member-account__message{display:none;margin-top:1rem;padding:.8rem 1rem;border-radius:.7rem;background:rgba(245,190,34,.2);line-height:1.45}.member-account__message.show{display:block}.member-account__message.error{background:rgba(0,63,50,.1)}.member-account__links{margin-top:1.2rem;font-size:.9rem}.member-account__links a{color:var(--brand-forest);font-weight:700}
   </style>
 </head>
 <body class="member-account">
   <main class="member-account__card">
-    <div class="member-account__brand"><span class="material-symbols-outlined">church</span><span>Minga Parishi · Member Portal</span></div>
-    <h1 id="heading">Fungua akaunti yako</h1>
-    <p id="intro">Weka namba yako, jina na nenosiri. Tutatuma msimbo wa SMS kuthibitisha umiliki wa simu. Akaunti hii haikuungi moja kwa moja na familia; Ofisi ya Parokia itakagua rekodi yako kwanza.</p>
+    <div class="member-account__brand"><span class="material-symbols-outlined" aria-hidden="true">church</span><span>Minga Parishi</span></div>
+    <h1 id="heading">Fungua akaunti ya kuingia</h1>
+    <p id="intro">Hii ni akaunti ya kuingia kwa muumini ambaye tayari amesajiliwa. Weka jina, simu na nenosiri; tutatuma msimbo wa SMS kuthibitisha simu yako.</p>
+    <div class="member-account__registration"><span>Unataka kujisajili wewe au familia kwenye parokia?</span><a href="register.html">Anza usajili wa familia <span aria-hidden="true">→</span></a></div>
     <form class="member-account__form" id="account-form">
       <label>Jina kamili<input name="full_name" autocomplete="name" required minlength="3" maxlength="120"></label>
       <label>Namba ya simu<input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="0712 345 678"></label>
@@ -29,7 +32,7 @@
       <button id="verify" type="button" hidden>Thibitisha namba na fungua akaunti</button>
     </form>
     <div class="member-account__message" id="message" role="status"></div>
-    <p class="member-account__links">Akaunti ipo tayari? <a href="login.html">Ingia hapa</a> · <a href="register.html">Omba kujiunga na familia</a></p>
+    <p class="member-account__links">Akaunti ipo tayari? <a href="login.html">Ingia hapa</a></p>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
   <script src="assets/js/config.js"></script><script src="assets/js/supabase-client.js"></script>
