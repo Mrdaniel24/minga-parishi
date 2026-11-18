@@ -82,12 +82,9 @@
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
     if (PM.applyAccess) PM.applyAccess(P.access);
     PM.fillYears && PM.fillYears(P.ref.years.map(y => y.label));
-    // a kigango / jumuiya leader starts on their own community
+    // Scoped leaders land on their role-specific dashboard; members still use
+    // the member portal, and the dashboard shortcuts lead into their own unit.
     if (P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) history.replaceState(null, '', hasMember ? '#/member-home' : '#/member-link');
-    if (!P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) {
-      const u = P.scopeUnit() && P.ref.unitsById[P.scopeUnit()];
-      if (u && (u.unit_type === 'kigango' || u.unit_type === 'jumuiya')) history.replaceState(null, '', `#/${u.unit_type}?id=${u.id}`);
-    }
     window.addEventListener('hashchange', route);
     route();
   };
