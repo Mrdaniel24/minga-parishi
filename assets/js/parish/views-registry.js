@@ -306,6 +306,26 @@
       const totalZaka = P.sum(zakaTx, 'net_amount');
       const byCat = {};
       tx.forEach(t => { const k = `${t.category_name} ${t.campaign_year || t.financial_year}`; byCat[k] = (byCat[k] || 0) + Number(t.net_amount); });
+      if (isMember) {
+        const otherTx = tx.filter(t => String(t.category_code || '').toUpperCase() !== 'ZAKA');
+        const paymentTable = rows => `<div class="pm-mobile-hide">${P.table(rows, [{ key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'category_name', label: 'Mchango' }, { key: 'period_month', label: 'Mwezi wa zaka', fmt: v => v ? v.slice(0, 7) : '—' }, { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'receipt_no', label: 'Risiti', fmt: v => v || '—' }], { empty: 'Bado hakuna malipo yaliyoingizwa hapa.' })}</div>${P.mobileTransactionList(rows.slice(0, 30).map(t => ({ ...t, category_name: String(t.category_code || '').toUpperCase() === 'ZAKA' && t.period_month ? `Zaka · ${t.period_month.slice(0, 7)}` : t.category_name })), 'Bado hakuna malipo yaliyoingizwa hapa.')}${rows.length > 30 ? `<p class="pm-muted pm-small">Inaonyesha malipo 30 ya karibuni kati ya ${P.num(rows.length)}.</p>` : ''}`;
+        const pledgeCards = pl.length ? `<div class="pm-member-pledge-list">${pl.map(p => `<article><div><b>${P.esc(p.campaign_name || 'Ahadi ya mchango')}</b><small>Ahadi ${P.tzs(p.pledged)} · Imelipwa ${P.tzs(p.paid)}</small></div><span><small>Salio</small><b>${P.tzs(p.outstanding)}</b></span></article>`).join('')}</div>` : `<p class="pm-member-finance-empty">Bado hakuna ahadi za michango zilizowekwa kwenye akaunti yako.</p>`;
+        el.innerHTML = `<div class="pm-member-wrap pm-member-finance">
+          <header class="pm-member-finance-head"><div><p class="pm-member-eyebrow">TAARIFA ZANGU</p><h1>Michango yangu</h1><p>Angalia zaka, michango mingine na ahadi zako sehemu moja.</p></div><span class="pm-member-finance-place"><span class="material-symbols-outlined">location_on</span>${P.esc(P.ref.unitsById[who.jumuiya_id]?.label || 'Parokia ya Minga')}</span></header>
+          ${notices}
+          <section class="pm-member-finance-summary" aria-label="Muhtasari wa michango"><article><span class="material-symbols-outlined">volunteer_activism</span><small>Zaka zilizolipwa</small><b>${P.tzs(totalZaka)}</b></article><article><span class="material-symbols-outlined">payments</span><small>Michango mingine</small><b>${P.tzs(P.sum(otherTx, 'net_amount'))}</b></article><article><span class="material-symbols-outlined">pending_actions</span><small>Salio la ahadi</small><b>${P.tzs(totalOutstanding)}</b></article></section>
+          <section class="pm-card pm-member-finance-card"><div class="pm-member-finance-toolbar"><div><h2 class="pm-h3">Taarifa za malipo</h2><p class="pm-muted pm-small">Rekodi zilizowekwa kwa akaunti yako pekee.</p></div><button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div>
+            <div class="pm-member-finance-tabs" role="tablist" aria-label="Chagua aina ya taarifa"><button type="button" role="tab" aria-selected="true" aria-controls="member-finance-zaka" data-finance-tab="zaka">Zaka <span>${P.num(zakaTx.length)}</span></button><button type="button" role="tab" aria-selected="false" aria-controls="member-finance-other" data-finance-tab="other">Michango mingine <span>${P.num(otherTx.length)}</span></button><button type="button" role="tab" aria-selected="false" aria-controls="member-finance-pledges" data-finance-tab="pledges">Ahadi <span>${P.num(pl.length)}</span></button></div>
+            <div id="member-finance-zaka" class="pm-member-finance-panel" role="tabpanel">${paymentTable(zakaTx)}</div><div id="member-finance-other" class="pm-member-finance-panel" role="tabpanel" hidden>${paymentTable(otherTx)}</div><div id="member-finance-pledges" class="pm-member-finance-panel" role="tabpanel" hidden>${pledgeCards}</div>
+          </section>
+        </div>`;
+        el.querySelectorAll('[data-finance-tab]').forEach(tab => tab.addEventListener('click', () => {
+          el.querySelectorAll('[data-finance-tab]').forEach(b => b.setAttribute('aria-selected', String(b === tab)));
+          el.querySelectorAll('.pm-member-finance-panel').forEach(panel => { panel.hidden = panel.id !== tab.getAttribute('aria-controls'); });
+        }));
+        el.querySelector('[data-print]')?.addEventListener('click', () => P.print('Michango yangu'));
+        return;
+      }
       const memberHero = isMember ? `<section class="pm-member-hero"><div class="pm-member-hero__icon"><span class="material-symbols-outlined">waving_hand</span></div>
           <div class="pm-member-hero__copy"><p class="pm-member-eyebrow">AKAUNTI YA MUUMINI</p><h1>Karibu, ${P.esc(name)}</h1>
             <p>Angalia taarifa zako za parokia, michango na ahadi zako sehemu moja.</p></div>
