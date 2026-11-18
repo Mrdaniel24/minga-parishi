@@ -395,8 +395,14 @@
       const foot = { family_name: '<b>JUMLA</b>', members: P.num(P.sum(rows, 'members')), zaka: `<b>${P.num(P.sum(rows, 'zaka'))}</b>`,
         mav_p: P.num(P.sum(rows, 'mav_p')), mav_t: P.num(P.sum(rows, 'mav_t')), mav_b: P.num(P.sum(rows, 'mav_b')),
         uje_p: P.num(P.sum(rows, 'uje_p')), uje_t: P.num(P.sum(rows, 'uje_t')), uje_b: P.num(P.sum(rows, 'uje_b')) };
-      box.innerHTML = `<p class="pm-muted pm-small">${rows.length} familia · ${people.length} waumini. <b>Bonyeza familia</b> kuona wanafamilia na kujaza zaka na michango yao.</p>` +
-        P.table(rows, [
+      box.innerHTML = `<p class="pm-muted pm-small">${rows.length} familia · ${people.length} waumini. <b>Chagua jina la familia</b> kuona wanafamilia na taarifa zao.</p>
+        <div class="pm-mobile-family-list">${rows.map(f => `<article class="pm-mobile-family-row">
+          <div class="pm-mobile-family-row__head"><a class="pm-link" href="#/family?id=${f.family_id}">${P.esc(f.family_name)}</a><span>${P.num(f.members)} watu</span></div>
+          <div class="pm-mobile-family-row__data"><span><small>Zaka ${year}</small><b>${famTx(f.zaka, f, 'zaka')}</b></span>
+            <span><small>Mavuno · imetolewa / salio</small><b>${P.tzs(f.mav_t)} / ${P.tzs(f.mav_b)}</b></span>
+            <span><small>Ujenzi · imetolewa / salio</small><b>${P.tzs(f.uje_t)} / ${P.tzs(f.uje_b)}</b></span></div>
+        </article>`).join('') || '<p class="pm-muted">Jumuiya hii haina familia bado.</p>'}</div>
+        <div class="pm-mobile-hide">${P.table(rows, [
           { key: 'family_code', label: 'Na.' },
           { key: 'family_name', label: 'Familia', html: f => `<a class="pm-link" href="#/family?id=${f.family_id}">${P.esc(f.family_name)}</a>
               <br><small class="pm-muted">${(byFam[f.family_id] || []).map(p => P.esc(p.full_name.split(' ')[0])).join(', ')}</small>` },
@@ -407,7 +413,7 @@
           { key: 'uje_p', label: 'Ujenzi pangiwa', fmt: money, cls: 'pm-num' }, { key: 'uje_t', label: 'Toa', fmt: (v, f) => famTx(v, f, 'ujenzi'), cls: 'pm-num' },
           { key: 'uje_b', label: 'Bado', fmt: v => Number(v) ? `<span class="pm-due">${P.num(v)}</span>` : '—', cls: 'pm-num' },
           { key: 'family_id', label: '', html: f => `<a class="pm-btn pm-btn--sm" href="#/family?id=${f.family_id}">Fungua</a>` }],
-          { foot, empty: 'Jumuiya hii haina familia bado.' });
+          { foot, empty: 'Jumuiya hii haina familia bado.' })}</div>`;
     },
 
     /* zaka: the jumuiya's monthly total (as the workbook records it) and every

@@ -67,6 +67,12 @@ body { color: var(--brand-emerald); }
   background: var(--brand-mint) !important;
 }
 #sidebar .kh-profile__avatar { background: var(--brand-emerald) !important; }
+.mobile-bottom-nav { background: rgba(243, 248, 245, .97) !important; border-color: rgba(0, 63, 50, .14) !important; box-shadow: 0 -4px 24px rgba(0, 63, 50, .09) !important; }
+.mobile-bottom-nav .bottom-nav-item { color: rgba(0, 63, 50, .68) !important; }
+.mobile-bottom-nav .bottom-nav-item:hover, .mobile-bottom-nav .bottom-nav-item.bottom-nav-active { color: var(--brand-forest) !important; background: rgba(0, 92, 64, .07) !important; }
+.mobile-bottom-nav .bottom-nav-item.bottom-nav-active::before { background: var(--brand-gold) !important; }
+.mobile-header .hamburger-btn { background: rgba(243, 248, 245, .14) !important; color: var(--brand-mint) !important; }
+.mobile-header .pm-yearpick { color: var(--brand-emerald) !important; background: var(--brand-gold) !important; }
 .kh-topbar, body > header.sticky, .main-responsive > header.sticky {
   background: rgba(243, 248, 245, .94) !important;
   border-color: rgba(0, 63, 50, .14) !important;

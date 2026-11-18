@@ -5,8 +5,12 @@
   if (!dashboard) return;
   const parishDashboardRender = dashboard.render;
 
-  const leaderRole = () => (P.access.roles || []).find(r =>
-    ['kigango_leader', 'jumuiya_leader'].includes(r.role) && r.org_unit_id);
+  const leaderRole = () => {
+    const roles = P.access.roles || [];
+    if (P.access.platform_admin || roles.some(r => !r.org_unit_id)) return null;
+    const scoped = roles.filter(r => r.org_unit_id);
+    return scoped.length === 1 && ['kigango_leader', 'jumuiya_leader'].includes(scoped[0].role) ? scoped[0] : null;
+  };
 
   dashboard.render = async (el, params) => {
     const role = leaderRole();
@@ -86,11 +90,12 @@
 
         <section class="pm-card pm-leader-section"><div class="pm-row"><h2 class="pm-h3">Miamala ya karibuni</h2>
           <a class="pm-link" href="#/reports?scope=${unit.id}">Ripoti za eneo</a></div>
-          ${P.table(d.recent || [], [
+          <div class="pm-mobile-hide">${P.table(d.recent || [], [
             { key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' },
             { key: 'category_name', label: 'Aina' }, { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' },
             { key: 'receipt_no', label: 'Risiti' },
-          ], { empty: `Bado hakuna miamala ya ${year} kwenye eneo hili.` })}
+          ], { empty: `Bado hakuna miamala ya ${year} kwenye eneo hili.` })}</div>
+          ${P.mobileTransactionList(d.recent || [], `Bado hakuna miamala ya ${year} kwenye eneo hili.`)}
         </section>
       </div>`;
   };

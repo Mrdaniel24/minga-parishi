@@ -178,9 +178,18 @@
         hd.hidden = !show;
       });
       const mobile = document.querySelector('.mobile-bottom-nav');
+      const accountRoles = acc?.roles || [];
+      const hasParishWideRole = !!acc?.platform_admin || accountRoles.some(r => !r.org_unit_id);
+      const scopedLeader = !hasParishWideRole && accountRoles.length === 1
+        ? accountRoles.find(r => ['kigango_leader', 'jumuiya_leader'].includes(r.role) && r.org_unit_id && ['kigango', 'jumuiya'].includes(r.unit_type))
+        : null;
       if (mobile) mobile.innerHTML = memberMode
         ? `<a href="#/member-home" class="bottom-nav-item"><span class="material-symbols-outlined">home</span><span>Nyumbani</span></a><a href="#/member-giving" class="bottom-nav-item"><span class="material-symbols-outlined">volunteer_activism</span><span>Michango</span></a><a href="#/member-family" class="bottom-nav-item"><span class="material-symbols-outlined">family_restroom</span><span>Familia</span></a><a href="#/member-requests" class="bottom-nav-item"><span class="material-symbols-outlined">assignment</span><span>Maombi</span></a>${accCanStaff(acc) ? '<button data-portal-mode-toggle class="bottom-nav-item"><span class="material-symbols-outlined">swap_horiz</span><span>Watumishi</span></button>' : '<button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>'}`
-        : `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Dashibodi</span></a><a href="#/units" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Vigango</span></a><a href="#/payments" class="bottom-nav-item"><span class="material-symbols-outlined">point_of_sale</span><span>Miamala</span></a><a href="#/reports" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`;
+        : scopedLeader?.role === 'jumuiya_leader'
+          ? `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Nyumbani</span></a><a href="#/jumuiya?id=${scopedLeader.org_unit_id}&tab=mahudhurio" class="bottom-nav-item"><span class="material-symbols-outlined">how_to_reg</span><span>Mahudhurio</span></a><a href="#/jumuiya?id=${scopedLeader.org_unit_id}&tab=familia" class="bottom-nav-item"><span class="material-symbols-outlined">family_restroom</span><span>Familia</span></a><a href="#/reports?scope=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`
+          : scopedLeader?.role === 'kigango_leader'
+            ? `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Nyumbani</span></a><a href="#/kigango?id=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Jumuiya</span></a><a href="#/reports?scope=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`
+            : `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Dashibodi</span></a><a href="#/units" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Vigango</span></a><a href="#/payments" class="bottom-nav-item"><span class="material-symbols-outlined">point_of_sale</span><span>Miamala</span></a><a href="#/reports" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`;
       const role = (acc && acc.roles || [])[0];
       const label = memberMode && !acc?.parishioner_id ? 'Unganisha na rejista'
         : memberMode ? 'Muumini'
@@ -211,9 +220,16 @@
     };
     mode.addEventListener('click', switchPortal);
     document.addEventListener('click', e => { if (e.target.closest('[data-portal-mode-toggle]')) switchPortal(); });
-    window.addEventListener('hashchange', () => {
+    const paintMobileNav = () => {
       nav.querySelectorAll('a.nav-item').forEach(el => el.classList.toggle('nav-item-active', isActive(el.getAttribute('href'))));
-    });
+      const route = location.hash || '#/dashboard';
+      document.querySelectorAll('.mobile-bottom-nav a.bottom-nav-item').forEach(el => {
+        const href = el.getAttribute('href') || '';
+        el.classList.toggle('bottom-nav-active', href === route || (!href.includes('?') && href === route.split('?')[0]) || (href.includes('?') && href.split('?')[0] === route.split('?')[0] && new URLSearchParams(href.split('?')[1]).get('tab') === new URLSearchParams(route.split('?')[1] || '').get('tab')));
+      });
+    };
+    paintMobileNav();
+    window.addEventListener('hashchange', paintMobileNav);
 
     const brand = document.createElement('p');
     brand.className = 'kh-sidebar-brand';
