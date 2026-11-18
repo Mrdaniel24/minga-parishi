@@ -55,7 +55,6 @@
     .link { display: inline-block; margin-top: 1.1rem; font-size: .85rem; font-weight: 800; color: var(--primary); background: none; border: 0; cursor: pointer; padding: 0; }
     .help { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); line-height: 1.5; }
     .reset-help { margin: .65rem 0 0; padding: .75rem; border-radius: 12px; background: #f4f8f6; color: var(--muted); font-size: .8rem; line-height: 1.5; }
-    .registration-choice{display:grid;gap:.45rem;margin-top:.85rem;padding:.75rem;border:1px solid rgba(245,190,34,.55);border-radius:12px;background:rgba(245,190,34,.12);font-size:.8rem;line-height:1.4}.registration-choice>a:first-of-type{display:flex;align-items:center;justify-content:center;gap:.45rem;min-height:42px;padding:.55rem .7rem;border-radius:9px;background:var(--gold);color:var(--primary-deep)!important;text-align:center;text-decoration:none;font-weight:900}.registration-choice>a:last-of-type{padding:.2rem;text-align:center;color:var(--primary)!important;font-weight:750}.registration-choice__label{font-weight:800;color:var(--primary-deep)}
     button[type=submit]:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(44,64,59,.2); }
     button[type=submit] { transition: background .2s, transform .2s, box-shadow .2s; }
     @media (prefers-reduced-motion: reduce) {
@@ -105,11 +104,6 @@
       <div class="login-card__mark"><span class="material-symbols-outlined">church</span></div>
       <h2 id="title">Karibu Tena</h2>
       <p class="sub" id="sub">Ingia kwa namba ya simu na nenosiri.</p>
-      <div class="registration-choice" aria-label="Usajili wa muumini na familia">
-        <span class="registration-choice__label">Hujasajiliwa bado?</span>
-        <a href="register.html"><span class="material-symbols-outlined" aria-hidden="true">person_add</span>Jisajili wewe au familia</a>
-        <a href="member-account.html">Tayari umesajiliwa? Fungua akaunti ya kuingia</a>
-      </div>
       <div class="msg" id="msg" role="alert"></div>
       <label>Namba ya simu
         <span class="field"><span class="material-symbols-outlined">smartphone</span>
@@ -124,6 +118,7 @@
       <button type="button" class="link" id="forgot" aria-expanded="false" aria-controls="reset-help">Umesahau nenosiri?</button>
       <p class="reset-help" id="reset-help" hidden>Kwa usalama wa akaunti, wasiliana na Msimamizi wa Mfumo akupe nenosiri jipya. Hakuna kiungo cha barua pepe kinachotumika.</p>
       <p class="help">Unahitaji msaada? Wasiliana na msimamizi wa parokia.</p>
+      <p class="help" style="margin-top:.5rem;padding-top:.75rem">Huna akaunti? <a href="register.html" style="color:var(--primary);font-weight:800">Register</a></p>
     </form>
     </section>
     <footer class="login-credit" aria-label="Taarifa za mtengenezaji">
