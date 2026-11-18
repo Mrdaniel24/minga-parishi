@@ -302,6 +302,8 @@
       const tx = [...tx0, ...ftx].sort((a, b) => String(b.txn_date).localeCompare(String(a.txn_date)));
       const pl = [...pl0, ...fpl];
       const totalPaid = P.sum(tx, 'net_amount'), totalPledged = P.sum(pl, 'pledged'), totalOutstanding = P.sum(pl, 'outstanding');
+      const zakaTx = isMember ? tx.filter(t => String(t.category_code || '').toUpperCase() === 'ZAKA') : [];
+      const totalZaka = P.sum(zakaTx, 'net_amount');
       const byCat = {};
       tx.forEach(t => { const k = `${t.category_name} ${t.campaign_year || t.financial_year}`; byCat[k] = (byCat[k] || 0) + Number(t.net_amount); });
       const memberHero = isMember ? `<section class="pm-member-hero"><div class="pm-member-hero__icon"><span class="material-symbols-outlined">waving_hand</span></div>
@@ -320,6 +322,7 @@
         <div class="pm-actions">${P.selfOnly && P.selfOnly() ? '' : '<button class="pm-btn" onclick="history.back()">Rudi</button>'}<button class="pm-btn" data-print>Chapa</button></div></div>
         ${notices}
         ${isMember ? memberHero + memberInfo : P.reportHeader('Taarifa ya michango', name)}
+        ${isMember ? `<section class="pm-card pm-pad"><div class="pm-row"><div><h2 class="pm-h3">Zaka Yangu</h2><p class="pm-muted pm-small">Taarifa za zaka zilizorekodiwa kwa akaunti yako pekee.</p></div><b class="pm-num">${P.tzs(totalZaka)}</b></div><div class="pm-mobile-hide">${P.table(zakaTx, [{ key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'period_month', label: 'Mwezi wa zaka', fmt: v => v ? v.slice(0, 7) : '—' }, { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'receipt_no', label: 'Risiti' }], { empty: 'Bado hakuna malipo ya zaka yaliyoingizwa kwenye akaunti yako.' })}</div>${P.mobileTransactionList(zakaTx.slice(0, 20).map(t => ({ ...t, category_name: t.period_month ? `Zaka · ${t.period_month.slice(0, 7)}` : 'Zaka' })), 'Bado hakuna malipo ya zaka yaliyoingizwa kwenye akaunti yako.')}${zakaTx.length > 20 ? `<p class="pm-muted pm-small">Inaonyesha malipo 20 ya karibuni kati ya ${P.num(zakaTx.length)}.</p>` : ''}</section>` : ''}
         <section class="pm-card"><h3 class="pm-h3">Ahadi</h3><div class="pm-mobile-hide">${P.table(pl, [{ key: 'campaign_name', label: 'Kampeni' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
           { key: 'paid', label: 'Amelipa', fmt: P.tzs, cls: 'pm-num' }, { key: 'outstanding', label: 'Deni', fmt: P.tzs, cls: 'pm-num pm-strong' },
           { key: 'excess', label: 'Ziada', fmt: v => Number(v) ? P.tzs(v) : '—', cls: 'pm-num' }, { key: 'completion_pct', label: '%', fmt: P.pct }], { empty: isMember ? 'Bado hakuna ahadi zilizowekwa.' : 'Hakuna ahadi.' })}</div><div class="pm-mobile-records">${pl.length ? pl.slice(0, 12).map(p => `<article class="pm-mobile-record"><strong>${P.esc(p.campaign_name || 'Ahadi')}</strong><div class="pm-mobile-record__top"><span>Ahadi ${P.tzs(p.pledged)} · Imelipwa ${P.tzs(p.paid)}</span><b>Bado ${P.tzs(p.outstanding)}</b></div></article>`).join('') : `<p class="pm-muted pm-small">${isMember ? 'Bado hakuna ahadi zilizowekwa.' : 'Hakuna ahadi.'}</p>`}</div></section>
