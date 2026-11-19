@@ -183,13 +183,13 @@
   V.comms = {
     title: 'Matangazo na SMS', perm: 'comms.send',
     async render(el, params) {
-      const tab = params.tab === 'sms' ? 'sms' : 'matangazo';
+      const tab = params.tab === 'matangazo' ? 'matangazo' : 'sms';
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Matangazo na SMS</h1>
           <p class="pm-muted">Tangazo linaonekana kwenye ukurasa wa kwanza wa watumiaji uliowachagua. SMS zinakwenda kwenye namba za simu zilizo kwenye rejista.</p></div>
         <div class="pm-actions">${tab === 'sms' ? '<button class="pm-btn pm-btn--primary" data-new><span class="material-symbols-outlined">sms</span>SMS mpya</button>'
           : '<button class="pm-btn pm-btn--primary" data-new><span class="material-symbols-outlined">campaign</span>Tangazo jipya</button>'}</div></div>
-        <nav class="pm-tabs"><a href="#/comms?tab=matangazo" class="${tab === 'matangazo' ? 'is-active' : ''}"><span class="material-symbols-outlined">campaign</span>Matangazo</a>
-          <a href="#/comms?tab=sms" class="${tab === 'sms' ? 'is-active' : ''}"><span class="material-symbols-outlined">sms</span>SMS kwa wingi</a></nav>
+        <nav class="pm-tabs"><a href="#/comms?tab=sms" class="${tab === 'sms' ? 'is-active' : ''}"><span class="material-symbols-outlined">sms</span>SMS za Zaka</a>
+          <a href="#/comms?tab=matangazo" class="${tab === 'matangazo' ? 'is-active' : ''}"><span class="material-symbols-outlined">campaign</span>Matangazo</a></nav>
         <div data-tab>${P.loading()}</div>`;
       const box = el.querySelector('[data-tab]');
       if (tab === 'matangazo') return announcementsTab(el, box);
@@ -246,7 +246,11 @@
       P.q(P.from('sms_messages').select('*').order('created_at', { ascending: false }).limit(200)),
       fetch(new URL('../api/sms', location.href), { method: 'GET' }).then(r => r.ok ? r.json() : { configured: false }).catch(() => ({ configured: false })),
     ]);
-    box.innerHTML = `${cfg.configured ? `<div class="pm-alert pm-alert--info">SMS zinatumwa kupitia ${P.esc(cfg.provider || 'mtoa huduma')}${cfg.sender ? ` kwa jina "${P.esc(cfg.sender)}"` : ''}.</div>`
+    box.innerHTML = `<section class="pm-card pm-zaka-sms"><div class="pm-zaka-sms-head"><div><h2>Zaka kwa mwezi</h2><p class="pm-muted">Chagua mwezi kuona walipa zaka na ambao hawajalipa, kwa kigango na jumuiya.</p></div>
+        <div class="pm-zaka-sms-period"><label>Mwaka<select data-zaka-year>${[P.thisYear() + 1, P.thisYear(), P.thisYear() - 1, P.thisYear() - 2].map(y => `<option ${y === P.year() ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+        <label>Mwezi<select data-zaka-month>${P.MONTHS.map((mn, i) => `<option value="${i + 1}" ${i + 1 === new Date().getMonth() + 1 ? 'selected' : ''}>${mn}</option>`).join('')}</select></label></div></div>
+        <div class="pm-zaka-sms-roster" data-zaka-roster><p class="pm-muted">Inapakia taarifa za Zaka…</p></div></section>
+      ${cfg.configured ? `<div class="pm-alert pm-alert--info">SMS zinatumwa kupitia ${P.esc(cfg.provider || 'mtoa huduma')}${cfg.sender ? ` kwa jina "${P.esc(cfg.sender)}"` : ''}.</div>`
         : `<div class="pm-alert pm-alert--warn">Mtoa huduma wa SMS bado hajawekwa kwenye server (mf. Beem Africa au NextSMS — inahitaji akaunti ya kulipia na Sender ID).
            Hadi atakapowekwa, unaweza kuandaa ujumbe hapa na <b>kupakua namba</b> (Excel) ili kutuma kwa simu au kwa huduma nyingine.</div>`}
       <section class="pm-card">${P.table(rows, [
@@ -272,15 +276,40 @@
       });
       Toast.success(`SMS zimetumwa kwa namba ${r.sent || ''}.`); P.refresh();
     };
+    let smsPrefill = null;
+    const loadZakaRoster = async () => {
+      const target = box.querySelector('[data-zaka-roster]');
+      if (!target) return;
+      const year = Number(box.querySelector('[data-zaka-year]').value), month = Number(box.querySelector('[data-zaka-month]').value);
+      target.innerHTML = '<p class="pm-muted">Inapakia…</p>';
+      try {
+        const units = await P.rpc('sms_zaka_roster', { p_year: year, p_month: month });
+        const groups = (units || []).filter(u => u.unit_type === 'kigango');
+        target.innerHTML = groups.length ? groups.map(k => {
+          const children = (units || []).filter(u => u.unit_type === 'jumuiya' && u.parent_id === k.unit_id);
+          const actions = (u, label='') => `<div class="pm-zaka-sms-actions"><span>${P.esc(label)}</span><button type="button" data-zaka-send="zaka_paid" data-unit="${u.unit_id}" aria-label="Tuma kwa waliolipa ${P.esc(label)}">Waliolipa <b>${P.num(u.paid_count)}</b></button><button type="button" data-zaka-send="zaka_unpaid" data-unit="${u.unit_id}" aria-label="Tuma kwa ambao hawajalipa ${P.esc(label)}">Hawajalipa <b>${P.num(u.unpaid_count)}</b></button></div>`;
+          return `<article class="pm-zaka-sms-unit"><div class="pm-zaka-sms-kigango"><b>Kigango cha ${P.esc(k.unit_name)}</b>${actions(k, '')}</div>${children.map(j => `<div class="pm-zaka-sms-jumuiya">${actions(j, j.unit_name)}</div>`).join('')}</article>`;
+        }).join('') : '<p class="pm-muted">Hakuna vigango vya kuonyesha.</p>';
+      } catch (e) { target.innerHTML = `<div class="pm-alert pm-alert--warn">${P.esc(P.friendlyError(e))}</div>`; }
+    };
+    box.querySelectorAll('[data-zaka-year], [data-zaka-month]').forEach(s => s.addEventListener('change', loadZakaRoster));
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-zaka-send]'); if (!b) return;
+      smsPrefill = { audience: b.dataset.zakaSend, unit_id: b.dataset.unit,
+        year: Number(box.querySelector('[data-zaka-year]').value), month: Number(box.querySelector('[data-zaka-month]').value) };
+      el.querySelector('[data-new]').click();
+    });
+    loadZakaRoster();
     el.querySelector('[data-new]').addEventListener('click', async () => {
+      const prefill = smsPrefill; smsPrefill = null;
       let units = [];
-      const defaultFor = audience => audience.startsWith('zaka_') || audience === 'zaka_payers' ? 'zaka_year' : audience === 'units' ? 'unit' : 'general';
+      const defaultFor = audience => audience.startsWith('zaka_') || audience === 'zaka_payers' ? 'zaka_month' : audience === 'units' ? 'unit' : 'general';
       const v = await P.modal({ title: 'SMS mpya', submit: cfg.configured ? 'Andaa na Tuma' : 'Andaa', wide: true, body: `<div class="pm-form">
-          <label class="pm-span2">Kwa nani<select name="audience">${Object.entries(AUD_SMS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+          <label class="pm-span2">Kwa nani<select name="audience">${Object.entries(AUD_SMS).map(([k, l]) => `<option value="${k}" ${(prefill?.audience ? prefill.audience === k : k === 'zaka_unpaid') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
           ${unitPicker([])}
           <label class="pm-span2 pm-relall" data-zakaonly hidden><input type="checkbox" name="zaka_only" value="1"> Walipa zaka tu kwenye maeneo hayo</label>
-          <label>Mwaka wa taarifa<select name="zaka_year">${[P.thisYear() + 1, P.thisYear(), P.thisYear() - 1, P.thisYear() - 2].map(y => `<option ${y === P.year() ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
-          <label>Mwezi wa taarifa<select name="zaka_month"><option value="">Mwaka mzima</option>${P.MONTHS.map((mn, i) => `<option value="${i + 1}">${mn}</option>`).join('')}</select></label>
+          <label>Mwaka wa taarifa<select name="zaka_year">${[P.thisYear() + 1, P.thisYear(), P.thisYear() - 1, P.thisYear() - 2].map(y => `<option ${y === (prefill?.year || P.year()) ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+          <label>Mwezi wa taarifa<select name="zaka_month"><option value="">Mwaka mzima</option>${P.MONTHS.map((mn, i) => `<option value="${i + 1}" ${i + 1 === (prefill?.month || 0) ? 'selected' : ''}>${mn}</option>`).join('')}</select></label>
           <p class="pm-span2 pm-muted pm-small">Mwaka na mwezi huchagua taarifa zitakazoingizwa kwenye tokeni za Zaka. Kwa “Waliolipa/Hawajalipa”, pia hutumika kuchuja wapokeaji.</p>
           <label class="pm-span2">Chagua template<select name="template_kind"><option value="general">Ujumbe wa kawaida</option><option value="unit">Taarifa ya Jumuiya/Kigango</option><option value="zaka_month">Taarifa ya Zaka ya mwezi</option><option value="zaka_year">Muhtasari wa Zaka wa mwaka</option><option value="custom">Ujumbe wangu mwenyewe</option></select></label>
           <label class="pm-span2">Ujumbe / template<textarea name="body" required rows="5" maxlength="918"></textarea>
@@ -332,19 +361,22 @@
             } catch (e) { out.textContent = P.friendlyError(e); preview.textContent = 'Mfano haupatikani kwa sasa.'; previewMeta.textContent = ''; }
           }, 250); };
           const sync = () => {
-            u.hidden = s.value !== 'units'; z.hidden = s.value !== 'units';
+            u.hidden = !['units','zaka_paid','zaka_unpaid'].includes(s.value); z.hidden = s.value !== 'units';
             if (!edited) setTemplate(defaultFor(s.value));
             refresh();
           };
+          if (prefill?.unit_id) { const unit = m.querySelector(`input[name=u][value="${prefill.unit_id}"]`); if (unit) { unit.checked = true; units = pickedUnits(m); } }
+          if (['zaka_paid','zaka_unpaid','zaka_payers'].includes(s.value) && !m.querySelector('[name=zaka_month]').value)
+            m.querySelector('[name=zaka_month]').value = String(new Date().getMonth() + 1);
           setTemplate(defaultFor(s.value));
           s.addEventListener('change', sync);
           m.addEventListener('change', e => { if (['u', 'zaka_only', 'zaka_year', 'zaka_month'].includes(e.target.name)) refresh(); });
           sync();
         } });
       if (!v) return;
-      if (v.audience === 'units' && !units.length) { Toast.error('Chagua angalau kigango au jumuiya moja.'); return; }
+      if (['units','zaka_paid','zaka_unpaid'].includes(v.audience) && !units.length) { Toast.error('Chagua angalau kigango au jumuiya moja ili kubainisha eneo la ujumbe.'); return; }
       const zk = { zaka_year: Number(v.zaka_year), zaka_month: v.zaka_month ? Number(v.zaka_month) : null };
-      const r = await P.rpc('sms_create', { p: { body: v.body, audience: v.audience, unit_ids: v.audience === 'units' ? units : [], zaka_only: !!v.zaka_only, ...zk } });
+      const r = await P.rpc('sms_create', { p: { body: v.body, audience: v.audience, unit_ids: ['units','zaka_paid','zaka_unpaid'].includes(v.audience) ? units : [], zaka_only: !!v.zaka_only, ...zk } });
       Toast.success(`SMS imeandaliwa kwa namba ${r.recipients}.`);
       if (cfg.configured && await P.confirm('Tuma sasa?', `Ujumbe utatumwa kwa namba ${r.recipients}. Gharama ya SMS inalipwa kwa mtoa huduma.`, 'Tuma')) {
         try { await send(r.id, null); } catch (e) { /* shown by P.busy */ P.refresh(); }
