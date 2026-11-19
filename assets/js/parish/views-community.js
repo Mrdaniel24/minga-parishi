@@ -333,7 +333,7 @@
           ${prefill ? `<input type="hidden" name="audience" value="${prefill.audience}"><div class="pm-span2 pm-sms-fixed-audience"><small>Wapokeaji</small><b>${P.esc(AUD_SMS[prefill.audience])}</b><span>${P.esc(prefill.unit_label)} · ${P.esc(P.MONTHS[prefill.month - 1])} ${prefill.year}</span></div>`
             : `<label class="pm-span2">Kwa nani<select name="audience">${Object.entries(AUD_SMS).map(([k, l]) => `<option value="${k}" ${k === 'zaka_unpaid' ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}
           ${prefill?.unit_id ? `<input type="hidden" name="zaka_scope" value="${prefill.unit_id}">` : unitPicker([])}
-          <label class="pm-span2 pm-relall" data-zakaonly hidden><input type="checkbox" name="zaka_only" value="1"> Walipa zaka tu kwenye maeneo hayo</label>
+          ${prefill ? '' : '<label class="pm-span2 pm-relall" data-zakaonly hidden><input type="checkbox" name="zaka_only" value="1"> Walipa zaka tu kwenye maeneo hayo</label>'}
           ${prefill ? `<input type="hidden" name="zaka_year" value="${prefill.year}"><input type="hidden" name="zaka_month" value="${prefill.month}">`
             : `<label>Mwaka wa taarifa<select name="zaka_year">${[P.thisYear() + 1, P.thisYear(), P.thisYear() - 1, P.thisYear() - 2].map(y => `<option ${y === P.year() ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
           <label>Mwezi wa taarifa<select name="zaka_month"><option value="">Mwaka mzima</option>${P.MONTHS.map((mn, i) => `<option value="${i + 1}">${mn}</option>`).join('')}</select></label>
@@ -380,7 +380,7 @@
             if (!prefill?.unit_id) units = pickedUnits(m);
             try {
               const r = await P.rpc('sms_preview', { p: { body: ta.value, audience: s.value, unit_ids: units,
-                zaka_only: m.querySelector('[name=zaka_only]').checked, zaka_year: Number(m.querySelector('[name=zaka_year]').value),
+                zaka_only: !!m.querySelector('[name=zaka_only]:checked'), zaka_year: Number(m.querySelector('[name=zaka_year]').value),
                 zaka_month: m.querySelector('[name=zaka_month]').value ? Number(m.querySelector('[name=zaka_month]').value) : null, ...when() } });
               out.innerHTML = `Ujumbe utaandaliwa kwa namba <b>${P.num(r.recipients)}</b> (kila namba mara moja). Waumini ${P.num(r.without_phone)} hawana simu kwenye rejista.`;
               preview.textContent = r.sample?.body || (r.recipients ? 'Andika ujumbe ili kuona mfano.' : 'Hakuna mpokeaji wa kuonyesha.');
@@ -389,7 +389,7 @@
           }, 250); };
           const sync = () => {
             if (u) u.hidden = !['units','zaka_paid','zaka_unpaid'].includes(s.value);
-            z.hidden = s.value !== 'units';
+            if (z) z.hidden = s.value !== 'units';
             if (!edited) setTemplate(defaultFor(s.value));
             refresh();
           };
