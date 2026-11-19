@@ -27,4 +27,15 @@ async function sendChunk(prov, text, phones) {
   return { ok: res.ok, status: res.status, body };
 }
 
-module.exports = { provider, sendChunk };
+async function sendPersonalizedChunk(prov, messages) {
+  if (!messages.length) return { ok: true, status: 200, body: {} };
+  if (prov.name !== 'nextsms') return { ok: false, status: 400, error: 'Mtoa huduma huyu hatumii batch ya ujumbe binafsi.' };
+  const res = await fetch('https://messaging-service.co.tz/api/sms/v1/text/multi', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: basic(process.env.NEXTSMS_USERNAME, process.env.NEXTSMS_PASSWORD) },
+    body: JSON.stringify({ messages: messages.map(({ phone, text }) => ({ from: prov.sender, to: phone, text })) }),
+  });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body };
+}
+
+module.exports = { provider, sendChunk, sendPersonalizedChunk };

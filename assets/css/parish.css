@@ -397,3 +397,12 @@ body { font-family: 'Montserrat', sans-serif !important; line-height: 1.5; }
 .pm-form .pm-att__opt input { width: auto; margin: 0; }
 .pm-form .pm-unitpick label { flex-direction: row; align-items: center; gap: .35rem; }
 .pm-form .pm-unitpick input { width: auto; }
+.pm-sms-token-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .35rem; max-height: 220px; overflow: auto; margin-top: .4rem; padding: .45rem; border: 1px solid var(--pm-line); border-radius: .7rem; background: var(--brand-mint, #f3f8f5); }
+.pm-sms-token-menu[hidden] { display: none; }
+.pm-sms-token-menu button { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .45rem .6rem; border: 1px solid var(--pm-line); border-radius: .5rem; color: var(--pm-ink); background: var(--pm-card); text-align: left; cursor: pointer; }
+.pm-sms-token-menu button:hover, .pm-sms-token-menu button:focus-visible { border-color: var(--brand-gold); outline: 2px solid var(--brand-gold); }
+.pm-sms-token-menu small { color: var(--pm-muted); font-size: .75rem; }
+.pm-sms-preview { margin: 0; padding: .85rem 1rem; border: 1px solid var(--pm-line); border-left: 4px solid var(--brand-gold); border-radius: .75rem; background: var(--brand-mint, #f3f8f5); }
+.pm-sms-preview h4 { margin: 0 0 .45rem; color: var(--brand-emerald); font-size: .9rem; }
+.pm-sms-preview p { margin: 0 0 .45rem; color: var(--brand-emerald); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pm-sms-preview small { color: var(--pm-muted); }

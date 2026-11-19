@@ -1,5 +1,5 @@
 // Minga Parish — bulk SMS through the parish's configured SMS provider.
-const { provider, sendChunk } = require('./_sms-provider');
+const { provider, sendChunk, sendPersonalizedChunk } = require('./_sms-provider');
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gyntomzlvmwiywtsdoth.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5bnRvbXpsdm13aXl3dHNkb3RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMTAwMDEsImV4cCI6MjEwNzY4NjAwMX0.8FYHk8TCEMVK8rlLYUfc2eupffc46s9eP69zvbUkAwY';
 
@@ -30,11 +30,35 @@ module.exports = async (req, res) => {
   catch (e) { return send(e.status || 400, { error: e.message }); }
   const results = [];
   let ok = true;
+  const groups = Array.isArray(msg.messages) && msg.messages.length
+    ? msg.messages
+    : [{ body: msg.body, phones: msg.phones || [] }];
   try {
-    for (let i = 0; i < msg.phones.length; i += 500) {
-      const r = await sendChunk(prov, msg.body, msg.phones.slice(i, i + 500));
-      results.push(r);
-      if (!r.ok) { ok = false; break; }
+    if (prov.name === 'nextsms' && groups.length > 1) {
+      let batch = [];
+      for (const group of groups) {
+        for (const phone of group.phones || []) {
+          batch.push({ phone, text: group.body || msg.body });
+          if (batch.length === 500) {
+            const r = await sendPersonalizedChunk(prov, batch);
+            results.push(r); batch = [];
+            if (!r.ok) { ok = false; break; }
+          }
+        }
+        if (!ok) break;
+      }
+      if (ok && batch.length) results.push(await sendPersonalizedChunk(prov, batch));
+      if (results.some(r => !r.ok)) ok = false;
+    } else {
+      for (const group of groups) {
+        const phones = group.phones || [];
+        for (let i = 0; i < phones.length; i += 500) {
+          const r = await sendChunk(prov, group.body || msg.body, phones.slice(i, i + 500));
+          results.push(r);
+          if (!r.ok) { ok = false; break; }
+        }
+        if (!ok) break;
+      }
     }
   } catch (e) {
     ok = false;
@@ -43,5 +67,5 @@ module.exports = async (req, res) => {
   try { await rpc(token, 'sms_finish', { p_id: id, p_ok: ok, p_provider: prov.name, p_result: { chunks: results } }); }
   catch (e) { /* message was sent; status can be checked in the provider account */ }
   if (!ok) return send(502, { error: `Mtoa huduma amekataa: ${JSON.stringify(results[results.length - 1].body || results[results.length - 1].error || '').slice(0, 300)}` });
-  return send(200, { sent: msg.phones.length, provider: prov.label });
+  return send(200, { sent: groups.reduce((n, group) => n + (group.phones || []).length, 0), provider: prov.label });
 };
