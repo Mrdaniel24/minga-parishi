@@ -119,29 +119,28 @@
     a('Maombi Yangu', 'assignment', 'member-requests', 'member', 'member');
     a('Unganisha na rejista', 'link', 'member-link', 'member', 'member');
     a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
-    h('Parokia');
+    h('Kazi za Kila Siku');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
-    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Tafuta Muumini', 'person_search', 'registry', 'registry.read');
-    h('Muhtasari wa parokia nzima');
+    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
+    a('Uhakiki wa malipo', 'fact_check', 'payment-approvals', 'finance.approve');
+    h('Maombi');
+    a('Maombi ya familia', 'fact_check', 'member-requests-office', 'registry.write');
+    h('Fedha na Ripoti');
     a('Michango (vigango vyote)', 'volunteer_activism', 'campaigns', 'finance.read');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
-    h('Ofisi ya Fedha');
-    a('Uhakiki wa malipo', 'fact_check', 'payment-approvals', 'finance.approve');
-    a('Matumizi', 'receipt', 'expenses', 'finance.read');
-
     a('Risiti', 'receipt_long', 'receipts', 'finance.read');
-    h('Mfumo');
-    a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
+    a('Matumizi', 'receipt', 'expenses', 'finance.read');
+    h('Uongozi na Parokia');
     a('Viongozi', 'badge', 'leaders', 'registry.read');
+    a('Muundo wa Parokia', 'lan', 'structure', 'registry.read');
     a('Taarifa za Parokia', 'info', 'parish', '*');
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
+    h('Mipangilio');
     a('Watumiaji na Nafasi', 'admin_panel_settings', 'users', 'users.manage');
     a('Mipangilio ya Fedha', 'settings', 'settings', 'parish.configure');
     a('Wasifu Wangu', 'manage_accounts', 'profile', null);
-    h('Maombi ya Waumini');
-    a('Maombi ya familia', 'fact_check', 'member-requests-office', 'registry.write');
 
     const isActive = href => {
       const route = location.hash || '#/dashboard';
