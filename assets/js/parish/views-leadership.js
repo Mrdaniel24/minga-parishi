@@ -53,19 +53,17 @@
         <h3>Kigango cha ${esc(k.name)}</h3>${roster(k, byUnit(k.id))}${jumuiyaList(k)}
       </section>`).join('');
 
-      const actionLabel = unitId => isRosterComplete(unitId) ? 'Hariri' : 'Weka';
-      const pickRow = (unit, label, detail = '') => `<button type="button" class="pm-leadership-pick" data-target="${unit.id}"><span><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</span><b>${actionLabel(unit.id)}</b></button>`;
-      const pickerMarkup = `${canAssignParish && parish ? pickRow(parish, 'Parokia nzima') : ''}
-        ${scopedUnit?.unit_type === 'jumuiya' ? `<section class="pm-leadership-picker-kigango"><h3>Kigango cha ${esc(P.ref.unitsById[scopedUnit.parent_id]?.name || '')}</h3>${pickRow(scopedUnit, `Jumuiya ya ${scopedUnit.name}`)}</section>` : ''}
-        ${visibleKigangos.map(k => {
+      const unitOptions = [
+        canAssignParish && parish ? `<option value="${parish.id}">Parokia nzima</option>` : '',
+        scopedUnit?.unit_type === 'jumuiya' ? `<optgroup label="Kigango cha ${esc(P.ref.unitsById[scopedUnit.parent_id]?.name || '')}"><option value="${scopedUnit.id}">Jumuiya ya ${esc(scopedUnit.name)}${isRosterComplete(scopedUnit.id) ? ' ✓' : ''}</option></optgroup>` : '',
+        ...visibleKigangos.map(k => {
           const children = visibleJumuiya.filter(j => j.parent_id === k.id);
-          return `<details class="pm-leadership-picker-kigango"><summary><span>Kigango cha ${esc(k.name)}</span><small>${children.length} Jumuiya</small></summary>
-            <div class="pm-leadership-picker-children">${pickRow(k, 'Kigango chenyewe')}${children.map(j => pickRow(j, `Jumuiya ya ${j.name}`)).join('')}</div>
-          </details>`;
-        }).join('')}`;
+          return `<optgroup label="Kigango cha ${esc(k.name)}"><option value="${k.id}">Kigango chenyewe${isRosterComplete(k.id) ? ' ✓' : ''}</option>${children.map(j => `<option value="${j.id}">Jumuiya ya ${esc(j.name)}${isRosterComplete(j.id) ? ' ✓' : ''}</option>`).join('')}</optgroup>`;
+        }),
+      ].join('');
       el.innerHTML = `<div class="pm-head pm-leadership-head"><div><h1 class="pm-h1">Viongozi</h1><p class="pm-muted">Parokia, Vigango na Jumuiya</p></div></div>
         ${canWrite ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Weka viongozi</h2>
-          <div class="pm-leadership-picklist">${pickerMarkup}</div>
+          <label class="pm-leadership-target-label">Eneo la uongozi<select data-target-select><option value="">Chagua eneo</option>${unitOptions}</select></label>
           <div class="pm-leadership-editor" data-editor hidden></div>
         </section>` : ''}
         <section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi waliowekwa</h2><div class="pm-leadership-directory">
@@ -99,12 +97,8 @@
           const [people, roleCodes] = await Promise.all([peopleFor(unit), Promise.resolve(ROLES[unit.unit_type])]);
           if (!people.length) { fields.innerHTML = '<p class="pm-leadership-empty">Hakuna muumini hai aliyepatikana hapa.</p>'; return; }
           const pos = positions.filter(p => roleCodes.some(x => x[0] === p.code));
-          fields.innerHTML = `<div class="pm-form">${roleCodes.map(([code, label]) => {
-            const position = pos.find(x => x.code === code);
-            const currentPerson = byUnit(unit.id).find(r => r.position_id === position?.id)?.parishioner_id;
-            const opts = `<option value="">Chagua muumini</option>${people.map(person => `<option value="${person.id}" ${person.id === currentPerson ? 'selected' : ''}>${esc(person.full_name)}</option>`).join('')}`;
-            return `<label>${esc(label)}<select data-position="${position?.id || ''}">${opts}</select></label>`;
-          }).join('')}</div>`;
+          const opts = `<option value="">Chagua muumini</option>${people.map(p => `<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}`;
+          fields.innerHTML = `<div class="pm-form">${roleCodes.map(([code, label]) => { const p = pos.find(x => x.code === code); return `<label>${esc(label)}<select data-position="${p?.id || ''}">${opts}</select></label>`; }).join('')}</div>`;
           save.disabled = pos.length !== 5;
           save.addEventListener('click', async () => {
             const selects = [...fields.querySelectorAll('select[data-position]')];
@@ -118,7 +112,7 @@
           });
         } catch (err) { fields.innerHTML = `<p class="pm-leadership-empty">${esc(err.message || 'Imeshindikana kupakia waumini.')}</p>`; }
       };
-      el.querySelectorAll('[data-target]').forEach(button => button.addEventListener('click', () => chooseUnit(button.dataset.target)));
+      el.querySelector('[data-target-select]').addEventListener('change', e => chooseUnit(e.target.value));
     },
   };
 
