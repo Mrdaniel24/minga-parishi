@@ -35,20 +35,17 @@
         .sort((a, b) => (a.leadership_positions?.sort_order || 0) - (b.leadership_positions?.sort_order || 0));
       const roster = (unit, entries) => entries.length ? `<div class="pm-leadership-roster">${entries.map(r => `<article class="pm-leadership-person">
         <strong>${esc(r.holder_name || 'Jina halijawekwa')}</strong><span>${esc(r.leadership_positions?.title_sw || 'Kiongozi')}</span><small>${esc(levelName(unit))}</small>
-      </article>`).join('')}</div>` : '<p class="pm-leadership-empty">Hakuna viongozi waliowekwa bado.</p>';
+      </article>`).join('')}</div>` : '';
       const jumuiyaList = kigango => {
-        const children = visibleJumuiya.filter(j => j.parent_id === kigango.id);
-        return children.length ? `<details class="pm-leadership-nested"><summary>Jumuiya <span>${children.length}</span></summary>
-          <div class="pm-leadership-children">${children.map(j => `<details class="pm-leadership-unit pm-leadership-unit--jumuiya">
-            <summary><span>${esc(j.name)}</span><small>${byUnit(j.id).length}/5 viongozi</small></summary>
-            <div class="pm-leadership-unit__body">${roster(j, byUnit(j.id))}</div>
-          </details>`).join('')}</div>
-        </details>` : '';
+        const children = visibleJumuiya.filter(j => j.parent_id === kigango.id && byUnit(j.id).length);
+        return children.length ? `<div class="pm-leadership-children"><h4>Jumuiya zenye viongozi</h4>${children.map(j => `<section class="pm-leadership-jumuiya">
+          <h5>Jumuiya ya ${esc(j.name)}</h5>${roster(j, byUnit(j.id))}
+        </section>`).join('')}</div>` : '';
       };
-      const kigangoList = visibleKigangos.length ? visibleKigangos.map(k => `<details class="pm-leadership-unit">
-        <summary><span>${esc(k.name)}</span><small>${byUnit(k.id).length}/5 viongozi</small></summary>
-        <div class="pm-leadership-unit__body">${roster(k, byUnit(k.id))}${jumuiyaList(k)}</div>
-      </details>`).join('') : '<p class="pm-leadership-empty">Hakuna vigango vilivyopatikana.</p>';
+      const visibleRosterKigangos = visibleKigangos.filter(k => byUnit(k.id).length || visibleJumuiya.some(j => j.parent_id === k.id && byUnit(j.id).length));
+      const kigangoList = visibleRosterKigangos.map(k => `<section class="pm-leadership-kigango">
+        <h3>Kigango cha ${esc(k.name)}</h3>${roster(k, byUnit(k.id))}${jumuiyaList(k)}
+      </section>`).join('');
 
       const unitOptions = [
         canAssignParish && parish ? `<option value="${parish.id}">Parokia nzima</option>` : '',
@@ -63,8 +60,11 @@
           <label class="pm-leadership-target-label">Eneo la uongozi<select data-target-select><option value="">Chagua eneo</option>${unitOptions}</select></label>
           <div class="pm-leadership-editor" data-editor hidden></div>
         </section>` : ''}
-        ${canAssignParish && parish ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi wa Parokia</h2>${roster(parish, byUnit(parish.id))}</section>` : ''}
-        ${scopedUnit?.unit_type === 'jumuiya' ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi wa Jumuiya</h2>${roster(scopedUnit, byUnit(scopedUnit.id))}</section>` : `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Vigango</h2><div class="pm-leadership-directory">${kigangoList}</div></section>`}`;
+        <section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi waliowekwa</h2><div class="pm-leadership-directory">
+          ${canAssignParish && parish && byUnit(parish.id).length ? `<section class="pm-leadership-parish"><h3>Parokia</h3>${roster(parish, byUnit(parish.id))}</section>` : ''}
+          ${scopedUnit?.unit_type === 'jumuiya' && byUnit(scopedUnit.id).length ? `<section class="pm-leadership-jumuiya"><h3>Jumuiya ya ${esc(scopedUnit.name)}</h3>${roster(scopedUnit, byUnit(scopedUnit.id))}</section>` : ''}
+          ${kigangoList || ''}${!byUnit(parish?.id).length && !visibleRosterKigangos.length && !(scopedUnit?.unit_type === 'jumuiya' && byUnit(scopedUnit.id).length) ? '<p class="pm-leadership-empty">Hakuna viongozi waliochaguliwa bado.</p>' : ''}
+        </div></section>`;
 
       if (!canWrite) return;
       const editor = el.querySelector('[data-editor]');
