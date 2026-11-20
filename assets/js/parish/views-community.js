@@ -288,9 +288,10 @@
         const units = await P.rpc('sms_zaka_roster', { p_year: year, p_month: month });
         const groups = (units || []).filter(u => u.unit_type === 'kigango');
       target.innerHTML = groups.length ? groups.map(k => {
-          const children = (units || []).filter(u => u.unit_type === 'jumuiya' && u.parent_id === k.unit_id);
-          const actions = (u, label='') => `<div class="pm-zaka-sms-actions"><span>${P.esc(label)}</span><button type="button" data-zaka-list="zaka_paid" data-unit="${u.unit_id}" data-unit-label="${P.esc(label || 'Kigango cha ' + k.unit_name)}" aria-label="Ona waliolipa ${P.esc(label)}">Waliolipa <b>${P.num(u.paid_count)}</b></button><button type="button" data-zaka-list="zaka_unpaid" data-unit="${u.unit_id}" data-unit-label="${P.esc(label || 'Kigango cha ' + k.unit_name)}" aria-label="Ona ambao hawajalipa ${P.esc(label)}">Hawajalipa <b>${P.num(u.unpaid_count)}</b></button></div>`;
-          return `<article class="pm-zaka-sms-unit"><div class="pm-zaka-sms-kigango"><b>Kigango cha ${P.esc(k.unit_name)}</b>${actions(k, '')}</div>${children.map(j => `<div class="pm-zaka-sms-jumuiya">${actions(j, j.unit_name)}</div>`).join('')}</article>`;
+          const children = (units || []).filter(u => u.unit_type === 'jumuiya' && u.parent_id === k.unit_id && Number(u.paid_count) + Number(u.unpaid_count) > 0);
+          const counts = u => `<span class="pm-zaka-sms-counts"><span>Walio ${P.num(u.paid_count)}</span><span>Hawajalipa ${P.num(u.unpaid_count)}</span></span>`;
+          const actions = (u, label='') => `<div class="pm-zaka-sms-actions"><button type="button" data-zaka-list="zaka_paid" data-unit="${u.unit_id}" data-unit-label="${P.esc(label || 'Kigango cha ' + k.unit_name)}">Walio lipa <b>${P.num(u.paid_count)}</b></button><button type="button" data-zaka-list="zaka_unpaid" data-unit="${u.unit_id}" data-unit-label="${P.esc(label || 'Kigango cha ' + k.unit_name)}">Hawajalipa <b>${P.num(u.unpaid_count)}</b></button></div>`;
+          return `<details class="pm-zaka-sms-unit"><summary class="pm-zaka-sms-kigango"><b>Kigango cha ${P.esc(k.unit_name)}</b>${counts(k)}</summary><div class="pm-zaka-sms-unit-content">${actions(k)}${children.length ? `<div class="pm-zaka-sms-jumuiya-list">${children.map(j => `<details class="pm-zaka-sms-jumuiya"><summary><b>Jumuiya ya ${P.esc(j.unit_name)}</b>${counts(j)}</summary>${actions(j, 'Jumuiya ya ' + j.unit_name)}</details>`).join('')}</div>` : '<p class="pm-muted pm-small">Hakuna Jumuiya zilizosajiliwa hapa.</p>'}</div></details>`;
         }).join('') : '<p class="pm-muted">Hakuna vigango vya kuonyesha.</p>';
       } catch (e) { target.innerHTML = `<div class="pm-alert pm-alert--warn">${P.esc(P.friendlyError(e))}</div>`; }
     };
@@ -310,12 +311,23 @@
       const year = Number(box.querySelector('[data-zaka-year]').value), month = Number(box.querySelector('[data-zaka-month]').value);
       const audience = b.dataset.zakaList, unitId = b.dataset.unit, unitLabel = b.dataset.unitLabel;
       try {
-        const people = await P.rpc('sms_zaka_recipients', { p_year: year, p_month: month, p_unit: unitId, p_audience: audience });
+        let people;
+        try { people = await P.rpc('sms_zaka_recipient_tree', { p_year: year, p_month: month, p_unit: unitId, p_audience: audience }); }
+        catch (err) {
+          if (!/sms_zaka_recipient_tree|schema cache|could not find the function/i.test(err.message || '')) throw err;
+          people = (await P.rpc('sms_zaka_recipients', { p_year: year, p_month: month, p_unit: unitId, p_audience: audience }))
+            .map(p => ({ ...p, family_id: null, family_name: 'Majina ya waumini', family_code: null }));
+        }
         const monthName = P.MONTHS[month - 1];
         const heading = audience === 'zaka_paid' ? 'Waliolipa' : 'Hawajalipa';
+        const families = Object.values((people || []).reduce((map, person) => {
+          const key = person.family_id || 'no-family';
+          (map[key] ||= { id: key, name: person.family_name || 'Bila familia iliyowekwa', code: person.family_code, people: [] }).people.push(person);
+          return map;
+        }, {}));
         const choice = await P.modal({ title: `${heading} · ${unitLabel}`, submit: people?.length ? 'Andaa SMS kwa hawa' : null, wide: true,
           body: `<p class="pm-muted pm-zaka-sms-list-subtitle">${P.esc(unitLabel)} · ${P.esc(monthName)} ${year} · ${P.num(people?.length || 0)} waumini</p>
-            <div class="pm-zaka-sms-people">${people?.length ? people.map((p,i) => `<div><span>${i + 1}</span><b>${P.esc(p.full_name)}</b></div>`).join('') : '<p class="pm-muted">Hakuna waumini kwenye kundi hili kwa kipindi ulichochagua.</p>'}</div>` });
+            <div class="pm-zaka-sms-people">${families.length ? families.map(f => `<details class="pm-zaka-sms-family"><summary><b>${P.esc(f.name)}</b>${f.code ? `<small>${P.esc(f.code)}</small>` : ''}<span>${P.num(f.people.length)} waumini</span></summary><div>${f.people.map(p => `<p>${P.esc(p.full_name)}</p>`).join('')}</div></details>`).join('') : '<p class="pm-muted">Hakuna waumini kwenye kundi hili kwa kipindi ulichochagua.</p>'}</div>` });
         if (choice && people?.length) {
           smsPrefill = { audience, unit_id: unitId, unit_label: unitLabel, year, month };
           el.querySelector('[data-new]').click();
