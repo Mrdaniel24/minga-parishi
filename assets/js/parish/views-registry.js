@@ -418,22 +418,41 @@
       const roleName = c => roles.find(r => r.code === c)?.name_sw || c;
       const isSuper = P.access.platform_admin;
       const canTouch = u => u.id !== P.profile.id && (isSuper || u.role !== 'super_admin');
+      const userTable = (users, scopeId) => P.table(users, [
+        { key: 'full_name', label: 'Mtumiaji', html: u => `<b>${P.esc(u.full_name || '—')}</b>${u.role === 'super_admin' ? ' ' + P.badge('Msimamizi wa Mfumo', 'gold') : ''}${u.status !== 'active' ? ' ' + P.badge('Amesimamishwa', 'rose') : ''}
+            <br><small class="pm-muted">${P.esc(P.loginOf(u))}</small>${personOf[u.id] ? `<br><small>Muumini: <a class="pm-link" href="#/statement?parishioner=${personOf[u.id].id}">${P.esc(personOf[u.id].full_name)}</a></small>` : ''}` },
+        { key: 'roles', label: 'Nafasi', html: u => (byUser[u.id] || []).filter(g => g.org_unit_id === scopeId).map(g => `<span class="pm-chip">${P.esc(roleName(g.role_code))}${u.id === P.profile.id ? '' : `<button type="button" title="Ondoa nafasi hii" data-revoke="${g.id}">×</button>`}</span>`).join(' ') || '<small class="pm-muted">Hana nafasi</small>' },
+        { key: 'login', label: 'Kuingia', html: u => String(u.email || '').endsWith(P.PHONE_DOMAIN) ? P.badge('Simu', 'teal') : P.badge('Barua pepe', 'muted') },
+        { key: 'id', label: '', html: u => canTouch(u) ? `<span class="pm-nowrap">
+            <button class="pm-btn pm-btn--sm" data-pw="${u.id}" title="Weka nenosiri jipya"><span class="material-symbols-outlined">key</span>Nenosiri</button>
+            <button class="pm-btn pm-btn--sm" data-phone="${u.id}" title="Aingie kwa namba hii ya simu"><span class="material-symbols-outlined">smartphone</span>Simu</button>
+            <button class="pm-btn pm-btn--sm" data-role="${u.id}">+ Nafasi</button>
+            <button class="pm-btn pm-btn--sm ${u.status === 'active' ? 'pm-btn--danger' : ''}" data-status="${u.id}">${u.status === 'active' ? 'Simamisha' : 'Rudisha'}</button></span>` : '' }],
+        { rowAttr: u => `data-row="${P.esc([u.full_name, u.email, u.phone].join(' ').toLowerCase())}"`, empty: 'Hakuna akaunti kwenye ngazi hii.' });
+      const profilesFor = predicate => profs.filter(u => (byUser[u.id] || []).some(predicate));
+      const groupsForUnit = (unit, users) => {
+        const entries = users || profilesFor(g => g.org_unit_id === unit.id);
+        const children = unit.unit_type === 'kigango' ? P.ref.units.filter(j => j.is_active && j.unit_type === 'jumuiya' && j.parent_id === unit.id).map(j => groupsForUnit(j)).join('') : '';
+        if (!entries.length && !children) return '';
+        const childIds = unit.unit_type === 'kigango' ? P.ref.units.filter(j => j.is_active && j.unit_type === 'jumuiya' && j.parent_id === unit.id).map(j => j.id) : [];
+        const count = new Set([...entries.map(u => u.id), ...profilesFor(g => childIds.includes(g.org_unit_id)).map(u => u.id)]).size;
+        return `<details class="pm-users-unit"><summary><b>${P.esc(unit.unit_type === 'kigango' ? `Kigango cha ${unit.name}` : `Jumuiya ya ${unit.name}`)}</b><span>${P.num(count)} akaunti</span></summary>${entries.length ? userTable(entries, unit.id) : ''}${children ? `<div class="pm-users-children">${children}</div>` : ''}</details>`;
+      };
+      const parishUsers = profilesFor(g => !g.org_unit_id);
+      const unassignedUsers = profs.filter(u => !(byUser[u.id] || []).length);
+      const knownScopeIds = new Set(P.ref.units.filter(u => u.is_active && ['kigango', 'jumuiya'].includes(u.unit_type)).map(u => u.id));
+      const otherScopeIds = [...new Set(grants.map(g => g.org_unit_id).filter(id => id && !knownScopeIds.has(id)))];
+      const otherScopeGroups = otherScopeIds.map(id => {
+        const entries = profilesFor(g => g.org_unit_id === id), label = P.ref.unitsById[id]?.label || 'Eneo lisilotumika';
+        return entries.length ? `<details class="pm-users-unit"><summary><b>${P.esc(label)}</b><span>${P.num(entries.length)} akaunti</span></summary>${userTable(entries, id)}</details>` : '';
+      }).join('');
+      const userDirectory = `${parishUsers.length ? `<details class="pm-users-unit"><summary><b>Parokia nzima</b><span>${P.num(parishUsers.length)} akaunti</span></summary>${userTable(parishUsers, null)}</details>` : ''}${P.ref.units.filter(u => u.is_active && u.unit_type === 'kigango').map(k => groupsForUnit(k)).join('')}${otherScopeGroups}${unassignedUsers.length ? `<details class="pm-users-unit"><summary><b>Akaunti zisizo na nafasi</b><span>${P.num(unassignedUsers.length)} akaunti</span></summary>${userTable(unassignedUsers, null)}</details>` : ''}`;
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Watumiaji na Ruhusa</h1>
-          <p class="pm-muted">Watumiaji wanaingia kwa <b>namba ya simu na nenosiri</b>. Akaunti zinaundwa hapa na Msimamizi; mtumiaji akisahau nenosiri, Msimamizi anamwekea jipya. Ruhusa zinatekelezwa na database (RLS), si kwa kuficha vitufe tu.</p></div>
+          <p class="pm-muted">Fungua Parokia, Kigango au Jumuiya kuona akaunti na nafasi zake.</p></div>
         <div class="pm-actions"><button class="pm-btn pm-btn--primary" data-newuser><span class="material-symbols-outlined">person_add</span>Mtumiaji mpya</button>
           <button class="pm-btn" data-grant><span class="material-symbols-outlined">add_moderator</span>Toa nafasi</button></div></div>
         <form class="pm-filters" data-find><label class="pm-wide">Tafuta<input name="q" placeholder="Jina, namba ya simu au barua pepe"></label></form>
-        <section class="pm-card">${P.table(profs, [
-          { key: 'full_name', label: 'Mtumiaji', html: u => `<b>${P.esc(u.full_name || '—')}</b>${u.role === 'super_admin' ? ' ' + P.badge('Msimamizi wa Mfumo', 'gold') : ''}${u.status !== 'active' ? ' ' + P.badge('Amesimamishwa', 'rose') : ''}
-              <br><small class="pm-muted">${P.esc(P.loginOf(u))}</small>${personOf[u.id] ? `<br><small>Muumini: <a class="pm-link" href="#/statement?parishioner=${personOf[u.id].id}">${P.esc(personOf[u.id].full_name)}</a></small>` : ''}` },
-          { key: 'roles', label: 'Nafasi', html: u => (byUser[u.id] || []).map(g => `<span class="pm-chip">${P.esc(roleName(g.role_code))}${g.org_unit_id ? ' · ' + P.esc(P.ref.unitsById[g.org_unit_id]?.label || '') : ''}${u.id === P.profile.id ? '' : `<button type="button" title="Ondoa nafasi hii" data-revoke="${g.id}">×</button>`}</span>`).join(' ') || '<small class="pm-muted">Hana nafasi</small>' },
-          { key: 'login', label: 'Kuingia', html: u => String(u.email || '').endsWith(P.PHONE_DOMAIN) ? P.badge('Simu', 'teal') : P.badge('Barua pepe', 'muted') },
-          { key: 'id', label: '', html: u => canTouch(u) ? `<span class="pm-nowrap">
-              <button class="pm-btn pm-btn--sm" data-pw="${u.id}" title="Weka nenosiri jipya"><span class="material-symbols-outlined">key</span>Nenosiri</button>
-              <button class="pm-btn pm-btn--sm" data-phone="${u.id}" title="Aingie kwa namba hii ya simu"><span class="material-symbols-outlined">smartphone</span>Simu</button>
-              <button class="pm-btn pm-btn--sm" data-role="${u.id}">+ Nafasi</button>
-              <button class="pm-btn pm-btn--sm ${u.status === 'active' ? 'pm-btn--danger' : ''}" data-status="${u.id}">${u.status === 'active' ? 'Simamisha' : 'Rudisha'}</button></span>` : '' }],
-          { rowAttr: u => `data-row="${P.esc([u.full_name, u.email, u.phone].join(' ').toLowerCase())}"`, empty: 'Hakuna akaunti.' })}</section>
+        <div class="pm-users-directory" data-users-directory>${userDirectory || '<section class="pm-card"><p class="pm-muted">Hakuna akaunti zilizopatikana.</p></section>'}</div>
         <section class="pm-card"><h3 class="pm-h3">Unganisha akaunti na muumini wa rejista</h3>
           <p class="pm-muted">Baada ya kuunganishwa, muumini ataona michango na ahadi zake tu.</p>
           <form class="pm-form" data-link><label>Namba ya simu au barua pepe ya akaunti<input name="login" required></label>
@@ -443,6 +462,11 @@
       el.querySelector('[data-find] input').addEventListener('input', e => {
         const q = e.target.value.trim().toLowerCase().replace(/^0/, '');
         el.querySelectorAll('tr[data-row]').forEach(tr => { tr.hidden = !!q && !tr.dataset.row.includes(q); });
+        el.querySelectorAll('.pm-users-unit').forEach(group => {
+          const hasMatch = [...group.querySelectorAll('tr[data-row]')].some(tr => !tr.hidden);
+          group.hidden = !!q && !hasMatch;
+          group.open = !!q && hasMatch;
+        });
       });
       el.querySelector('[data-find]').addEventListener('submit', e => e.preventDefault());
       const roleFields = (opt) => `<label>Nafasi${opt ? ' (hiari)' : ''}<select name="role_code" ${opt ? '' : 'required'}>${opt ? '<option value="">— Bila nafasi —</option>' : ''}${P.options(roles, { value: 'code', label: r => `${r.name_sw}${r.scoped ? ' (eneo)' : ''}` })}</select></label>
