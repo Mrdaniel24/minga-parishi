@@ -7,6 +7,20 @@
 .pm-leadership-target-label { display: grid; gap: .35rem; max-width: 34rem; color: var(--pm-muted); font-size: .8rem; font-weight: 700; }
 .pm-leadership-target-label select { width: 100%; min-width: 0; min-height: 2.85rem; padding: .6rem .75rem; border: 1px solid var(--pm-line); border-radius: .75rem; background: #fff; color: var(--brand-emerald, #003f32); font: inherit; font-size: .94rem; }
 .pm-leadership-target-label select:focus { outline: 2px solid rgba(245,190,34,.32); border-color: var(--brand-gold, #f5be22); }
+.pm-leadership-picklist { display: grid; gap: .45rem; max-width: 42rem; }
+.pm-leadership-pick { display: flex; align-items: center; justify-content: space-between; gap: .75rem; width: 100%; min-height: 2.8rem; padding: .55rem .7rem; border: 1px solid var(--pm-line); border-radius: .65rem; background: #fff; color: var(--brand-emerald, #003f32); text-align: left; font: inherit; cursor: pointer; }
+.pm-leadership-pick:hover, .pm-leadership-pick:focus-visible { border-color: var(--brand-gold, #f5be22); outline: 2px solid rgba(245,190,34,.2); }
+.pm-leadership-pick > span { display: grid; gap: .12rem; min-width: 0; }
+.pm-leadership-pick strong { overflow-wrap: anywhere; font-size: .88rem; font-weight: 700; }
+.pm-leadership-pick small { color: var(--pm-muted); font-size: .73rem; }
+.pm-leadership-pick > b { flex: 0 0 auto; padding: .33rem .65rem; border-radius: 99px; background: var(--brand-mint, #f3f8f5); color: var(--brand-forest, #005c40); font-size: .74rem; font-weight: 750; }
+.pm-leadership-picker-kigango { min-width: 0; border: 1px solid var(--pm-line); border-radius: .7rem; background: #fff; }
+.pm-leadership-picker-kigango > summary { display: flex; justify-content: space-between; align-items: center; gap: .6rem; min-height: 2.8rem; padding: .55rem .7rem; color: var(--brand-emerald, #003f32); font-size: .88rem; font-weight: 700; cursor: pointer; list-style: none; }
+.pm-leadership-picker-kigango > summary::-webkit-details-marker { display: none; }
+.pm-leadership-picker-kigango > summary::after { content: '▾'; color: var(--brand-forest, #005c40); }
+.pm-leadership-picker-kigango[open] > summary::after { content: '▴'; }
+.pm-leadership-picker-kigango > summary small { margin-left: auto; color: var(--pm-muted); font-size: .73rem; font-weight: 600; }
+.pm-leadership-picker-children { display: grid; gap: .35rem; padding: .45rem; border-top: 1px solid var(--pm-line); background: var(--brand-mint, #f3f8f5); }
 .pm-leadership-directory { display: grid; gap: .9rem; min-width: 0; }
 .pm-leadership-parish, .pm-leadership-kigango { min-width: 0; }
 .pm-leadership-parish > h3, .pm-leadership-kigango > h3 { margin: 0 0 .45rem; color: var(--brand-emerald, #003f32); font-size: .95rem; font-weight: 750; }
@@ -44,6 +58,8 @@
   .pm-leadership-hint { margin-bottom: .6rem; font-size: .82rem; }
   .pm-leadership-target-label { max-width: none; font-size: .76rem; }
   .pm-leadership-target-label select { min-height: 2.7rem; font-size: .9rem; }
+  .pm-leadership-picklist { max-width: none; }
+  .pm-leadership-pick > b { font-size: .72rem; }
   .pm-leadership-person { grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); gap: .18rem .5rem; padding: .55rem 0; }
   .pm-leadership-person strong { font-size: .86rem; }
   .pm-leadership-person > span { text-align: right; font-size: .78rem; }
