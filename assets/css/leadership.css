@@ -9,7 +9,7 @@
 .pm-leadership-target-label select:focus { outline: 2px solid rgba(245,190,34,.32); border-color: var(--brand-gold, #f5be22); }
 .pm-leadership-directory { display: grid; gap: .9rem; min-width: 0; }
 .pm-leadership-unit { min-width: 0; border: 1px solid var(--pm-line); border-radius: .8rem; background: #fff; overflow: hidden; }
-.pm-leadership-unit > summary { display: flex; align-items: center; gap: .45rem .8rem; min-width: 0; padding: .72rem .85rem; color: var(--brand-emerald, #003f32); font-weight: 700; cursor: pointer; list-style: none; }
+.pm-leadership-unit > summary { display: flex; align-items: center; gap: .45rem .8rem; min-width: 0; padding: .72rem .85rem; color: var(--brand-emerald, #003f32); font-weight: 500; cursor: pointer; list-style: none; }
 .pm-leadership-unit > summary::-webkit-details-marker { display: none; }
 .pm-leadership-unit > summary::before { content: '›'; flex: 0 0 auto; color: var(--brand-forest, #005c40); font-size: 1.2rem; transition: transform .15s ease; }
 .pm-leadership-unit[open] > summary::before { transform: rotate(90deg); }
@@ -18,14 +18,14 @@
 .pm-leadership-unit > .pm-leadership-roster { padding: 0 .85rem .5rem; }
 .pm-leadership-unit--child { border: 0; border-bottom: 1px solid var(--pm-line); border-radius: 0; background: transparent; }
 .pm-leadership-unit--child:last-child { border-bottom: 0; }
-.pm-leadership-unit--child > summary { padding: .6rem .25rem; }
+.pm-leadership-unit--child > summary { padding: .6rem .25rem; font-weight: 500; }
 .pm-leadership-unit--child > .pm-leadership-roster { padding: 0 .25rem .4rem; }
 .pm-leadership-parish, .pm-leadership-kigango { min-width: 0; }
 .pm-leadership-parish > h3, .pm-leadership-kigango > h3 { margin: 0 0 .45rem; color: var(--brand-emerald, #003f32); font-size: .95rem; font-weight: 750; }
 .pm-leadership-roster { display: grid; min-width: 0; }
 .pm-leadership-person { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(8rem, .8fr); align-items: center; gap: .35rem .7rem; min-width: 0; padding: .55rem .25rem; border-bottom: 1px solid var(--pm-line); color: var(--brand-emerald, #003f32); }
 .pm-leadership-person:first-child { border-top: 1px solid var(--pm-line); }
-.pm-leadership-person strong { min-width: 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 700; }
+.pm-leadership-person strong { min-width: 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 500; }
 .pm-leadership-person > span { min-width: 0; overflow-wrap: anywhere; color: var(--brand-forest, #005c40); font-size: .82rem; font-weight: 650; }
 .pm-leadership-person > small { min-width: 0; overflow-wrap: anywhere; color: var(--pm-muted); font-size: .76rem; }
 .pm-leadership-children { display: grid; gap: .65rem; margin: .75rem 0 0 .35rem; padding: .25rem 0 .1rem .75rem; border-left: 2px solid var(--brand-gold, #f5be22); }
