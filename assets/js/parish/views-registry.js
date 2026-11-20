@@ -283,12 +283,19 @@
   V.statement = {
     title: 'Taarifa ya Michango',
     async render(el, params) {
-      const isFam = !!params.family, id = params.family || params.parishioner;
+      const isFam = !!params.family;
+      const isMember = !!(P.memberPortalMode || (P.selfOnly && P.selfOnly()));
+      const id = params.family || params.parishioner || (isMember ? P.memberContext?.parishioner_id || P.access.parishioner_id : null);
+      if (!id || id === 'undefined' || id === 'null') {
+        el.innerHTML = `<div class="pm-alert pm-alert--error">${isMember
+          ? 'Akaunti yako bado haijaunganishwa na rekodi ya muumini. Tumia sehemu ya “Unganisha na rejista” au wasiliana na Ofisi ya Parokia.'
+          : 'Chagua muumini au familia kwenye Rejista ili kufungua taarifa za michango.'}</div>`;
+        return;
+      }
       const who = isFam ? await P.q(P.from('families').select('family_name,jumuiya_id').eq('id', id).single())
                         : await P.q(P.from('parishioners').select('full_name,jumuiya_id,family_id,relationship,phone').eq('id', id).single());
       const name = isFam ? who.family_name : who.full_name;
       const col = isFam ? 'family_id' : 'parishioner_id';
-      const isMember = !!(P.memberPortalMode || (P.selfOnly && P.selfOnly()));
       // Member finance is personal by default. Family-wide payments and pledges
       // have their own page; a representative grant never shares another person's ledger.
       const fam = !isMember && !isFam && who.family_id;
