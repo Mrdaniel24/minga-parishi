@@ -1,4 +1,4 @@
-/* Five elected offices for each parish, kigango and jumuiya. */
+/* Elected leadership directory and roster management. */
 (function () {
   const P = window.Parish, V = P.views;
   const ROLES = {
@@ -7,61 +7,107 @@
     jumuiya: [['MWENYEKITI_JUMUIYA', 'Mwenyekiti'], ['MWENYEKITI_MSAIDIZI_JUMUIYA', 'Mwenyekiti msaidizi'], ['KATIBU_JUMUIYA', 'Katibu'], ['KATIBU_MSAIDIZI_JUMUIYA', 'Katibu msaidizi'], ['MWASIBU_JUMUIYA', 'Mwasibu']],
   };
   const esc = P.esc;
+  const levelName = unit => unit?.unit_type === 'parish' ? 'Parokia' : unit?.unit_type === 'kigango' ? `Kigango cha ${unit.name}` : `Jumuiya ya ${unit?.name || ''}`;
+
   V.leaders = {
     title: 'Viongozi', perm: 'registry.read',
     async render(el) {
       const canWrite = P.access.platform_admin || P.access.permissions.includes('registry.write');
       const [positions, rows] = await Promise.all([
         P.q(P.from('leadership_positions').select('*').eq('is_active', true).order('sort_order')),
-        P.q(P.from('leadership_assignments').select('*, leadership_positions(title_sw,level,sort_order,code)').order('status').order('starts_on', { ascending: false })),
+        P.q(P.from('leadership_assignments').select('*, leadership_positions(title_sw,level,sort_order,code)').eq('status', 'active').order('starts_on', { ascending: false })),
       ]);
-      const allUnits = P.ref.units.filter(u => u.is_active && ['parish', 'kigango', 'jumuiya'].includes(u.unit_type));
+      const activeUnits = P.ref.units.filter(u => u.is_active && ['parish', 'kigango', 'jumuiya'].includes(u.unit_type));
+      const parish = activeUnits.find(u => u.unit_type === 'parish');
       const scopedId = P.scopeUnit(), scopedUnit = scopedId && P.ref.unitsById[scopedId];
-      const units = scopedUnit ? allUnits.filter(u => u.id === scopedUnit.id || (scopedUnit.unit_type === 'kigango' && u.parent_id === scopedUnit.id))
-        : allUnits;
-      const activeRows = rows.filter(r => r.status === 'active');
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Viongozi</h1><p class="pm-muted">Weka viongozi watano wa kila ngazi. Nafasi hizi za kuchaguliwa ni tofauti na ruhusa za kutumia mfumo.</p></div>
-        ${canWrite ? '<div class="pm-actions"><button class="pm-btn pm-btn--primary" data-assign><span class="material-symbols-outlined">groups</span>Weka viongozi watano</button></div>' : ''}</div>
-        ${canWrite ? `<section class="pm-card"><h2 class="pm-h3">Ugawaji wa nafasi</h2><p class="pm-muted">Chagua kitengo kisha gawa mwenyekiti, mwenyekiti msaidizi, katibu, katibu msaidizi na mwasibu kwa waumini wake.</p>
-          <form class="pm-filters" data-form><label class="pm-wide">Parokia, kigango au jumuiya<select name="unit" required><option value="">Chagua kitengo…</option>${units.map(u => `<option value="${u.id}">${esc(({parish:'Parokia',kigango:'Kigango',jumuiya:'Jumuiya'})[u.unit_type]+' · '+u.label)}</option>`).join('')}</select></label>
-          <div class="pm-wide" style="flex:1 0 100%" data-roles><p class="pm-muted">Chagua kitengo ili kujaza nafasi tano.</p></div><button class="pm-btn pm-btn--primary" data-save disabled>Hifadhi viongozi</button></form></section>` : ''}
-        <section class="pm-card"><h2 class="pm-h3">Orodha ya viongozi</h2>${P.table(activeRows, [{key:'title',label:'Nafasi',html:r=>esc(r.leadership_positions?.title_sw)},
-          {key:'org',label:'Kitengo',html:r=>esc(P.ref.unitsById[r.org_unit_id]?.label||'')},{key:'holder_name',label:'Jina'},{key:'phone',label:'Simu'},
-          {key:'starts_on',label:'Kuanzia',fmt:P.date},{key:'ends_on',label:'Hadi',fmt:P.date},{key:'status',label:'Hali',html:r=>P.badge(r.status==='active'?'Hai':'Ameondoka',r.status==='active'?'teal':'muted')}],{empty:'Hakuna viongozi hawa waliohifadhiwa.'})}</section>
-        `;
-      if (!canWrite) return;
-      const form = el.querySelector('[data-form]'), roleBox = form.querySelector('[data-roles]'), save = form.querySelector('[data-save]');
-      const peopleFor = async unit => {
-        const people = await P.q(P.from('parishioners').select('id,full_name,family_id,jumuiya_id').eq('parish_id', P.ref.parish.id).eq('membership_status','active').order('full_name').limit(5000));
-        const missingJumuiya = people.filter(p=>!p.jumuiya_id&&p.family_id).map(p=>p.family_id);
-        const familyIds = [...new Set(missingJumuiya)];
-        const families = familyIds.length ? await P.q(P.from('families').select('id,jumuiya_id').in('id',familyIds)) : [];
-        const familyJumuiya = Object.fromEntries(families.map(f=>[f.id,f.jumuiya_id]));
-        const validUnits = unit.unit_type==='kigango' ? P.ref.units.filter(x=>x.unit_type==='jumuiya'&&x.parent_id===unit.id).map(x=>x.id) : [unit.id];
-        return unit.unit_type==='parish' ? people : people.filter(p=>validUnits.includes(p.jumuiya_id||familyJumuiya[p.family_id]));
+      const visibleKigangos = activeUnits.filter(u => u.unit_type === 'kigango' &&
+        (!scopedUnit || scopedUnit.unit_type === 'parish' || scopedUnit.unit_type === 'kigango' && u.id === scopedUnit.id));
+      const visibleJumuiya = activeUnits.filter(u => u.unit_type === 'jumuiya' &&
+        (!scopedUnit || scopedUnit.unit_type === 'parish' || scopedUnit.unit_type === 'kigango' && u.parent_id === scopedUnit.id || scopedUnit.unit_type === 'jumuiya' && u.id === scopedUnit.id));
+      const canAssignParish = !scopedUnit || scopedUnit.unit_type === 'parish';
+      const permittedTargets = new Set([
+        ...(canAssignParish && parish ? [parish.id] : []),
+        ...visibleKigangos.map(u => u.id),
+        ...visibleJumuiya.map(u => u.id),
+      ]);
+      const activeRows = rows.filter(r => permittedTargets.has(r.org_unit_id));
+      const byUnit = id => activeRows.filter(r => r.org_unit_id === id)
+        .sort((a, b) => (a.leadership_positions?.sort_order || 0) - (b.leadership_positions?.sort_order || 0));
+      const roster = (unit, entries) => entries.length ? `<div class="pm-leadership-roster">${entries.map(r => `<article class="pm-leadership-person">
+        <strong>${esc(r.holder_name || 'Jina halijawekwa')}</strong><span>${esc(r.leadership_positions?.title_sw || 'Kiongozi')}</span><small>${esc(levelName(unit))}</small>
+      </article>`).join('')}</div>` : '<p class="pm-leadership-empty">Hakuna viongozi waliowekwa bado.</p>';
+      const jumuiyaList = kigango => {
+        const children = visibleJumuiya.filter(j => j.parent_id === kigango.id);
+        return children.length ? `<details class="pm-leadership-nested"><summary>Jumuiya <span>${children.length}</span></summary>
+          <div class="pm-leadership-children">${children.map(j => `<details class="pm-leadership-unit pm-leadership-unit--jumuiya">
+            <summary><span>${esc(j.name)}</span><small>${byUnit(j.id).length}/5 viongozi</small></summary>
+            <div class="pm-leadership-unit__body">${roster(j, byUnit(j.id))}</div>
+          </details>`).join('')}</div>
+        </details>` : '';
       };
-      form.querySelector('[name=unit]').addEventListener('change', async e => {
-        save.disabled = true; roleBox.innerHTML = P.loading();
-        const unit = P.ref.unitsById[e.target.value];
-        if (!unit || !ROLES[unit.unit_type]) { roleBox.innerHTML = '<p class="pm-muted">Chagua kitengo sahihi.</p>'; return; }
-        const people = await peopleFor(unit);
-        if (!people.length) { roleBox.innerHTML = '<p class="pm-muted">Hakuna muumini hai aliyepatikana kwenye kitengo hiki.</p>'; return; }
-        const codes = ROLES[unit.unit_type], pos = positions.filter(p => codes.some(x=>x[0]===p.code));
-        const opts = `<option value="">Chagua muumini…</option>${people.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}`;
-        roleBox.innerHTML = `<div class="pm-form">${codes.map(([code,label])=>{const p=pos.find(x=>x.code===code);return `<label>${esc(label)}<select required data-position="${p?.id||''}">${opts}</select></label>`;}).join('')}</div>`;
-        save.disabled = pos.length !== 5;
-      });
-      form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const selects = [...roleBox.querySelectorAll('select[data-position]')];
-        const assignments = selects.map(s=>({position_id:s.dataset.position,parishioner_id:s.value}));
-        if (assignments.length!==5 || assignments.some(a=>!a.position_id||!a.parishioner_id) || new Set(assignments.map(a=>a.position_id)).size!==5 || new Set(assignments.map(a=>a.parishioner_id)).size!==5) {
-          Toast.error('Chagua waumini watano tofauti na uhakikishe nafasi zote zimejazwa.'); return;
-        }
-        save.disabled = true;
-        try { await P.rpc('save_unit_leadership',{p_unit:form.elements.unit.value,p_assignments:assignments}); Toast.success('Viongozi watano wamehifadhiwa.'); P.reload(); }
-        catch(err) { Toast.error(err.message); save.disabled = false; }
-      });
+      const kigangoList = visibleKigangos.length ? visibleKigangos.map(k => `<details class="pm-leadership-unit">
+        <summary><span>${esc(k.name)}</span><small>${byUnit(k.id).length}/5 viongozi</small></summary>
+        <div class="pm-leadership-unit__body">${roster(k, byUnit(k.id))}${jumuiyaList(k)}</div>
+      </details>`).join('') : '<p class="pm-leadership-empty">Hakuna vigango vilivyopatikana.</p>';
+
+      const unitOptions = [
+        canAssignParish && parish ? `<option value="${parish.id}">Parokia nzima</option>` : '',
+        scopedUnit?.unit_type === 'jumuiya' ? `<optgroup label="Kigango cha ${esc(P.ref.unitsById[scopedUnit.parent_id]?.name || '')}"><option value="${scopedUnit.id}">Jumuiya ya ${esc(scopedUnit.name)}</option></optgroup>` : '',
+        ...visibleKigangos.map(k => {
+          const children = visibleJumuiya.filter(j => j.parent_id === k.id);
+          return `<optgroup label="Kigango cha ${esc(k.name)}"><option value="${k.id}">Kigango chenyewe</option>${children.map(j => `<option value="${j.id}">Jumuiya ya ${esc(j.name)}</option>`).join('')}</optgroup>`;
+        }),
+      ].join('');
+      el.innerHTML = `<div class="pm-head pm-leadership-head"><div><h1 class="pm-h1">Viongozi</h1><p class="pm-muted">Parokia, Vigango na Jumuiya</p></div></div>
+        ${canWrite ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Weka viongozi</h2>
+          <label class="pm-leadership-target-label">Eneo la uongozi<select data-target-select><option value="">Chagua eneo</option>${unitOptions}</select></label>
+          <div class="pm-leadership-editor" data-editor hidden></div>
+        </section>` : ''}
+        ${canAssignParish && parish ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi wa Parokia</h2>${roster(parish, byUnit(parish.id))}</section>` : ''}
+        ${scopedUnit?.unit_type === 'jumuiya' ? `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Viongozi wa Jumuiya</h2>${roster(scopedUnit, byUnit(scopedUnit.id))}</section>` : `<section class="pm-card pm-leadership-card"><h2 class="pm-h3">Vigango</h2><div class="pm-leadership-directory">${kigangoList}</div></section>`}`;
+
+      if (!canWrite) return;
+      const editor = el.querySelector('[data-editor]');
+      const peopleFor = async unit => {
+        const people = await P.q(P.from('parishioners').select('id,full_name,family_id,jumuiya_id').eq('parish_id', P.ref.parish.id).eq('membership_status', 'active').order('full_name').limit(5000));
+        const familyIds = [...new Set(people.filter(p => !p.jumuiya_id && p.family_id).map(p => p.family_id))];
+        const families = familyIds.length ? await P.q(P.from('families').select('id,jumuiya_id').in('id', familyIds)) : [];
+        const familyJumuiya = Object.fromEntries(families.map(f => [f.id, f.jumuiya_id]));
+        if (unit.unit_type === 'parish') return people;
+        const memberUnits = unit.unit_type === 'kigango'
+          ? activeUnits.filter(x => x.unit_type === 'jumuiya' && x.parent_id === unit.id).map(x => x.id)
+          : [unit.id];
+        return people.filter(p => memberUnits.includes(p.jumuiya_id || familyJumuiya[p.family_id]));
+      };
+      const chooseUnit = async unitId => {
+        const unit = activeUnits.find(u => u.id === unitId);
+        if (!unitId) { editor.hidden = true; editor.innerHTML = ''; return; }
+        if (!unit || !permittedTargets.has(unit.id)) return;
+        editor.hidden = false;
+        editor.innerHTML = `<div class="pm-leadership-editor__head"><h3>${esc(levelName(unit))}</h3></div><p class="pm-leadership-hint">Jaza nafasi unazotaka; zilizoachwa hubaki kama zilivyo.</p><div data-role-fields>${P.loading()}</div><button type="button" class="pm-btn pm-btn--primary" data-save disabled>Hifadhi viongozi</button>`;
+        editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const fields = editor.querySelector('[data-role-fields]'), save = editor.querySelector('[data-save]');
+        try {
+          const [people, roleCodes] = await Promise.all([peopleFor(unit), Promise.resolve(ROLES[unit.unit_type])]);
+          if (!people.length) { fields.innerHTML = '<p class="pm-leadership-empty">Hakuna muumini hai aliyepatikana hapa.</p>'; return; }
+          const pos = positions.filter(p => roleCodes.some(x => x[0] === p.code));
+          const opts = `<option value="">Chagua muumini</option>${people.map(p => `<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}`;
+          fields.innerHTML = `<div class="pm-form">${roleCodes.map(([code, label]) => { const p = pos.find(x => x.code === code); return `<label>${esc(label)}<select data-position="${p?.id || ''}">${opts}</select></label>`; }).join('')}</div>`;
+          save.disabled = pos.length !== 5;
+          save.addEventListener('click', async () => {
+            const selects = [...fields.querySelectorAll('select[data-position]')];
+            const assignments = selects.filter(s => s.value).map(s => ({ position_id: s.dataset.position, parishioner_id: s.value }));
+            if (!assignments.length || assignments.some(a => !a.position_id) || new Set(assignments.map(a => a.position_id)).size !== assignments.length) {
+              Toast.error('Chagua angalau kiongozi mmoja.'); return;
+            }
+            save.disabled = true;
+            try { await P.rpc('save_unit_leadership', { p_unit: unit.id, p_assignments: assignments }); Toast.success('Viongozi wamehifadhiwa.'); P.reload(); }
+            catch (err) { Toast.error(err.message); save.disabled = false; }
+          });
+        } catch (err) { fields.innerHTML = `<p class="pm-leadership-empty">${esc(err.message || 'Imeshindikana kupakia waumini.')}</p>`; }
+      };
+      el.querySelector('[data-target-select]').addEventListener('change', e => chooseUnit(e.target.value));
     },
   };
+
 })();
