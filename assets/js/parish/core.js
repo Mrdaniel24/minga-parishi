@@ -313,7 +313,7 @@
   };
 
   /* search box for parishioners / families / communities used by payment & pledge forms */
-  P.payerPicker = (root, { onPick, jumuiya, types = ['parishioner', 'family', 'kigango', 'jumuiya', 'group'] } = {}) => {
+  P.payerPicker = (root, { onPick, jumuiya, scopeUnitIds, types = ['parishioner', 'family', 'kigango', 'jumuiya', 'group'] } = {}) => {
     const input = root.querySelector('[data-payer-search]');
     const list = root.querySelector('[data-payer-results]');
     let t;
@@ -324,15 +324,24 @@
       t = setTimeout(async () => {
         const like = `%${v}%`;
         const requests = [];
-        if (types.includes('parishioner')) requests.push(P.q((jumuiya ? P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)').eq('jumuiya_id', jumuiya)
-          : P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)')).neq('membership_status', 'removed').ilike('full_name', like).limit(jumuiya ? 15 : 8)).catch(() => []));
+        if (types.includes('parishioner')) {
+          let q = P.from('parishioners').select('id,full_name,family_id,jumuiya_id,families!parishioners_family_id_fkey(family_name)');
+          if (jumuiya) q = q.eq('jumuiya_id', jumuiya);
+          else if (scopeUnitIds?.length) q = q.in('jumuiya_id', scopeUnitIds);
+          requests.push(P.q(q.neq('membership_status', 'removed').ilike('full_name', like).limit(jumuiya ? 15 : 8)).catch(() => []));
+        }
         else requests.push(Promise.resolve([]));
-        if (types.includes('family')) requests.push(P.q((jumuiya ? P.from('families').select('id,family_name,jumuiya_id').eq('jumuiya_id', jumuiya)
-          : P.from('families').select('id,family_name,jumuiya_id')).ilike('family_name', like).limit(jumuiya ? 10 : 5)).catch(() => []));
+        if (types.includes('family')) {
+          let q = P.from('families').select('id,family_name,jumuiya_id');
+          if (jumuiya) q = q.eq('jumuiya_id', jumuiya);
+          else if (scopeUnitIds?.length) q = q.in('jumuiya_id', scopeUnitIds);
+          requests.push(P.q(q.ilike('family_name', like).limit(jumuiya ? 10 : 5)).catch(() => []));
+        }
         else requests.push(Promise.resolve([]));
         const [people, fams] = await Promise.all(requests);
         const unitTypes = types.filter(t => ['kigango', 'jumuiya', 'group'].includes(t));
         const units = P.ref.units.filter(u => u.is_active && unitTypes.includes(u.unit_type) && (!jumuiya || u.id === jumuiya)
+          && (!scopeUnitIds?.length || scopeUnitIds.includes(u.id))
           && u.name.toLowerCase().includes(v.toLowerCase())).slice(0, 8);
         const j = id => P.ref.unitsById[id] ? P.ref.unitsById[id].label : '';
         const section = (title, rows) => rows.length ? `<div class="pm-search__section"><p class="pm-search__heading">${title}</p>${rows.join('')}</div>` : '';

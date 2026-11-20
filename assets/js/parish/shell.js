@@ -131,6 +131,7 @@
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
     a('Michango ya Viongozi', 'military_tech', 'leaderreport', 'finance.read');
     h('Ofisi ya Fedha');
+    a('Uhakiki wa malipo', 'fact_check', 'payment-approvals', 'finance.approve');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
 
     a('Risiti', 'receipt_long', 'receipts', 'finance.read');

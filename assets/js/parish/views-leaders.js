@@ -40,7 +40,7 @@
     const recentSession = sessions.data?.[0];
     const shortcuts = kigango
       ? `<a href="#/kigango?id=${unit.id}"><span class="material-symbols-outlined">account_tree</span><b>Muhtasari wa kigango</b><small>Ona takwimu na taarifa za jumuiya</small></a>
-         <a href="#/reports?scope=${unit.id}"><span class="material-symbols-outlined">bar_chart</span><b>Ripoti za eneo</b><small>Chunguza makusanyo na ahadi za mwaka</small></a>`
+         <a href="#/reports?scope=${unit.id}"><span class="material-symbols-outlined">bar_chart</span><b>Taarifa ya fedha</b><small>Ona mapato, matumizi na salio la eneo</small></a>`
       : `<a href="#/jumuiya?id=${unit.id}&tab=mahudhurio"><span class="material-symbols-outlined">how_to_reg</span><b>Mahudhurio</b><small>${P.can('attendance.record') ? 'Rekodi au pitia mikutano' : 'Pitia mikutano ya jumuiya'}</small></a>
          <a href="#/jumuiya?id=${unit.id}&tab=familia"><span class="material-symbols-outlined">family_restroom</span><b>Familia na waumini</b><small>Fungua orodha ya familia za jumuiya</small></a>
          <a href="#/jumuiya?id=${unit.id}&tab=zaka"><span class="material-symbols-outlined">calendar_month</span><b>Zaka</b><small>Pitia taarifa za zaka za mwaka</small></a>`;
@@ -89,7 +89,7 @@
         </section>`}
 
         <section class="pm-card pm-leader-section"><div class="pm-row"><h2 class="pm-h3">Miamala ya karibuni</h2>
-          <a class="pm-link" href="#/reports?scope=${unit.id}">Ripoti za eneo</a></div>
+          <a class="pm-link" href="#/reports?scope=${unit.id}">Taarifa ya fedha</a></div>
           <div class="pm-mobile-hide">${P.table(d.recent || [], [
             { key: 'txn_date', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' },
             { key: 'category_name', label: 'Aina' }, { key: 'net_amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' },

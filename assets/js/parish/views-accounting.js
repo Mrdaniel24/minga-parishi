@@ -52,6 +52,43 @@
     },
   };
 
+  V['payment-approvals'] = {
+    title: 'Uhakiki wa Malipo', perm: 'finance.approve',
+    async render(el) {
+      const reqs = await P.q(P.from('approval_requests').select('id,transaction_id,requested_by,requested_at')
+        .eq('request_type','payment_submission').eq('status','pending').order('requested_at',{ascending:true}).limit(500));
+      const ids = reqs.map(r => r.transaction_id).filter(Boolean);
+      const [tx, proofs] = await Promise.all([
+        ids.length ? P.q(P.from('v_ledger').select('*').in('id',ids)) : [],
+        ids.length ? P.q(P.from('transaction_attachments').select('transaction_id').in('transaction_id',ids)) : [],
+      ]);
+      const txById = Object.fromEntries(tx.map(t => [t.id,t]));
+      const proofSet = new Set(proofs.map(x => x.transaction_id));
+      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Uhakiki wa malipo</h1><p class="pm-muted">Kagua jina, aina, kiasi, tarehe na risiti. Malipo yanaingia kwenye taarifa baada tu ya kuidhinishwa.</p></div></div>
+        <section class="pm-card"><h2 class="pm-h3">Yanayosubiri (${reqs.length})</h2>${P.table(reqs.map(r => ({...r,t:txById[r.transaction_id]||{},has_proof:proofSet.has(r.transaction_id)})),[
+          {key:'txn_date',label:'Tarehe',html:r=>P.date(r.t.txn_date)},
+          {key:'payer_name',label:'Mlipaji',html:r=>P.esc(r.t.payer_name||'—')},
+          {key:'category_name',label:'Mchango',html:r=>P.esc(r.t.category_name||'—')},
+          {key:'unit',label:'Eneo',html:r=>P.esc([r.t.jumuiya_name,r.t.kigango_name].filter(Boolean).join(' · ')||'Parokia')},
+          {key:'amount',label:'Kiasi',html:r=>P.tzs(r.t.amount),cls:'pm-num'},
+          {key:'reference_no',label:'Kumbukumbu',html:r=>P.esc(r.t.reference_no||'—')},
+          {key:'proof',label:'Risiti',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm" data-proof="${r.transaction_id}">Angalia risiti</button>`:P.badge('Risiti haijapakiwa','rose')},
+          {key:'actions',label:'Uamuzi',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm pm-btn--primary" data-approve="${r.id}">Idhinisha</button> <button class="pm-btn pm-btn--sm" data-reject="${r.id}">Kataa</button>`:'<small class="pm-muted">Subiri risiti ipakiwe</small>'}
+        ],{empty:'Hakuna malipo yanayosubiri uhakiki.'})}</section>`;
+      el.querySelectorAll('[data-proof]').forEach(b=>b.addEventListener('click',()=>P.openProofs(b.dataset.proof)));
+      el.querySelectorAll('[data-approve],[data-reject]').forEach(b=>b.addEventListener('click',async()=>{
+        const approve=b.hasAttribute('data-approve'), id=b.dataset.approve||b.dataset.reject;
+        let note=null;
+        if(!approve){const v=await P.modal({title:'Sababu ya kukataa malipo',submit:'Kataa malipo',body:'<div class="pm-form"><label class="pm-span2">Sababu<input name="note" required minlength="3"></label></div>'});if(!v)return;note=v.note;}
+        try {
+          const r=await P.busy(b,()=>P.rpc('decide_approval',{p_request:id,p_approve:approve,p_note:note}));
+          Toast.success(approve?`Malipo yameidhinishwa. Risiti ${r.receipt_no||''}`:'Malipo yamekataliwa; sababu imehifadhiwa.');
+          P.reload();
+        } catch(e) { if (!e.__shown) Toast.error(P.friendlyError(e)); }
+      }));
+    },
+  };
+
   /* ================= UHASIBU ================= */
   V.accounting = {
     title: 'Uhasibu', perm: 'finance.read',
@@ -156,122 +193,74 @@
     },
   };
 
-  /* ================= RIPOTI ================= */
-  const REPORTS = [
-    ['Makusanyo', [['collections', 'Makusanyo kwa kipindi (siku / wiki / mwezi / mwaka)'], ['monthly', 'Makusanyo ya kila mwezi (mwaka mzima)'],
-      ['by_level', 'Michango kwa familia / jumuiya / kigango / parokia'], ['campaign', 'Kampeni kwa jumuiya / kigango'], ['outstanding', 'Ahadi ambazo hazijalipwa']]],
-    ['Zaka', [['zaka', 'Zaka kwa mwezi (Jan–Des)']]],
-    ['Fedha', [['income_expense', 'Mapato na matumizi'], ['funds', 'Salio la mifuko'], ['yoy', 'Ulinganisho wa miaka']]],
-    ['Risiti', [['receipts', 'Rejista ya risiti']]],
-  ];
-  const reportItems = REPORTS.flatMap(([, items]) => items);
+  /* ================= TAARIFA YA FEDHA ================= */
+  const periodRange = (period, index, year) => {
+    let a, b;
+    if (period === 'month') { a = new Date(year, index - 1, 1); b = new Date(year, index, 0); }
+    else if (period === 'quarter') { const m = (index - 1) * 3; a = new Date(year, m, 1); b = new Date(year, m + 3, 0); }
+    else if (period === 'half') { const m = (index - 1) * 6; a = new Date(year, m, 1); b = new Date(year, m + 6, 0); }
+    else if (period === 'nine') { a = new Date(year, 0, 1); b = new Date(year, 9, 0); }
+    else { a = new Date(year, 0, 1); b = new Date(year, 11, 31); }
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { from: iso(a), to: iso(b) };
+  };
   V.reports = {
-    title: 'Ripoti', perm: 'finance.read',
+    title: 'Taarifa ya Fedha', perm: 'finance.read',
     async render(el, params) {
-      const r = params.r || 'collections', scope = params.scope || P.scopeUnit() || '';
-      const from = params.from || (P.year() === P.thisYear() ? `${P.year()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01` : P.yearFrom()), to = params.to || P.yearTo();
-      const year = Number(params.year || P.year()), level = params.level || 'jumuiya', cat = params.category || '', camp = params.campaign || '';
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Ripoti</h1><p class="pm-muted">Ripoti zote zinatoka kwenye kumbukumbu moja ya miamala — hakuna kunakili kati ya karatasi.</p></div>
+      const period = params.period || 'month', year = Number(params.year || P.year());
+      const index = Number(params.period_index || (new Date().getMonth() + 1));
+      const scope = params.scope || P.scopeUnit() || '';
+      const defaults = periodRange(['month', 'quarter', 'half', 'nine'].includes(period) ? period : 'year', index, year);
+      const from = params.from || defaults.from, to = params.to || defaults.to;
+      const scopeLbl = scope ? P.ref.unitsById[scope]?.label || 'Eneo lililochaguliwa' : 'Parokia nzima';
+      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Taarifa ya fedha</h1><p class="pm-muted">Ripoti moja ya kipindi: kadiriwa, halisi, tofauti na salio. Chagua mwezi, robo mwaka, nusu mwaka, miezi tisa au mwaka mzima.</p></div>
         <div class="pm-actions"><button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button><button class="pm-btn" data-print><span class="material-symbols-outlined">picture_as_pdf</span>PDF / Chapa</button></div></div>
         <form class="pm-filters">
-          <label class="pm-wide">Ripoti<select name="r">${REPORTS.map(([group, items]) => `<optgroup label="${group}">${items.map(([k, v]) => `<option value="${k}" ${k === r ? 'selected' : ''}>${v}</option>`).join('')}</optgroup>`).join('')}</select></label>
-          <label>Kuanzia<input type="date" name="from" value="${from}"></label><label>Hadi<input type="date" name="to" value="${to}"></label>
-          <label>Mwaka<input type="number" name="year" value="${year}"></label>
-          <label>Ngazi<select name="level">${[['parish', 'Parokia'], ['kigango', 'Kigango'], ['jumuiya', 'Jumuiya'], ['family', 'Familia'], ['parishioner', 'Muumini']].map(([k, v]) => `<option value="${k}" ${k === level ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-          <label>Aina<select name="category">${P.catOptions(null, { blank: 'Zote', selected: cat })}</select></label>
-          <label>Kampeni<select name="campaign">${P.options(P.ref.camps, { blank: '—', selected: camp })}</select></label>
-          <label>Eneo<select name="scope">${P.unitOptions(['kigango', 'jumuiya'], { blank: 'Parokia nzima', selected: scope })}</select></label>
-          <button class="pm-btn pm-btn--primary">Tengeneza</button></form>
+          <label>Mwaka<input type="number" name="year" min="2000" max="2100" value="${year}"></label>
+          <label>Kipindi<select name="period"><option value="month" ${period==='month'?'selected':''}>Mwezi</option><option value="quarter" ${period==='quarter'?'selected':''}>Robo mwaka</option><option value="half" ${period==='half'?'selected':''}>Nusu mwaka</option><option value="nine" ${period==='nine'?'selected':''}>Miezi tisa (Jan–Sep)</option><option value="year" ${period==='year'?'selected':''}>Mwaka mzima</option><option value="custom" ${period==='custom'?'selected':''}>Tarehe maalum</option></select></label>
+          <label data-index-wrap style="${['month','quarter','half'].includes(period)?'':'display:none'}">Namba ya kipindi<select name="period_index">${Array.from({length:period==='quarter'?4:period==='half'?2:12},(_,i)=>`<option value="${i+1}" ${index===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+          <label data-from-wrap style="${period==='custom'?'':'display:none'}">Kuanzia<input type="date" name="from" value="${from}"></label><label data-to-wrap style="${period==='custom'?'':'display:none'}">Hadi<input type="date" name="to" value="${to}"></label>
+          <label class="pm-wide">Eneo<select name="scope">${P.unitOptions(['kigango','jumuiya'],{blank:'Parokia nzima',selected:scope})}</select></label>
+          <button class="pm-btn pm-btn--primary">Tengeneza ripoti</button></form>
         <section class="pm-card" data-out>${P.loading()}</section>`;
-      el.querySelector('.pm-filters').addEventListener('submit', e => { e.preventDefault(); P.go('#/reports?' + new URLSearchParams(Object.fromEntries(new FormData(e.target)))); });
-      const out = el.querySelector('[data-out]');
-      const title = reportItems.find(x => x[0] === r)?.[1] || 'Ripoti';
-      const scopeLbl = scope ? P.ref.unitsById[scope].label : 'Parokia nzima';
-      let rows = [], cols = [], foot = null, sub = scopeLbl, excel = null;
-      // a total of the report opens the payments behind it (same filters as the report)
-      const base = { ...(scope ? { unit: scope } : {}), ...(camp ? { campaign: camp } : {}) };
-      const monthRange = (y, i) => ({ from: `${y}-${String(i + 1).padStart(2, '0')}-01`, to: new Date(y, i + 1, 0).toISOString().slice(0, 10) });
-      const MKIND = { zaka: ['zaka'], mavuno: ['mavuno'], ujenzi: ['ujenzi'], sadaka: ['sadaka'], special: ['special', 'shukrani'], other: ['income_other'] };
-      const byLevelTx = x => {
-        const k = r === 'collections' ? 'parish' : level;
-        if (k === 'parish') return {};
-        if (!x.group_id) return null;
-        if (k === 'family') return { family: x.group_id };
-        if (k === 'parishioner') return { parishioner: x.group_id };
-        if (k === 'kigango') return { unit: x.group_id };
-        // jumuiya level: a row that is a kigango holds what was paid at the kigango itself
-        return P.ref.unitsById[x.group_id]?.unit_type === 'kigango' ? { unit_self: x.group_id } : { unit: x.group_id };
+      const form = el.querySelector('.pm-filters'), typeSelect = form.elements.period;
+      const syncPeriod = () => {
+        const count = typeSelect.value === 'quarter' ? 4 : typeSelect.value === 'half' ? 2 : 12;
+        const indexSelect = form.elements.period_index, old = Math.min(Number(indexSelect.value) || 1, count);
+        indexSelect.innerHTML = Array.from({length:count},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join(''); indexSelect.value=String(old);
+        el.querySelector('[data-index-wrap]').style.display=['month','quarter','half'].includes(typeSelect.value)?'':'none';
+        el.querySelector('[data-from-wrap]').style.display=typeSelect.value==='custom'?'':'none';
+        el.querySelector('[data-to-wrap]').style.display=typeSelect.value==='custom'?'':'none';
       };
-      if (r === 'collections' || r === 'by_level') {
-        rows = await P.rpc('contribution_totals', { p_from: from, p_to: to, p_level: r === 'collections' ? 'parish' : level, p_category: cat || null, p_campaign: camp || null, p_scope: scope || null });
-        if (r === 'collections') { rows = rows.map(x => ({ ...x, group_name: x.category_name })); }
-        cols = [{ key: 'group_name', label: r === 'collections' ? 'Aina ya mchango' : 'Jina' }, ...(r === 'by_level' ? [{ key: 'category_name', label: 'Aina' }] : []),
-          { key: 'payments', label: 'Malipo', cls: 'pm-num' }, { key: 'reversals', label: 'Yaliyorudishwa', cls: 'pm-num' },
-          { key: 'total', label: 'Jumla', cls: 'pm-num pm-strong', html: x => { const w = byLevelTx(x); return w ? P.txMoney(x.total, { title: `${x.category_name}${r === 'by_level' ? ' — ' + (x.group_name || '') : ''}`, sub: `${P.date(from)} – ${P.date(to)}`, ...base, ...w, category: x.category_id, from, to }) : P.tzs(x.total); } }];
-        foot = { group_name: '<b>JUMLA</b>', total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>`, payments: P.num(P.sum(rows, 'payments')) };
-        sub = `${scopeLbl} · ${from} – ${to}`;
-      } else if (r === 'monthly' || r === 'income_expense') {
-        rows = await P.rpc('monthly_totals', { p_year: year, p_scope: scope || null });
-        rows = rows.map((m, i) => ({ ...m, mwezi: P.MONTHS[i], net: Number(m.income) - Number(m.expense) }));
-        const scU = scope ? { unit: scope } : {};
-        const mtx = (k, fmt) => (v, x) => P.txMoney(v, { title: `${k === 'income' ? 'Mapato' : k[0].toUpperCase() + k.slice(1)} — ${x.mwezi} ${year}`, sub: scopeLbl, ...scU, ...monthRange(year, rows.indexOf(x)), ...(MKIND[k] ? { kinds: MKIND[k] } : {}) }, fmt);
-        cols = r === 'monthly' ? [{ key: 'mwezi', label: 'Mwezi' }, ...['zaka', 'mavuno', 'ujenzi', 'sadaka', 'special', 'other'].map(k => ({ key: k, label: k[0].toUpperCase() + k.slice(1), fmt: mtx(k, P.num), sum: P.num, cls: 'pm-num' })), { key: 'income', label: 'Jumla', fmt: mtx('income', P.tzs), sum: P.tzs, cls: 'pm-num pm-strong' }]
-          : [{ key: 'mwezi', label: 'Mwezi' }, { key: 'income', label: 'Mapato', fmt: mtx('income', P.tzs), sum: P.tzs, cls: 'pm-num' }, { key: 'expense', label: 'Matumizi', fmt: P.tzs, cls: 'pm-num' }, { key: 'net', label: 'Ziada / Upungufu', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-        // the year totals (foot) open the whole year
-        foot = Object.fromEntries(cols.slice(1).map(c => [c.key, c.sum ? P.txMoney(P.sum(rows, c.key), { title: `${c.label} ${year}`, sub: scopeLbl, ...scU, year, ...(MKIND[c.key] ? { kinds: MKIND[c.key] } : {}) }, c.sum) : c.fmt(P.sum(rows, c.key))]));
-        foot.mwezi = '<b>JUMLA</b>';
-        sub = `${scopeLbl} · ${year}`;
-      } else if (r === 'campaign') {
-        if (!camp) { out.innerHTML = P.empty('Chagua kampeni.'); return; }
-        rows = await P.rpc('campaign_org_progress', { p_campaign: camp, p_level: level === 'kigango' ? 'kigango' : 'jumuiya' });
-        cols = [{ key: 'org_unit_name', label: 'Jina' }, { key: 'target', label: 'Walichopangiwa', fmt: P.tzs, cls: 'pm-num' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
-          { key: 'collected', label: 'Walichotoa', html: x => x.org_unit_id ? P.txMoney(x.collected, { title: `${P.ref.camps.find(c => c.id === camp)?.name || 'Kampeni'} — ${x.org_unit_name}`, campaign: camp, unit: x.org_unit_id }) : P.tzs(x.collected), cls: 'pm-num pm-strong' }, { key: 'balance', label: 'Bado', fmt: P.tzs, cls: 'pm-num' }, { key: 'excess', label: 'Ziada', fmt: P.tzs, cls: 'pm-num' }, { key: 'pct', label: '%', fmt: P.pct, cls: 'pm-num' }];
-        foot = { org_unit_name: '<b>JUMLA</b>', target: P.tzs(P.sum(rows, 'target')), collected: `<b>${P.tzs(P.sum(rows, 'collected'))}</b>`, balance: P.tzs(P.sum(rows, 'balance')), excess: P.tzs(P.sum(rows, 'excess')) };
-        sub = P.ref.camps.find(c => c.id === camp)?.name;
-      } else if (r === 'outstanding') {
-        let q = P.from('v_pledge_balances').select('*').eq('status', 'active').gt('outstanding', 0).order('outstanding', { ascending: false }).limit(2000);
-        if (camp) q = q.eq('campaign_id', camp);
-        if (scope) q = P.ref.unitsById[scope].unit_type === 'kigango' ? q.eq('kigango_id', scope) : q.eq('jumuiya_id', scope);
-        rows = (await P.q(q)).map(x => ({ ...x, who: x.parishioner_name || x.family_name || x.org_unit_name, jum: P.ref.unitsById[x.jumuiya_id]?.label }));
-        cols = [{ key: 'who', label: 'Mwenye ahadi' }, { key: 'jum', label: 'Jumuiya' }, { key: 'campaign_name', label: 'Kampeni' }, { key: 'pledged', label: 'Ahadi', fmt: P.tzs, cls: 'pm-num' },
-          { key: 'paid', label: 'Amelipa', fmt: P.tzs, cls: 'pm-num' }, { key: 'outstanding', label: 'Deni', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-        foot = { who: '<b>JUMLA</b>', pledged: P.tzs(P.sum(rows, 'pledged')), paid: P.tzs(P.sum(rows, 'paid')), outstanding: `<b>${P.tzs(P.sum(rows, 'outstanding'))}</b>` };
-      } else if (r === 'funds') {
-        rows = await P.q(P.from('v_fund_balances').select('*'));
-        cols = [{ key: 'name', label: 'Mfuko' }, { key: 'income', label: 'Mapato', fmt: P.tzs, cls: 'pm-num' }, { key: 'expenses', label: 'Matumizi', fmt: P.tzs, cls: 'pm-num' }, { key: 'balance', label: 'Salio', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-        foot = { name: '<b>JUMLA</b>', balance: `<b>${P.tzs(P.sum(rows, 'balance'))}</b>` }; sub = 'Hadi leo';
-      } else if (r === 'yoy') {
-        const [a, b] = await Promise.all([P.rpc('monthly_totals', { p_year: year - 1, p_scope: scope || null }), P.rpc('monthly_totals', { p_year: year, p_scope: scope || null })]);
-        rows = P.MONTHS.map((m, i) => ({ mwezi: m, prev: Number(a[i].income), cur: Number(b[i].income), diff: Number(b[i].income) - Number(a[i].income) }));
-        const scU = scope ? { unit: scope } : {};
-        const ytx = y => (v, x) => P.txMoney(v, { title: `Mapato — ${x.mwezi} ${y}`, sub: scopeLbl, ...scU, ...monthRange(y, rows.indexOf(x)) });
-        cols = [{ key: 'mwezi', label: 'Mwezi' }, { key: 'prev', label: String(year - 1), fmt: ytx(year - 1), cls: 'pm-num' }, { key: 'cur', label: String(year), fmt: ytx(year), cls: 'pm-num' }, { key: 'diff', label: 'Tofauti', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-        foot = { mwezi: '<b>JUMLA</b>', prev: P.tzs(P.sum(rows, 'prev')), cur: P.tzs(P.sum(rows, 'cur')), diff: P.tzs(P.sum(rows, 'diff')) };
-      } else if (r === 'receipts') {
-        rows = await P.q(P.from('v_receipt_register').select('*').gte('issued_at', from).lte('issued_at', to + 'T23:59:59').order('seq'));
-        cols = [{ key: 'receipt_no', label: 'Risiti' }, { key: 'issued_at', label: 'Tarehe', fmt: P.date }, { key: 'payer_name', label: 'Mlipaji' }, { key: 'category_name', label: 'Aina' }, { key: 'amount', label: 'Kiasi', fmt: P.tzs, cls: 'pm-num' }, { key: 'status', label: 'Hali' }];
-        foot = { receipt_no: '<b>JUMLA (halali)</b>', amount: P.tzs(P.sum(rows.filter(x => x.status === 'valid'), 'amount')) }; sub = `${from} – ${to}`;
-      } else if (r === 'zaka') {
-        const validLevels = ['parishioner', 'family', 'jumuiya', 'kigango'];
-        const zakaLevel = validLevels.includes(level) ? level : 'jumuiya';
-        rows = await P.rpc('zaka_grid_tree', { p_year: year, p_level: zakaLevel, p_scope: scope || null });
-        const months = P.MONTHS.map((m, i) => ({ key: `m${String(i + 1).padStart(2, '0')}`, label: m.slice(0, 3), sum: P.tzs, cls: 'pm-num' }));
-        cols = [{ key: 'group_name', label: ({ parishioner: 'Muumini', family: 'Familia', jumuiya: 'Jumuiya', kigango: 'Kigango' })[zakaLevel] },
-          ...(zakaLevel === 'parishioner' || zakaLevel === 'family' ? [{ key: 'jumuiya_name', label: 'Jumuiya' }] : []),
-          ...months, { key: 'total', label: 'Jumla', fmt: P.tzs, sum: P.tzs, cls: 'pm-num pm-strong' },
-          { key: 'months_paid', label: 'Miezi imelipwa', fmt: P.num, cls: 'pm-num' }, { key: 'months_unpaid', label: 'Miezi iliyobaki', fmt: P.num, cls: 'pm-num' }];
-        const scU = scope ? { unit: scope } : {};
-        cols = cols.map(c => months.includes(c) ? { ...c, fmt: (v, x) => P.txMoney(v, { title: `Zaka ${year} — ${x.group_name}`, sub: c.label, ...scU, ...(zakaLevel === 'family' ? { family: x.group_id } : zakaLevel === 'parishioner' ? { parishioner: x.group_id } : { unit: x.group_id }), kinds: ['zaka'], zaka_year: year, period_month: `${year}-${c.key.slice(1)}-01` }, P.tzs) } : c);
-        foot = { group_name: '<b>JUMLA</b>', ...Object.fromEntries(months.map(m => [m.key, P.tzs(P.sum(rows, m.key))])), total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>` };
-        sub = `${scopeLbl} · Zaka ${year} · ${({ parishioner: 'kwa waumini', family: 'kwa familia', jumuiya: 'kwa jumuiya', kigango: 'kwa vigango' })[zakaLevel]}`;
-      }
-      out.innerHTML = P.reportHeader(title, sub) + P.table(rows, cols, { foot }) +
-        `<p class="pm-muted pm-small pm-print-foot">${P.esc(P.ref.parish.report_footer || 'Mfumo wa Usimamizi wa Parokia')}</p>`;
-      el.querySelector('[data-print]').addEventListener('click', () => P.print(title));
-      el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel(title.slice(0, 40), { Ripoti: rows.map(x => Object.fromEntries(cols.map(c => [c.label, typeof x[c.key] === 'string' && !isNaN(x[c.key]) && x[c.key] !== '' ? Number(x[c.key]) : x[c.key]]))) }));
+      typeSelect.addEventListener('change',syncPeriod);
+      form.addEventListener('submit',e=>{
+        e.preventDefault(); const values=Object.fromEntries(new FormData(form));
+        if(values.period==='custom'){
+          if(!values.from||!values.to||values.to<values.from){Toast.error('Weka tarehe sahihi za mwanzo na mwisho.');return;}
+        } else {const range=periodRange(values.period,Number(values.period_index||1),Number(values.year));values.from=range.from;values.to=range.to;}
+        P.go('#/reports?'+new URLSearchParams(values));
+      });
+      const data=await P.rpc('financial_period_report',{p_from:from,p_to:to,p_scope:scope||null});
+      const rows=data.lines||[], incomeRows=rows.filter(x=>x.kind!=='expense'), expenseRows=rows.filter(x=>x.kind==='expense');
+      const cols=[{key:'name',label:'Kipengele'},{key:'budget_amount',label:'Kadiriwa',fmt:P.tzs,cls:'pm-num'},
+        {key:'actual_amount',label:'Halisi',fmt:P.tzs,cls:'pm-num'},{key:'variance_amount',label:'Ziada / Pungufu',fmt:P.tzs,cls:'pm-num pm-strong'},
+        {key:'variance_reason',label:'Sababu',html:x=>P.esc(x.variance_reason||'—')}];
+      const sumFoot=list=>({name:'<b>JUMLA</b>',budget_amount:P.tzs(P.sum(list,'budget_amount')),actual_amount:`<b>${P.tzs(P.sum(list,'actual_amount'))}</b>`,variance_amount:P.tzs(P.sum(list,'variance_amount'))});
+      const cards=`<div class="pm-kpis">${P.kpi('Salio la mwanzo',P.tzs(data.opening_balance),'account_balance')}${P.kpi('Mapato',P.tzs(data.income_total),'trending_up')}${P.kpi('Matumizi',P.tzs(data.expense_total),'trending_down')}${P.kpi('Salio la mwisho',P.tzs(data.closing_balance),'savings')}</div>`;
+      const edit=P.can('finance.configure')?'<button class="pm-btn pm-btn--sm" data-budget>Weka / hariri bajeti na sababu</button>':'';
+      const out=el.querySelector('[data-out]');
+      out.innerHTML=P.reportHeader('Taarifa ya fedha',`${scopeLbl} · ${P.date(from)} – ${P.date(to)}`)+cards+`<p class="pm-muted pm-small">Marekebisho ya salio yaliyothibitishwa: ${P.tzs(data.adjustment_total||0)}</p>`+edit+
+        `<h2 class="pm-h3">A. Mapato</h2>${P.table(incomeRows,cols,{foot:sumFoot(incomeRows),empty:'Hakuna mapato yaliyorekodiwa kwenye kipindi hiki.'})}<h2 class="pm-h3">B. Matumizi</h2>${P.table(expenseRows,cols,{foot:sumFoot(expenseRows),empty:'Hakuna matumizi yaliyorekodiwa kwenye kipindi hiki.'})}<p class="pm-muted pm-small pm-print-foot">Salio la mwanzo ni fedha iliyokuwepo kabla ya kipindi. Mapato na matumizi yanahesabu miamala iliyothibitishwa pekee; uhamisho wa ndani hauhesabiwi mara mbili. Tofauti ni halisi ukitoa kadiriwa; sababu hujazwa na msimamizi.</p>`;
+      if(P.can('finance.configure')) out.querySelector('[data-budget]').addEventListener('click',async()=>{
+        const choices=P.ref.cats.filter(c=>c.is_active&&c.code!=='TRANSFER');
+        const v=await P.modal({title:'Bajeti na sababu ya tofauti',body:`<div class="pm-form"><label>Aina ya mapato/matumizi<select name="category_id" required>${P.options(choices,{label:'name_sw',blank:'Chagua…'})}</select></label><label>Bajeti ya kipindi (TZS)<input name="budget_amount" type="number" min="0" step="1" required></label><label class="pm-span2">Sababu ya tofauti (ikiwezekana)<textarea name="variance_reason" rows="3" maxlength="500"></textarea></label></div><p class="pm-muted pm-small">Kipindi: ${P.date(from)} – ${P.date(to)}. Bajeti itahifadhiwa kwa ${P.esc(scopeLbl)}.</p>`,submit:'Hifadhi bajeti'});
+        if(!v)return;await P.rpc('save_financial_period_budget',{p:{org_unit_id:scope||null,period_start:from,period_end:to,category_id:v.category_id,budget_amount:v.budget_amount,variance_reason:v.variance_reason}});Toast.success('Bajeti imehifadhiwa.');P.reload();
+      });
+      el.querySelector('[data-print]').addEventListener('click',()=>P.print('Taarifa ya fedha'));
+      const xlsRows=list=>list.map(x=>({'Kipengele':x.name,'Kadiriwa':Number(x.budget_amount),'Halisi':Number(x.actual_amount),'Tofauti':Number(x.variance_amount),'Sababu':x.variance_reason||''}));
+      el.querySelector('[data-xls]').addEventListener('click',()=>P.exportExcel('Taarifa_ya_fedha',{Muhtasari:[{Eneo:scopeLbl,Kipindi:`${from} - ${to}`,'Salio la mwanzo':Number(data.opening_balance),'Mapato':Number(data.income_total),'Matumizi':Number(data.expense_total),'Marekebisho':Number(data.adjustment_total||0),'Salio la mwisho':Number(data.closing_balance)}],Mapato:xlsRows(incomeRows),Matumizi:xlsRows(expenseRows)}));
     },
   };
-
   /* ================= UHAKIKI WA FEDHA ================= */
   V.reconciliation = {
     title: 'Uhakiki wa Fedha', perm: 'finance.read',

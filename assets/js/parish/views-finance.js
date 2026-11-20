@@ -50,8 +50,8 @@
               <div><span><i class="material-symbols-outlined">volunteer_activism</i>Michango maalumu</span><b>${dtx(t.special, `Michango maalumu ${year}`, { year, kinds: ['special', 'shukrani'] })}</b></div>
             </div>
           </div>
-          <a class="pm-pledges-card" href="#/reports?r=outstanding${scope ? '&scope=' + scope : ''}">
-            <span class="material-symbols-outlined">pending_actions</span><span><b>Ahadi ambazo hazijalipwa</b><small>Fungua ripoti ya ahadi</small></span><strong>${P.tzs(t.outstanding_pledges)}</strong>
+          <a class="pm-pledges-card" href="#/pledges">
+            <span class="material-symbols-outlined">pending_actions</span><span><b>Ahadi ambazo hazijalipwa</b><small>Fungua orodha ya ahadi</small></span><strong>${P.tzs(t.outstanding_pledges)}</strong>
           </a>
         </section>
         <section class="pm-grid2">
@@ -97,7 +97,9 @@
     : (a, b) => String(a.group_name).localeCompare(String(b.group_name)));
 
   /* ================= MIAMALA (payments) ================= */
-  async function paymentForm(prefill = {}) {
+  async function paymentForm(prefill = {}, options = {}) {
+    const reviewSubmission = !!options.reviewSubmission;
+    const fixedPayer = !!options.fixedPayer;
     let payer = prefill.payer || null;
     const jum = prefill.jumuiya ? P.ref.unitsById[prefill.jumuiya] : null;      // recording inside one jumuiya
     const kigango = prefill.kigango_id ? P.ref.unitsById[prefill.kigango_id] : null;
@@ -111,18 +113,20 @@
     let split = null;           // any income type distributed among units, families, or parishioners
     const body = `
       <div class="pm-form">
-        <label class="pm-span2"><span data-payer-label>Mlipaji (tafuta muumini, familia au jumuiya${jum ? ` — ndani ya Jumuiya ya ${P.esc(jum.name)}` : ''})</span>
-          <div class="pm-search"><input data-payer-search name="payer_name" autocomplete="off" placeholder="Andika jina…" value="${P.esc(prefill.payerName || '')}" required>
+        <label class="pm-span2"><span data-payer-label>${reviewSubmission ? 'Mlipaji kutoka kwenye rejista' : `Mlipaji (tafuta muumini, familia au jumuiya${jum ? ` — ndani ya Jumuiya ya ${P.esc(jum.name)}` : ''})`}</span>
+          <div class="pm-search"><input data-payer-search name="payer_name" autocomplete="off" placeholder="Andika jina…" value="${P.esc(prefill.payerName || '')}" ${fixedPayer ? 'readonly' : ''} ${reviewSubmission && !fixedPayer ? 'required' : ''}>
           <div data-payer-results class="pm-search__results"></div></div>
-          <small data-payer-kind class="pm-muted">${payer ? 'Amechaguliwa kutoka kwenye rejista' : 'Jina huru (halijaunganishwa na rejista)'}</small></label>
+          <small data-payer-kind class="pm-muted">${fixedPayer ? 'Malipo yatatumwa kwa akaunti yako' : payer ? 'Amechaguliwa kutoka kwenye rejista' : reviewSubmission ? 'Tafuta na uchague rekodi ya mlipaji' : 'Jina huru (halijaunganishwa na rejista)'}</small></label>
         <label data-org-field ${payer ? 'hidden' : ''}>${kigango ? 'Jumuiya (kama malipo hayagawiwi)' : 'Jumuiya / Kigango (kama malipo hayagawiwi)'}<select name="org_unit_id">${P.unitOptions(['jumuiya', 'kigango', 'group'], { blank: '— Parokia —', selected: prefill.org_unit_id || prefill.jumuiya })}</select></label>
-        <label>Aina ya mchango<select name="category_id" required>${P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
-        ${P.newTypeHtml()}
+        <label>Aina ya mchango<select name="category_id" required>${reviewSubmission
+          ? P.catOptions([...new Set(P.ref.cats.filter(c => c.kind !== 'expense').map(c => c.kind))], { blank: 'Chagua…', selected: prefill.category_id })
+          : P.typeOptions(null, { blank: 'Chagua…', selected: prefill.category_id })}</select></label>
+        ${reviewSubmission ? '' : P.newTypeHtml()}
         <label>Kiasi (TZS)<input name="amount" type="number" min="1" step="1" required inputmode="numeric"></label>
         <label>Tarehe<input name="txn_date" type="date" value="${P.today()}" required></label>
         <label>Njia ya malipo<select name="payment_method">${Object.entries(P.METHODS).filter(([k]) => k !== 'envelope').map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
-        ${P.proofField()}
-        ${splitRoot ? `<div class="pm-span2" data-split-wrap>
+        ${reviewSubmission ? P.proofField().replace('(hiari)', '(inahitajika)').replace('name="proof"', 'name="proof" required') : P.proofField()}
+        ${splitRoot && !reviewSubmission ? `<div class="pm-span2" data-split-wrap>
           <button type="button" class="pm-btn" data-split-open><span class="material-symbols-outlined">call_split</span>Gawanya malipo kwa ngazi</button>
           <div class="pm-split" data-split hidden></div></div>` : ''}
         <details class="pm-span2" data-payment-extra ${prefill.campaign_id || prefill.period_month ? 'open' : ''}>
@@ -136,7 +140,8 @@
         </details>
       </div>`;
     const result = await P.modal({
-      title: jum ? `Rekodi malipo — Jumuiya ya ${jum.name}` : 'Rekodi malipo', submit: 'Thibitisha na Hifadhi', wide: true, body,
+      title: reviewSubmission ? 'Wasilisha malipo kwa uhakiki' : jum ? `Rekodi malipo — Jumuiya ya ${jum.name}` : 'Rekodi malipo',
+      submit: reviewSubmission ? 'Tuma kwa uhakiki' : 'Thibitisha na Hifadhi', wide: true, body,
       onOpen(m) {
         const cat = m.querySelector('[name=category_id]'), camp = m.querySelector('[name=campaign_id]');
         const syncPeriod = () => {
@@ -269,13 +274,41 @@
         }, true);
 
         cat.addEventListener('change', syncCat); camp.addEventListener('change', syncPeriod); syncCat();
-        P.wireNewType(m, cat);
-        P.payerPicker(m, { jumuiya: prefill.jumuiya, onPick: p => { payer = p; m.querySelector('[data-org-field]').hidden = true; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
-        m.querySelector('[data-payer-search]').addEventListener('input', () => { payer = null; if (split) return; m.querySelector('[data-org-field]').hidden = false; m.querySelector('[data-payer-kind]').textContent = 'Jina huru (halijaunganishwa na rejista)'; });
+        if (!reviewSubmission) P.wireNewType(m, cat);
+        let payerConfirmed = !!fixedPayer;
+        P.payerPicker(m, { jumuiya: prefill.jumuiya, scopeUnitIds: options.scopeUnitIds,
+          types: reviewSubmission ? ['parishioner', 'family', 'kigango', 'jumuiya'] : undefined,
+          onPick: p => { payer = p; payerConfirmed = true; m.querySelector('[data-org-field]').hidden = true; m.querySelector('[data-payer-kind]').textContent = `Amechaguliwa: ${p.kind === 'parishioner' ? 'muumini' : p.kind === 'family' ? 'familia' : 'jumuiya/kikundi'}`; } });
+        m.querySelector('[data-payer-search]').addEventListener('input', () => { if (fixedPayer) return; payer = null; payerConfirmed = false; if (split) return; m.querySelector('[data-org-field]').hidden = reviewSubmission; m.querySelector('[data-payer-kind]').textContent = reviewSubmission ? 'Chagua jina kwenye matokeo ya utafutaji' : 'Jina huru (halijaunganishwa na rejista)'; });
+        if (reviewSubmission) m.querySelector('[data-org-field]').hidden = true;
+        if (reviewSubmission) m.querySelector('form').addEventListener('submit', e => {
+          if (!payerConfirmed || !payer) { e.preventDefault(); e.stopImmediatePropagation(); Toast.error('Tafuta kisha chagua mlipaji kwenye orodha.'); }
+        }, true);
         if (prefill.split && openBtn) startSplit();
       },
     });
     if (!result) return null;
+    if (reviewSubmission) {
+      const categoryId = await P.resolveType(result);
+      const args = {
+        idempotency_key: key, amount: Number(result.amount), txn_date: result.txn_date, category_id: categoryId,
+        campaign_id: result.campaign_id || null, payment_method: result.payment_method,
+        reference_no: result.reference_no || null, description: result.description || null,
+        period_month: result.period_month ? result.period_month + '-01' : null,
+      };
+      if (payer) args[`${payer.kind}_id`] = payer.id;
+      let r = await P.rpc('submit_payment_for_review', { p: args });
+      if (r.status === 'possible_duplicate') {
+        const ok = await P.confirm('Huenda ni malipo yaliyorudiwa', `${r.message} (Muamala Na. ${r.existing_txn_no}). Endelea tu kama ni malipo mapya.`, 'Ndiyo, ni mapya');
+        if (!ok) return null;
+        r = await P.rpc('submit_payment_for_review', { p: { ...args, confirm_duplicate: true } });
+      }
+      if (r.status === 'pending_review') {
+        await P.attachProof(result.proof, [r.transaction_id]);
+        return r;
+      }
+      return r;
+    }
     if (split) {
       const categoryId = await P.resolveType(result);
       const lines = split.lines();
@@ -319,6 +352,9 @@
     title: 'Miamala', perm: 'finance.read',
     async render(el, params) {
       const scoped = P.scopeUnit() ? P.ref.unitsById[P.scopeUnit()] : null;
+      const submitScopeIds = scoped ? P.ref.units.filter(u => {
+        let x = u; while (x) { if (x.id === scoped.id) return true; x = P.ref.unitsById[x.parent_id]; } return false;
+      }).map(u => u.id) : null;
       const f = { from: params.from || P.yearFrom(), to: params.to || P.yearTo(), category: params.category || '', status: params.status || 'posted', q: params.q || '' };
       // where we are: k = kigango ('none' = parokiani), j = jumuiya ('none' = the kigango itself),
       // fa = familia ('none' = the jumuiya itself), p = muumini ('none' = the family itself)
@@ -351,7 +387,7 @@
         ${P.crumbs(crumbs.map((c, i) => i === crumbs.length - 1 ? { label: c.label } : c))}
         <div class="pm-head"><div><h1 class="pm-h1">Miamala${crumbs.length > 1 ? ' — ' + P.esc(crumbs[crumbs.length - 1].label) : ''}</h1>
           <p class="pm-muted">${level ? `Bonyeza ${LBL[level][0].toLowerCase()} kuingia ndani zaidi, hadi miamala yenyewe.` : 'Miamala yenyewe.'} ${P.date(f.from)} – ${P.date(f.to)}.</p></div>
-          <div class="pm-actions">${P.can('finance.record') ? '<button class="pm-btn pm-btn--primary" data-new><span class="material-symbols-outlined">add</span>Rekodi Malipo</button>' : ''}
+          <div class="pm-actions">${P.can('finance.record') ? '<button class="pm-btn pm-btn--primary" data-new><span class="material-symbols-outlined">add</span>Rekodi Malipo</button>' : ''}${P.can('finance.submit_payment') ? '<button class="pm-btn pm-btn--primary" data-submit-payment><span class="material-symbols-outlined">upload</span>Wasilisha malipo</button>' : ''}
           <button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button></div></div>
         <form class="pm-filters">
           <label>Kuanzia<input type="date" name="from" value="${f.from}"></label>
@@ -365,6 +401,14 @@
         e.preventDefault(); const v = Object.fromEntries(new FormData(e.target)); Object.assign(f, v); P.go(link({ all: '' }));
       });
       const newBtn = el.querySelector('[data-new]');
+      el.querySelector('[data-submit-payment]')?.addEventListener('click', async () => {
+        try {
+          const jumuiya = scoped?.unit_type === 'jumuiya' ? scoped.id : null;
+          const prefill = jumuiya ? { jumuiya } : {};
+          const result = await paymentForm(prefill, { reviewSubmission: true, scopeUnitIds: submitScopeIds || undefined });
+          if (result?.status === 'pending_review') { Toast.success('Malipo yametumwa kwa uhakiki.'); P.refresh(); }
+        } catch (e) { Toast.error(`Ombi limehifadhiwa lakini risiti haikupanda: ${P.friendlyError(e)}.`); P.refresh(); }
+      });
       const openNew = async () => {
         const pre = at.j && at.j !== 'none' ? { jumuiya: at.j } : at.k && at.k !== 'none'
           ? { kigango_id: at.k, org_unit_id: at.k, kigango_contributions: await P.rpc('unit_contributions', { p_year: P.year(), p_unit: at.k }) }

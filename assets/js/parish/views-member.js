@@ -33,6 +33,24 @@
     const c = await context();
     if (!c.parishioner_id) { el.innerHTML = `<div class="pm-member-wrap">${noLink}</div>`; return; }
     await V.statement.render(el, { parishioner: c.parishioner_id });
+    const pending = await P.q(P.from('finance_transactions').select('id,txn_no,amount,txn_date,category_id')
+      .eq('recorded_by', P.profile.id).eq('parishioner_id', c.parishioner_id).eq('kind', 'income').eq('status', 'pending')
+      .order('created_at', { ascending: false }).limit(30));
+    const proofs = pending.length ? new Set((await P.q(P.from('transaction_attachments').select('transaction_id')
+      .in('transaction_id', pending.map(t => t.id)))).map(x => x.transaction_id)) : new Set();
+    const head = el.querySelector('.pm-member-finance-head');
+    head?.insertAdjacentHTML('afterend', `<section class="pm-card pm-pad pm-member-payment-submit"><div class="pm-row"><div><h2 class="pm-h3">Wasilisha malipo</h2><p class="pm-muted pm-small">Ambatisha risiti. Malipo yataonekana kwenye taarifa baada ya kuhakikiwa.</p></div><button class="pm-btn pm-btn--primary" data-submit-own-payment><span class="material-symbols-outlined">add</span>Wasilisha</button></div>${pending.length ? `<h3 class="pm-h3 mt-3">Yanayosubiri (${pending.length})</h3><div class="pm-mobile-records">${pending.map(t => `<article class="pm-mobile-record"><div class="pm-mobile-record__top"><span>${P.date(t.txn_date)} · Na. ${P.esc(t.txn_no)}</span><b>${P.tzs(t.amount)}</b></div><strong>${P.esc(P.ref.catsById[t.category_id]?.name_sw || 'Mchango')}</strong><small>${proofs.has(t.id) ? 'Inasubiri uhakiki' : 'Inasubiri risiti ya uthibitisho'}</small>${proofs.has(t.id) ? '' : `<label class="pm-btn pm-btn--sm">Ambatisha risiti<input type="file" accept="image/*,application/pdf" data-retry-proof="${t.id}" hidden></label>`}</article>`).join('')}</div>` : ''}</section>`);
+    el.querySelector('[data-submit-own-payment]')?.addEventListener('click', async () => {
+      try {
+        const result = await P.paymentForm({ payer: { kind: 'parishioner', id: c.parishioner_id }, payerName: c.full_name }, { reviewSubmission: true, fixedPayer: true });
+        if (result?.status === 'pending_review') { Toast.success('Malipo yametumwa kwa uhakiki.'); P.refresh(); }
+      } catch (e) { Toast.error(`Ombi limehifadhiwa lakini risiti haikupanda: ${P.friendlyError(e)}. Ambatisha risiti kwenye orodha ya yanayosubiri.`); P.refresh(); }
+    });
+    el.querySelectorAll('[data-retry-proof]').forEach(input => input.addEventListener('change', async () => {
+      if (!input.files?.[0]) return;
+      try { await P.attachProof(input.files[0], [input.dataset.retryProof]); Toast.success('Risiti imeambatishwa.'); P.refresh(); }
+      catch (e) { Toast.error(P.friendlyError(e)); }
+    }));
   }};
 
   V['member-family'] = { title: 'Familia Yangu', async render(el) {
