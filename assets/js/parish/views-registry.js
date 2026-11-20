@@ -448,16 +448,12 @@
       }).join('');
       const userDirectory = `${parishUsers.length ? `<details class="pm-users-unit"><summary><b>Parokia nzima</b><span>${P.num(parishUsers.length)} akaunti</span></summary>${userTable(parishUsers, null)}</details>` : ''}${P.ref.units.filter(u => u.is_active && u.unit_type === 'kigango').map(k => groupsForUnit(k)).join('')}${otherScopeGroups}${unassignedUsers.length ? `<details class="pm-users-unit"><summary><b>Akaunti zisizo na nafasi</b><span>${P.num(unassignedUsers.length)} akaunti</span></summary>${userTable(unassignedUsers, null)}</details>` : ''}`;
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Watumiaji na Ruhusa</h1>
-          <p class="pm-muted">Fungua Parokia, Kigango au Jumuiya kuona akaunti na nafasi zake.</p></div>
+          <p class="pm-muted">Fungua Parokia, Kigango au Jumuiya kuona akaunti na nafasi zake. Namba ikilingana na rekodi moja hai ya muumini, mfumo utaunganisha akaunti kiotomatiki.</p></div>
         <div class="pm-actions"><button class="pm-btn pm-btn--primary" data-newuser><span class="material-symbols-outlined">person_add</span>Mtumiaji mpya</button>
           <button class="pm-btn" data-grant><span class="material-symbols-outlined">add_moderator</span>Toa nafasi</button></div></div>
         <form class="pm-filters" data-find><label class="pm-wide">Tafuta<input name="q" placeholder="Jina, namba ya simu au barua pepe"></label></form>
         <div class="pm-users-directory" data-users-directory>${userDirectory || '<section class="pm-card"><p class="pm-muted">Hakuna akaunti zilizopatikana.</p></section>'}</div>
-        <section class="pm-card"><h3 class="pm-h3">Unganisha akaunti na muumini wa rejista</h3>
-          <p class="pm-muted">Baada ya kuunganishwa, muumini ataona michango na ahadi zake tu.</p>
-          <form class="pm-form" data-link><label>Namba ya simu au barua pepe ya akaunti<input name="login" required></label>
-          <label>Muumini<div class="pm-search"><input data-payer-search name="who" required autocomplete="off"><div data-payer-results class="pm-search__results"></div></div></label>
-          <div class="pm-span2"><button class="pm-btn">Unganisha</button></div></form></section>`;
+        `;
       const byId = Object.fromEntries(profs.map(u => [u.id, u]));
       el.querySelector('[data-find] input').addEventListener('input', e => {
         const q = e.target.value.trim().toLowerCase().replace(/^0/, '');
@@ -481,19 +477,19 @@
           <p class="pm-muted pm-small">Aingie kwenye ukurasa wa kuingia kwa namba yake ya simu na nenosiri hili. Mfumo hautumi SMS: mpe taarifa hizi wewe mwenyewe.</p>` });
 
       el.querySelector('[data-newuser]').addEventListener('click', async () => {
-        let person = null;
         const v = await P.modal({ title: 'Mtumiaji mpya', wide: true, body: `<div class="pm-form pm-user-form">
             <label class="pm-span2">Jina kamili<input name="full_name" required></label>
             <label>Namba ya simu (ya kuingia)<input name="phone" required inputmode="tel" placeholder="mf. 0712 345 678"></label>
             ${pwField}
             ${roleFields(true)}
-            <label class="pm-span2">Muumini wa rejista (hiari — kama ni muumini anayeona michango yake)<div class="pm-search"><input data-payer-search name="who" autocomplete="off"><div data-payer-results class="pm-search__results"></div></div></label>
+            <p class="pm-span2 pm-muted pm-small">Namba ikilingana na rekodi moja hai ya muumini, akaunti itaunganishwa kiotomatiki. Rekodi zisizolingana au zenye namba zinazojirudia hazitaunganishwa.</p>
             <label class="pm-span2">Barua pepe (hiari, kwa mawasiliano tu)<input name="email" type="email"></label></div>`,
-          onOpen: m => { wirePw(m); P.payerPicker(m, { types: ['parishioner'], onPick: p => { person = p.id; } }); } });
+          onOpen: wirePw });
         if (!v) return;
         const r = await P.rpc('admin_create_user', { p: { full_name: v.full_name, phone: v.phone, email: v.email || null, password: v.password,
-          role_code: v.role_code || null, org_unit_id: v.role_code ? (v.org_unit_id || null) : null, parishioner_id: person } });
+          role_code: v.role_code || null, org_unit_id: v.role_code ? (v.org_unit_id || null) : null } });
         await told(/^\d+$/.test(r.login) ? '+' + r.login : r.login, v.password);
+        if (r.linked) Toast.success('Akaunti imeunganishwa na rekodi ya muumini kwa namba ya simu.');
         P.reload();
       });
       el.querySelectorAll('[data-pw]').forEach(b => b.addEventListener('click', async () => {
@@ -534,16 +530,6 @@
         if (!await P.confirm('Ondoa nafasi', 'Mtumiaji huyu atapoteza ruhusa hii mara moja.')) return;
         await P.q(P.from('parish_user_roles').delete().eq('id', b.dataset.revoke)); P.reload();
       }));
-      let person = null;
-      P.payerPicker(el.querySelector('[data-link]'), { types: ['parishioner'], onPick: p => { person = p.id; } });
-      el.querySelector('[data-link]').addEventListener('submit', async e => {
-        e.preventDefault();
-        if (!person) { Toast.error('Chagua muumini (si familia) kutoka kwenye orodha.'); return; }
-        const uid = await P.rpc('find_user', { p_login: new FormData(e.target).get('login') });
-        if (!uid) { Toast.error('Hakuna akaunti yenye namba/barua pepe hiyo.'); return; }
-        await P.q(P.from('parishioners').update({ profile_id: uid }).eq('id', person));
-        Toast.success('Akaunti imeunganishwa na muumini.'); P.reload();
-      });
     },
   };
 
