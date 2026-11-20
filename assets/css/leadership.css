@@ -11,6 +11,13 @@
 .pm-leadership-parish, .pm-leadership-kigango { min-width: 0; }
 .pm-leadership-parish > h3, .pm-leadership-kigango > h3 { margin: 0 0 .45rem; color: var(--brand-emerald, #003f32); font-size: .95rem; font-weight: 750; }
 .pm-leadership-roster { display: grid; min-width: 0; }
+.pm-leadership-more { margin: .25rem 0; }
+.pm-leadership-more > summary { display: flex; align-items: center; justify-content: space-between; gap: .6rem; width: fit-content; min-width: 11rem; padding: .42rem .65rem; border: 1px solid rgba(0,92,64,.12); border-radius: .6rem; background: var(--brand-mint, #f3f8f5); color: var(--brand-forest, #005c40); font-size: .8rem; font-weight: 700; cursor: pointer; list-style: none; }
+.pm-leadership-more > summary::-webkit-details-marker { display: none; }
+.pm-leadership-more > summary::after { content: '▾'; color: var(--brand-forest, #005c40); }
+.pm-leadership-more[open] > summary::after { content: '▴'; }
+.pm-leadership-more > summary span { display: grid; place-items: center; min-width: 1.35rem; height: 1.35rem; border-radius: 99px; background: rgba(245,190,34,.24); font-size: .72rem; }
+.pm-leadership-more__list { display: grid; margin: .35rem 0 0 .35rem; padding-left: .55rem; border-left: 2px solid rgba(0,92,64,.14); }
 .pm-leadership-person { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(8rem, .8fr); align-items: center; gap: .35rem .7rem; min-width: 0; padding: .55rem .25rem; border-bottom: 1px solid var(--pm-line); color: var(--brand-emerald, #003f32); }
 .pm-leadership-person:first-child { border-top: 1px solid var(--pm-line); }
 .pm-leadership-person strong { min-width: 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 700; }
@@ -41,6 +48,7 @@
   .pm-leadership-person strong { font-size: .86rem; }
   .pm-leadership-person > span { text-align: right; font-size: .78rem; }
   .pm-leadership-person > small { grid-column: 1 / -1; font-size: .72rem; }
+  .pm-leadership-more > summary { min-height: 2.5rem; }
   .pm-leadership-children { margin-left: .25rem; padding-left: .55rem; }
   .pm-leadership-editor { padding: .7rem; }
   .pm-leadership-editor .pm-form { grid-template-columns: minmax(0, 1fr); }

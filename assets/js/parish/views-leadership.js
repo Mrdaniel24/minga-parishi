@@ -7,6 +7,7 @@
     jumuiya: [['MWENYEKITI_JUMUIYA', 'Mwenyekiti'], ['MWENYEKITI_MSAIDIZI_JUMUIYA', 'Mwenyekiti msaidizi'], ['KATIBU_JUMUIYA', 'Katibu'], ['KATIBU_MSAIDIZI_JUMUIYA', 'Katibu msaidizi'], ['MWASIBU_JUMUIYA', 'Mwasibu']],
   };
   const esc = P.esc;
+  const CHAIR = { parish: 'MWENYEKITI_PAROKIA', kigango: 'MWENYEKITI_KIGANGO', jumuiya: 'MWENYEKITI_JUMUIYA' };
   const levelName = unit => unit?.unit_type === 'parish' ? 'Parokia' : unit?.unit_type === 'kigango' ? `Kigango cha ${unit.name}` : `Jumuiya ya ${unit?.name || ''}`;
 
   V.leaders = {
@@ -33,9 +34,13 @@
       const activeRows = rows.filter(r => permittedTargets.has(r.org_unit_id));
       const byUnit = id => activeRows.filter(r => r.org_unit_id === id)
         .sort((a, b) => (a.leadership_positions?.sort_order || 0) - (b.leadership_positions?.sort_order || 0));
-      const roster = (unit, entries) => entries.length ? `<div class="pm-leadership-roster">${entries.map(r => `<article class="pm-leadership-person">
-        <strong>${esc(r.holder_name || 'Jina halijawekwa')}</strong><span>${esc(r.leadership_positions?.title_sw || 'Kiongozi')}</span><small>${esc(levelName(unit))}</small>
-      </article>`).join('')}</div>` : '';
+      const roster = (unit, entries) => {
+        if (!entries.length) return '';
+        const chair = entries.find(r => r.leadership_positions?.code === CHAIR[unit.unit_type]);
+        const others = entries.filter(r => r !== chair);
+        const person = r => `<article class="pm-leadership-person"><strong>${esc(r.holder_name || 'Jina halijawekwa')}</strong><span>${esc(r.leadership_positions?.title_sw || 'Kiongozi')}</span><small>${esc(levelName(unit))}</small></article>`;
+        return `<div class="pm-leadership-roster">${chair ? person(chair) : ''}${others.length ? `<details class="pm-leadership-more"><summary>Viongozi wengine <span>${others.length}</span></summary><div class="pm-leadership-more__list">${others.map(person).join('')}</div></details>` : ''}</div>`;
+      };
       const jumuiyaList = kigango => {
         const children = visibleJumuiya.filter(j => j.parent_id === kigango.id && byUnit(j.id).length);
         return children.length ? `<div class="pm-leadership-children"><h4>Jumuiya zenye viongozi</h4>${children.map(j => `<section class="pm-leadership-jumuiya">
