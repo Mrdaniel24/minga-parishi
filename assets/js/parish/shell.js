@@ -121,9 +121,9 @@
     a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
     h('Kazi za Kila Siku');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
+    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
-    a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
     a('Uhakiki wa malipo', 'fact_check', 'payment-approvals', 'finance.approve');
     h('Parokia');
