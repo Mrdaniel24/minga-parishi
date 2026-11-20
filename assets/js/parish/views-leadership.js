@@ -34,6 +34,7 @@
       const activeRows = rows.filter(r => permittedTargets.has(r.org_unit_id));
       const byUnit = id => activeRows.filter(r => r.org_unit_id === id)
         .sort((a, b) => (a.leadership_positions?.sort_order || 0) - (b.leadership_positions?.sort_order || 0));
+      const isRosterComplete = unitId => byUnit(unitId).length === 5;
       const roster = (unit, entries) => {
         if (!entries.length) return '';
         const chair = entries.find(r => r.leadership_positions?.code === CHAIR[unit.unit_type]);
@@ -54,10 +55,10 @@
 
       const unitOptions = [
         canAssignParish && parish ? `<option value="${parish.id}">Parokia nzima</option>` : '',
-        scopedUnit?.unit_type === 'jumuiya' ? `<optgroup label="Kigango cha ${esc(P.ref.unitsById[scopedUnit.parent_id]?.name || '')}"><option value="${scopedUnit.id}">Jumuiya ya ${esc(scopedUnit.name)}</option></optgroup>` : '',
+        scopedUnit?.unit_type === 'jumuiya' ? `<optgroup label="Kigango cha ${esc(P.ref.unitsById[scopedUnit.parent_id]?.name || '')}"><option value="${scopedUnit.id}">Jumuiya ya ${esc(scopedUnit.name)}${isRosterComplete(scopedUnit.id) ? ' ✓' : ''}</option></optgroup>` : '',
         ...visibleKigangos.map(k => {
           const children = visibleJumuiya.filter(j => j.parent_id === k.id);
-          return `<optgroup label="Kigango cha ${esc(k.name)}"><option value="${k.id}">Kigango chenyewe</option>${children.map(j => `<option value="${j.id}">Jumuiya ya ${esc(j.name)}</option>`).join('')}</optgroup>`;
+          return `<optgroup label="Kigango cha ${esc(k.name)}"><option value="${k.id}">Kigango chenyewe${isRosterComplete(k.id) ? ' ✓' : ''}</option>${children.map(j => `<option value="${j.id}">Jumuiya ya ${esc(j.name)}${isRosterComplete(j.id) ? ' ✓' : ''}</option>`).join('')}</optgroup>`;
         }),
       ].join('');
       el.innerHTML = `<div class="pm-head pm-leadership-head"><div><h1 class="pm-h1">Viongozi</h1><p class="pm-muted">Parokia, Vigango na Jumuiya</p></div></div>
