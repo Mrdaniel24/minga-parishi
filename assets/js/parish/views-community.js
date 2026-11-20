@@ -1,77 +1,10 @@
-/* Minga Parish — leaders and communication:
-   michango ya viongozi (report for the leadership only), mahudhurio ya
+/* Minga Parish — communication:
+   mahudhurio ya
    jumuiya (attendance, recorded by the jumuiya leader), matangazo
    (announcements shown on the first page) and SMS kwa wingi. */
 (function () {
   const P = window.Parish;
   const V = P.views;
-  const monthsDue = y => y < P.thisYear() ? 12 : y > P.thisYear() ? 0 : new Date().getMonth() + 1;
-  const LEVEL = { jumuiya: 'Jumuiya', kigango: 'Kigango', parish: 'Parokia', group: 'Chama' };
-
-  /* ================= MICHANGO YA VIONGOZI ================= */
-  V.leaderreport = {
-    title: 'Michango ya Viongozi', perm: 'finance.read',
-    async render(el, params) {
-      const year = P.year();
-      const sc = P.scopeUnit() && P.ref.unitsById[P.scopeUnit()];
-      const kig = params.kigango || (sc?.unit_type === 'kigango' ? sc.id : sc?.unit_type === 'jumuiya' ? sc.parent_id : '');
-      const jum = params.jumuiya || (sc?.unit_type === 'jumuiya' ? sc.id : '');
-      const lvl = params.level || '';
-      const pos = params.position || '';
-      const showEnded = params.ended !== '0';
-      const positions = await P.q(P.from('leadership_positions').select('id,title_sw,level,sort_order,is_active').in('level', ['jumuiya', 'kigango', 'parish']).order('sort_order')).catch(() => []);
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Michango ya Viongozi ${year}</h1>
-          <p class="pm-muted">Viongozi wenye vyeo (Katibu, Mwenyekiti, Mhazini…) na michango yao ya mwaka. Ripoti hii inaonwa na viongozi na ofisi ya parokia tu.</p></div>
-        <div class="pm-actions"><button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button>
-          <button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
-        <form class="pm-filters">${P.cascadeHtml({ kigango: kig, jumuiya: jum, allLabel: 'Zote' })}
-          <label>Ngazi ya cheo<select name="level"><option value="">Zote</option>${Object.entries(LEVEL).slice(0, 3).map(([k, v]) => `<option value="${k}" ${k === lvl ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-          <label>Cheo<select name="position"><option value="">Vyote</option>${Object.entries(LEVEL).slice(0, 3).map(([lv, lbl]) => {
-            const list = positions.filter(x => x.level === lv);
-            return list.length ? `<optgroup label="${lbl}">${list.map(x => `<option value="${x.id}" ${x.id === pos ? 'selected' : ''}>${P.esc(x.title_sw)}${x.is_active === false ? ' (hakitumiki)' : ''}</option>`).join('')}</optgroup>` : '';
-          }).join('')}</select></label>
-          <label>Vyeo vya<select name="ended"><option value="">Sasa na vilivyoisha ${year}</option><option value="0" ${showEnded ? '' : 'selected'}>Sasa tu</option></select></label>
-          <button class="pm-btn pm-btn--primary">Onyesha</button></form>
-        <section class="pm-card" data-out>${P.loading()}</section>`;
-      P.wireCascade(el);
-      el.querySelector('.pm-filters').addEventListener('submit', e => { e.preventDefault();
-        P.go('#/leaderreport?' + new URLSearchParams(Object.fromEntries([...new FormData(e.target)].filter(([, v]) => v)))); });
-      const scope = jum || kig || null;
-      let rows;
-      try { rows = await P.rpc('leaders_contributions', { p_year: year, p_scope: scope, p_position: pos || null, p_include_ended: showEnded }); }
-      catch (e) {
-        // database not patched yet (migration 33): the old report, without the new filters
-        rows = await P.rpc('leaders_contributions', { p_year: year, p_scope: scope });
-        Toast.info('Vichujio vipya vya ripoti hii vitafanya kazi baada ya patch ya database (2026-11-10).');
-      }
-      if (lvl) rows = rows.filter(r => (r.levels || '').split(',').includes(lvl));
-      const due = monthsDue(year);
-      const unit = r => P.ref.unitsById[r.jumuiya_id]?.label || '—';
-      const cols = [
-        { key: 'full_name', label: 'Kiongozi', html: r => `<a class="pm-link" href="#/statement?parishioner=${r.parishioner_id}">${P.esc(r.full_name)}</a>`
-            + (r.titles ? `<br><small class="pm-muted">${P.esc(r.titles)}</small>` : '')
-            + (r.ended_titles ? `<br><small class="pm-muted"><s>${P.esc(r.ended_titles)}</s></small> ${r.titles ? '' : P.badge('cheo kimeisha', 'muted')}` : '') },
-        { key: 'jumuiya_id', label: 'Jumuiya', html: r => P.esc(unit(r)) },
-        { key: 'zaka', label: `Zaka ${year}`, cls: 'pm-num pm-strong', html: r => P.txMoney(r.zaka, { title: `Zaka ${year} — ${r.full_name}`, parishioner: r.parishioner_id, kinds: ['zaka'], zaka_year: year }, P.num) },
-        { key: 'zaka_months', label: 'Miezi', cls: 'pm-num', html: r => due ? `<span class="${r.zaka_months < due ? 'pm-due' : ''}">${r.zaka_months}/${due}</span>` : P.num(r.zaka_months) },
-        { key: 'personal', label: 'Michango yake', cls: 'pm-num', html: r => P.txMoney(r.personal, { title: `Michango ${year} — ${r.full_name}`, parishioner: r.parishioner_id, not_kinds: ['zaka', 'expense'], gyear: year }, P.num) },
-        { key: 'family', label: 'Ya familia yake', cls: 'pm-num', html: r => r.family_id ? P.txMoney(r.family, { title: `Michango ${year} kwa jina la ${r.family_name || 'familia'}`, family: r.family_id, family_only: true, not_kinds: ['zaka', 'expense'], gyear: year }, P.num) : P.num(r.family) },
-        { key: 'pledged', label: 'Ahadi', fmt: P.num, cls: 'pm-num' },
-        { key: 'outstanding', label: 'Deni', cls: 'pm-num', html: r => Number(r.outstanding) ? `<span class="pm-due">${P.num(r.outstanding)}</span>` : '—' },
-        { key: 'total', label: 'Jumla', fmt: P.tzs, cls: 'pm-num pm-strong' }];
-      const foot = { full_name: `<b>JUMLA (${rows.length})</b>`, zaka: `<b>${P.num(P.sum(rows, 'zaka'))}</b>`, personal: P.num(P.sum(rows, 'personal')),
-        family: P.num(P.sum(rows, 'family')), pledged: P.num(P.sum(rows, 'pledged')), outstanding: P.num(P.sum(rows, 'outstanding')), total: `<b>${P.tzs(P.sum(rows, 'total'))}</b>` };
-      const sub = scope ? P.ref.unitsById[scope].label : 'Parokia nzima';
-      el.querySelector('[data-out]').innerHTML = P.reportHeader(`Michango ya Viongozi ${year}`, sub) +
-        P.table(rows, cols, { foot, empty: 'Hakuna viongozi wenye vyeo kwenye eneo hili. Vyeo vinatolewa kwenye fomu ya muumini (Hariri → Vyeo).' }) +
-        `<p class="pm-muted pm-small">"Miezi" = miezi ya ${year} aliyolipa zaka (kati ya ${due} iliyokwisha pita). "Ya familia yake" = michango iliyotolewa kwa jina la familia (mf. Mavuno, Ujenzi).</p>`;
-      el.querySelector('[data-print]').addEventListener('click', () => P.print(`Michango ya Viongozi ${year}`));
-      el.querySelector('[data-xls]').addEventListener('click', () => P.exportExcel(`michango_viongozi_${year}`, { Viongozi: rows.map(r => ({
-        Kiongozi: r.full_name, Vyeo: r.titles || '', Vyeo_vilivyoisha: r.ended_titles || '', Jumuiya: unit(r), Simu: r.phone || '', Zaka: Number(r.zaka), Miezi_ya_zaka: r.zaka_months,
-        Michango_yake: Number(r.personal), Ya_familia: Number(r.family), Ahadi: Number(r.pledged), Deni: Number(r.outstanding), Jumla: Number(r.total) })) }));
-    },
-  };
-
   /* ================= MAHUDHURIO (tab of the jumuiya page) ================= */
   P.attendanceTab = async (box, j, year) => {
     const canW = P.can('attendance.record');

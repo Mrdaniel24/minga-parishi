@@ -119,8 +119,6 @@
     a('Maombi Yangu', 'assignment', 'member-requests', 'member', 'member');
     a('Unganisha na rejista', 'link', 'member-link', 'member', 'member');
     a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
-    h('Yangu');
-    a('Michango Yangu', 'volunteer_activism', 'statement', 'self');
     h('Parokia');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
@@ -129,7 +127,6 @@
     a('Miamala ya Parokia', 'point_of_sale', 'payments', 'finance.read');
     a('Michango (vigango vyote)', 'volunteer_activism', 'campaigns', 'finance.read');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
-    a('Michango ya Viongozi', 'military_tech', 'leaderreport', 'finance.read');
     h('Ofisi ya Fedha');
     a('Uhakiki wa malipo', 'fact_check', 'payment-approvals', 'finance.approve');
     a('Matumizi', 'receipt', 'expenses', 'finance.read');
