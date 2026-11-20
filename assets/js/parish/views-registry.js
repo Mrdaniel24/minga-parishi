@@ -406,13 +406,15 @@
   V.users = {
     title: 'Watumiaji', perm: 'users.manage',
     async render(el) {
-      const [roles, grants, profs] = await Promise.all([
+      const [roles, grants, profs, families] = await Promise.all([
         P.q(P.from('parish_roles').select('*').order('sort_order')),
         P.q(P.from('parish_user_roles').select('*').order('granted_at', { ascending: false })),
         P.q(P.from('profiles').select('id,full_name,email,phone,role,status,created_at').order('full_name').limit(2000)),
+        P.q(P.from('families').select('id,jumuiya_id').limit(5000)).catch(() => []),
       ]);
-      const linked = await P.q(P.from('parishioners').select('id,full_name,profile_id').not('profile_id', 'is', null).limit(5000)).catch(() => []);
-      const personOf = Object.fromEntries(linked.map(x => [x.profile_id, x]));
+      const linked = await P.q(P.from('parishioners').select('id,full_name,profile_id,jumuiya_id,family_id').not('profile_id', 'is', null).limit(5000)).catch(() => []);
+      const familyById = Object.fromEntries(families.map(f => [f.id, f]));
+      const personOf = Object.fromEntries(linked.map(x => [x.profile_id, { ...x, area_id: x.jumuiya_id || familyById[x.family_id]?.jumuiya_id || null }]));
       const byUser = {};
       grants.forEach(g => { (byUser[g.user_id] ||= []).push(g); });
       const roleName = c => roles.find(r => r.code === c)?.name_sw || c;
@@ -430,25 +432,35 @@
             <button class="pm-btn pm-btn--sm ${u.status === 'active' ? 'pm-btn--danger' : ''}" data-status="${u.id}">${u.status === 'active' ? 'Simamisha' : 'Rudisha'}</button></span>` : '' }],
         { rowAttr: u => `data-row="${P.esc([u.full_name, u.email, u.phone].join(' ').toLowerCase())}"`, empty: 'Hakuna akaunti kwenye ngazi hii.' });
       const profilesFor = predicate => profs.filter(u => (byUser[u.id] || []).some(predicate));
+      const membersFor = unit => profs.filter(u => {
+        if (unit.unit_type !== 'jumuiya') return false;
+        if ((byUser[u.id] || []).length) return false;
+        const person = personOf[u.id];
+        return person?.area_id === unit.id;
+      });
       const groupsForUnit = (unit, users) => {
-        const entries = users || profilesFor(g => g.org_unit_id === unit.id);
+        const entries = users || [...new Map([...profilesFor(g => g.org_unit_id === unit.id), ...membersFor(unit)].map(u => [u.id, u])).values()];
         const children = unit.unit_type === 'kigango' ? P.ref.units.filter(j => j.is_active && j.unit_type === 'jumuiya' && j.parent_id === unit.id).map(j => groupsForUnit(j)).join('') : '';
         if (!entries.length && !children) return '';
         const childIds = unit.unit_type === 'kigango' ? P.ref.units.filter(j => j.is_active && j.unit_type === 'jumuiya' && j.parent_id === unit.id).map(j => j.id) : [];
-        const count = new Set([...entries.map(u => u.id), ...profilesFor(g => childIds.includes(g.org_unit_id)).map(u => u.id)]).size;
+        const descendantUsers = childIds.flatMap(id => {
+          const child = P.ref.unitsById[id];
+          return child ? [...profilesFor(g => g.org_unit_id === id), ...membersFor(child)] : [];
+        });
+        const count = new Set([...entries.map(u => u.id), ...descendantUsers.map(u => u.id)]).size;
         return `<details class="pm-users-unit"><summary><b>${P.esc(unit.unit_type === 'kigango' ? `Kigango cha ${unit.name}` : `Jumuiya ya ${unit.name}`)}</b><span>${P.num(count)} akaunti</span></summary>${entries.length ? userTable(entries, unit.id) : ''}${children ? `<div class="pm-users-children">${children}</div>` : ''}</details>`;
       };
-      const parishUsers = profilesFor(g => !g.org_unit_id);
-      const unassignedUsers = profs.filter(u => !(byUser[u.id] || []).length);
+      const parishUsers = profs.filter(u => (byUser[u.id] || []).some(g => !g.org_unit_id)
+        || (!(byUser[u.id] || []).length && !personOf[u.id]?.area_id));
       const knownScopeIds = new Set(P.ref.units.filter(u => u.is_active && ['kigango', 'jumuiya'].includes(u.unit_type)).map(u => u.id));
       const otherScopeIds = [...new Set(grants.map(g => g.org_unit_id).filter(id => id && !knownScopeIds.has(id)))];
       const otherScopeGroups = otherScopeIds.map(id => {
         const entries = profilesFor(g => g.org_unit_id === id), label = P.ref.unitsById[id]?.label || 'Eneo lisilotumika';
         return entries.length ? `<details class="pm-users-unit"><summary><b>${P.esc(label)}</b><span>${P.num(entries.length)} akaunti</span></summary>${userTable(entries, id)}</details>` : '';
       }).join('');
-      const userDirectory = `${parishUsers.length ? `<details class="pm-users-unit"><summary><b>Parokia nzima</b><span>${P.num(parishUsers.length)} akaunti</span></summary>${userTable(parishUsers, null)}</details>` : ''}${P.ref.units.filter(u => u.is_active && u.unit_type === 'kigango').map(k => groupsForUnit(k)).join('')}${otherScopeGroups}${unassignedUsers.length ? `<details class="pm-users-unit"><summary><b>Akaunti zisizopewa nafasi ya parokia</b><span>${P.num(unassignedUsers.length)} akaunti</span></summary>${userTable(unassignedUsers, null)}</details>` : ''}`;
+      const userDirectory = `${parishUsers.length ? `<details class="pm-users-unit"><summary><b>Parokia nzima</b><span>${P.num(parishUsers.length)} akaunti</span></summary>${userTable(parishUsers, null)}</details>` : ''}${P.ref.units.filter(u => u.is_active && u.unit_type === 'kigango').map(k => groupsForUnit(k)).join('')}${otherScopeGroups}`;
       el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Watumiaji na Ruhusa</h1>
-          <p class="pm-muted">Makundi yanaonyesha nafasi za parokia, si aina ya akaunti. Muumini anaweza kuwa na akaunti bila nafasi ya uongozi. Namba ikilingana na rekodi moja hai ya muumini, mfumo utaunganisha akaunti kiotomatiki.</p></div>
+          <p class="pm-muted">Akaunti zinaonekana kwenye eneo la muumini au nafasi yake. Viongozi wana nafasi zao zikiangaziwa; akaunti nyingine za eneo hilo zinaendelea kuonekana pamoja nao. Namba ikilingana na rekodi moja hai ya muumini, mfumo utaunganisha akaunti kiotomatiki.</p></div>
         <div class="pm-actions"><button class="pm-btn pm-btn--primary" data-newuser><span class="material-symbols-outlined">person_add</span>Mtumiaji mpya</button>
           <button class="pm-btn" data-grant><span class="material-symbols-outlined">add_moderator</span>Toa nafasi</button></div></div>
         <form class="pm-filters" data-find><label class="pm-wide">Tafuta<input name="q" placeholder="Jina, namba ya simu au barua pepe"></label></form>
