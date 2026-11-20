@@ -97,8 +97,12 @@
           const [people, roleCodes] = await Promise.all([peopleFor(unit), Promise.resolve(ROLES[unit.unit_type])]);
           if (!people.length) { fields.innerHTML = '<p class="pm-leadership-empty">Hakuna muumini hai aliyepatikana hapa.</p>'; return; }
           const pos = positions.filter(p => roleCodes.some(x => x[0] === p.code));
-          const opts = `<option value="">Chagua muumini</option>${people.map(p => `<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}`;
-          fields.innerHTML = `<div class="pm-form">${roleCodes.map(([code, label]) => { const p = pos.find(x => x.code === code); return `<label>${esc(label)}<select data-position="${p?.id || ''}">${opts}</select></label>`; }).join('')}</div>`;
+          fields.innerHTML = `<div class="pm-form">${roleCodes.map(([code, label]) => {
+            const position = pos.find(p => p.code === code);
+            const currentPerson = byUnit(unit.id).find(r => r.position_id === position?.id)?.parishioner_id;
+            const opts = `<option value="">Chagua muumini</option>${people.map(person => `<option value="${person.id}" ${person.id === currentPerson ? 'selected' : ''}>${esc(person.full_name)}</option>`).join('')}`;
+            return `<label>${esc(label)}<select data-position="${position?.id || ''}">${opts}</select></label>`;
+          }).join('')}</div>`;
           save.disabled = pos.length !== 5;
           save.addEventListener('click', async () => {
             const selects = [...fields.querySelectorAll('select[data-position]')];
