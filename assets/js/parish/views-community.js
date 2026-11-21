@@ -206,13 +206,13 @@
         <div class="pm-zaka-sms-period"><label>Mwaka<select data-zaka-year>${[P.thisYear() + 1, P.thisYear(), P.thisYear() - 1, P.thisYear() - 2].map(y => `<option ${y === P.year() ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
         <label>Mwezi<select data-zaka-month>${P.MONTHS.map((mn, i) => `<option value="${i + 1}" ${i + 1 === new Date().getMonth() + 1 ? 'selected' : ''}>${mn}</option>`).join('')}</select></label></div></div>
         <div class="pm-zaka-sms-roster" data-zaka-roster><p class="pm-muted">Inapakia taarifa za Zaka…</p></div></section>
-      ${cfg.configured ? `<div class="pm-alert pm-alert--info">SMS zinatumwa kupitia ${P.esc(cfg.provider || 'mtoa huduma')}${cfg.sender ? ` kwa jina "${P.esc(cfg.sender)}"` : ''}.</div>`
+      ${cfg.configured ? `<div class="pm-alert pm-alert--info pm-row"><span>SMS zinatumwa kupitia ${P.esc(cfg.provider || 'mtoa huduma')}${cfg.sender ? ` kwa jina "${P.esc(cfg.sender)}"` : ''}.</span><button type="button" class="pm-btn pm-btn--sm" data-test>SMS ya jaribio</button></div>`
         : `<div class="pm-alert pm-alert--warn">Mtoa huduma wa SMS bado hajawekwa kwenye server (mf. Beem Africa au NextSMS — inahitaji akaunti ya kulipia na Sender ID).
            Hadi atakapowekwa, unaweza kuandaa ujumbe hapa na <b>kupakua namba</b> (Excel) ili kutuma kwa simu au kwa huduma nyingine.</div>`}
       <section class="pm-card">${P.table(rows, [
         { key: 'created_at', label: 'Tarehe', fmt: v => P.date(String(v).slice(0, 10)) },
         { key: 'body', label: 'Template ya ujumbe', html: m => `${P.esc(m.body.slice(0, 160))}${m.body.length > 160 ? '…' : ''}<br><small class="pm-muted">${m.body.length} herufi · takriban SMS ${smsParts(m.body)} kwa kila mtu</small>` },
-        { key: 'audience', label: 'Kwa', html: m => P.esc((m.audience === 'units' ? unitNames(m.unit_ids) : AUD_SMS[m.audience]) + zakaWhen(m) + (m.zaka_only && m.audience !== 'zaka_payers' ? ' (walipa zaka)' : '')) },
+        { key: 'audience', label: 'Kwa', html: m => P.esc((m.audience === 'test' ? 'SMS ya jaribio' : m.audience === 'units' ? unitNames(m.unit_ids) : AUD_SMS[m.audience]) + zakaWhen(m) + (m.zaka_only && m.audience !== 'zaka_payers' ? ' (walipa zaka)' : '')) },
         { key: 'recipients', label: 'Namba', cls: 'pm-num' },
         { key: 'status', label: 'Hali', html: m => P.badge(...(STATUS[m.status] || [m.status, 'muted'])) + (m.result?.manual ? '<br><small class="pm-muted">imewekwa kwa mkono</small>' : '') },
         { key: 'id', label: '', html: m => `<span class="pm-nowrap"><button class="pm-btn pm-btn--sm" data-xls="${m.id}">Namba (Excel)</button>
@@ -232,6 +232,22 @@
       });
       Toast.success(`SMS zimetumwa kwa namba ${r.sent || ''}.`); P.refresh();
     };
+    const testButton = box.querySelector('[data-test]');
+    testButton?.addEventListener('click', async () => {
+      const v = await P.modal({ title: 'SMS ya jaribio · API ya NextSMS', submit: 'Andaa SMS', body: `<div class="pm-form">
+          <p class="pm-span2 pm-muted">Ujumbe huu utaandaliwa kwa namba moja tu. Hakiki namba kabla ya kubofya “Tuma”.</p>
+          <label class="pm-span2">Namba ya jaribio<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required value="0615292503" placeholder="0615 292 503"></label>
+          <label class="pm-span2">Ujumbe<textarea name="body" required rows="3" maxlength="918">Jaribio la SMS la Mfumo wa Parokia ya Minga. Ikiwa umepokea ujumbe huu, muunganisho wa NextSMS unafanya kazi.</textarea></label>
+        </div>` });
+      if (!v) return;
+      const digits = String(v.phone || '').replace(/\D/g, '');
+      const phone = digits.startsWith('0') ? `255${digits.slice(1)}` : digits.startsWith('255') ? digits : `255${digits}`;
+      if (!/^255[67]\d{8}$/.test(phone)) { Toast.error('Weka namba halali ya simu ya Tanzania.'); return; }
+      const result = await P.rpc('sms_create_test', { p_phone: v.phone, p_body: v.body });
+      if (Number(result.recipients) !== 1) { Toast.error('SMS ya jaribio haikuandaliwa: idadi ya wapokeaji si moja.'); return; }
+      Toast.success(`SMS ya jaribio imeandaliwa kwa +${result.phone} pekee. Kagua orodha kabla ya kuituma.`);
+      P.refresh();
+    });
     let smsPrefill = null;
     const loadZakaRoster = async () => {
       const target = box.querySelector('[data-zaka-roster]');
@@ -365,7 +381,13 @@
     });
     box.querySelectorAll('[data-send]').forEach(b => b.addEventListener('click', async () => {
       const m = rows.find(x => x.id === b.dataset.send);
-      if (!await P.confirm('Tuma SMS?', `Ujumbe utatumwa kwa namba ${m.recipients}.`, 'Tuma')) return;
+      let detail = `Ujumbe utatumwa kwa namba ${m.recipients}.`;
+      if (m.audience === 'test') {
+        const recipients = await P.q(P.from('sms_recipients').select('phone').eq('message_id', m.id));
+        if (recipients.length !== 1) { Toast.error('SMS ya jaribio lazima iwe na namba moja tu; ujumbe haukutumwa.'); return; }
+        detail = `Ujumbe wa jaribio utatumwa kwa +${recipients[0].phone} pekee kupitia ${cfg.provider || 'mtoa huduma'}.`;
+      }
+      if (!await P.confirm('Tuma SMS?', detail, 'Tuma')) return;
       send(m.id, b).catch(() => P.refresh());
     }));
     // a message stuck on "sending" (server stopped half way): the sender checks with the provider, then says what happened
