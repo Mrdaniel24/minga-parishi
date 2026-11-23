@@ -101,10 +101,12 @@
 
   // assign a contribution to a jumuiya / kigango: what money, how much, from when, by when
   const targetForm = async (unit, year, row = null) => {
+    const savedTarget = row?.campaign_id ? await P.q(P.from('campaign_targets').select('target_source').eq('campaign_id',row.campaign_id).eq('org_unit_id',unit.id).maybeSingle()).catch(()=>null) : null;
+    const targetSource = savedTarget?.target_source || 'manual';
     const children = unit.unit_type === 'kigango'
       ? P.ref.units.filter(u => u.is_active && u.parent_id === unit.id && ['jumuiya', 'group'].includes(u.unit_type)).sort((a, b) => P.unitOrder(a.id) - P.unitOrder(b.id) || a.name.localeCompare(b.name))
       : [];
-    const selfAssessed = row && Number(row.target) === 0;
+    const selfAssessed = row && Number(row.target) === 0 && targetSource === 'manual';
     const v = await P.modal({ title: row ? `${row.campaign_name} — ${unit.name}` : `Pangia ${unit.unit_type === 'kigango' ? 'kigango cha' : 'jumuiya ya'} ${unit.name}`, wide: true, body: `
       <p class="pm-muted pm-small">Andika aina ya mchango na pesa yake. Ukiweka kiasi, mfumo utaonyesha kilicholipwa na kinachobaki. Unaweza pia kuacha jumuiya zijipangie kiasi.</p>
       <div class="pm-form">
@@ -114,7 +116,9 @@
           <label>Aina ya mchango<input name="category_name" required minlength="3" placeholder="Andika aina, mfano: Ujenzi, Mavuno, au jina lako"></label>
           <label>Ni pesa ya nini<input name="name" required minlength="3" placeholder="Andika jina la mchango"></label>`}
         <label class="pm-span2 pm-relall"><input type="checkbox" name="self_assessed" value="true" data-self-assessed ${selfAssessed ? 'checked' : ''}> Hakuna kiasi maalumu — jumuiya itajipangia</label>
-        <label data-target-amount>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="1" step="1" inputmode="numeric" ${selfAssessed ? '' : 'required'} value="${row && !selfAssessed ? Number(row.target) || '' : ''}"></label>
+        ${['jumuiya','group'].includes(unit.unit_type) ? `<label>Jumla itokane na<select name="target_source" data-target-source><option value="manual" ${targetSource==='manual'?'selected':''}>Kiasi nilichoandika</option><option value="families" ${targetSource==='families'?'selected':''}>Jumla ya mgao wa familia</option><option value="parishioners" ${targetSource==='parishioners'?'selected':''}>Jumla ya mgao wa waumini</option></select></label>` : '<input type="hidden" name="target_source" value="manual">'}
+        <label data-target-amount ${targetSource!=='manual'?'hidden':''}>Kiasi alichopangiwa (TZS)<input name="amount" type="number" min="0" step="1" inputmode="numeric" ${selfAssessed || targetSource!=='manual' ? '' : 'required'} value="${row && !selfAssessed && targetSource==='manual' ? Number(row.target) || '' : ''}"></label>
+        <p class="pm-muted pm-small pm-span2" data-source-summary ${targetSource==='manual'?'hidden':''}>Jumla itahesabiwa moja kwa moja kutoka kwenye mgao wa ${targetSource==='families'?'familia':'waumini'} wa kampeni hii.</p>
         <label>Kuanzia<input name="starts_on" type="date" value="${row?.starts_on ? String(row.starts_on).slice(0, 10) : `${year}-01-01`}"></label>
         <label>Mwisho wa kulipa<input name="due_on" type="date" value="${row?.due_on ? String(row.due_on).slice(0, 10) : `${year}-12-31`}"></label>
         <label class="pm-span2">Maelezo (hiari)<input name="notes" value="${P.esc(note(row?.notes))}"></label>
@@ -130,6 +134,18 @@
         const self = m.querySelector('[data-self-assessed]');
         const targetLabel = m.querySelector('[data-target-amount]');
         const targetInput = m.querySelector('[name=amount]');
+        const source = m.querySelector('[data-target-source]');
+        const syncTargetSource=()=>{
+          if(!source)return;
+          const computed=source.value!=='manual';
+          targetLabel.hidden=self.checked||computed;
+          targetInput.required=!self.checked&&!computed;
+          m.querySelector('[data-source-summary]').hidden=!computed||self.checked;
+          m.querySelector('[data-source-summary]').textContent=`Jumla itahesabiwa moja kwa moja kutoka kwenye mgao wa ${source.value==='families'?'familia':'waumini'} wa kampeni hii.`;
+          if(computed)targetInput.value='';
+          self.disabled=computed;
+          if(computed)self.checked=false;
+        };
         const syncSelfAssessed = () => {
           const open = self.checked;
           targetLabel.hidden = open;
@@ -142,7 +158,9 @@
           }
         };
         self.addEventListener('change', syncSelfAssessed);
+        source?.addEventListener('change',syncTargetSource);
         syncSelfAssessed();
+        syncTargetSource();
         if (!toggle) return;
         const list = m.querySelector('[data-allocations]'), total = m.querySelector('[name=amount]'), summary = m.querySelector('[data-allocation-total]');
         const updateTotal = () => {
@@ -197,7 +215,8 @@
     }
     const target = { org_unit_id: unit.id, campaign_id: v.campaign_id || null, category_id: categoryId,
       name: String(v.name || '').trim() || null, year, self_assessed: v.self_assessed === 'true',
-      amount: v.self_assessed === 'true' ? 0 : Number(v.amount) || 0,
+      amount: v.self_assessed === 'true' || v.target_source && v.target_source!=='manual' ? 0 : Number(v.amount) || 0,
+      target_source: v.target_source || 'manual',
       starts_on: v.starts_on || null, due_on: v.due_on || null, notes: v.notes || null };
     if (children.length) {
       target.distribute_to_jumuiya = v.distribute_to_jumuiya === 'true';
@@ -288,6 +307,7 @@
         <div class="pm-head"><div><p class="pm-eyebrow">Kigango</p><h1 class="pm-h1">${P.esc(k.name)}</h1>
           <p class="pm-muted">${rows.length} jumuiya · ${P.num(s('families'))} familia · ${P.num(s('parishioners'))} waumini · Mwaka ${year}</p></div>
           <div class="pm-actions">${canPledge() ? '<button class="pm-btn" data-target><span class="material-symbols-outlined">assignment_add</span>Pangia kigango</button>' : ''}
+            ${canRecord() ? '<button class="pm-btn" data-pay-batch><span class="material-symbols-outlined">call_split</span>Wasilisha risiti ya michango</button>' : ''}
             ${canRecord() ? '<button class="pm-btn pm-btn--primary" data-pay><span class="material-symbols-outlined">add</span>Malipo ya kigango</button>' : ''}
             <button class="pm-btn" data-xls><span class="material-symbols-outlined">download</span>Excel</button>
             <button class="pm-btn" data-print><span class="material-symbols-outlined">print</span>Chapa</button></div></div>
@@ -330,6 +350,10 @@
         Michango: contrib.map(r => ({ Mchango: r.campaign_name, Kiasi: Number(r.obligation), Ametoa: gave(r), Bado: Number(r.balance), Asilimia: r.pct })) }));
       const pay = el.querySelector('[data-pay]');
       pay && pay.addEventListener('click', () => P.recordPayment({ kigango_id: k.id, kigango_contributions: contrib }));
+      el.querySelector('[data-pay-batch]')?.addEventListener('click',async()=>{
+        try { const r=await P.paymentBatchForm({}, {reviewSubmission:true,scopeUnitIds:[k.id]}); if(r?.status==='pending_review'){Toast.success('Risiti na mgao vimetumwa kwa uhakiki.');P.refresh();} }
+        catch(e){Toast.error(P.friendlyError(e));if(e.batchSubmitted)P.refresh();}
+      });
       const tb = el.querySelector('[data-target]');
       tb && tb.addEventListener('click', () => targetForm(k, year));
       el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => targetForm(k, year, contrib.find(r => r.campaign_id === b.dataset.edit))));
@@ -480,11 +504,15 @@
         return `<span class="pm-nowrap">${b.join(' ')}</span>`;
       };
       box.innerHTML = `<div class="pm-row"><p class="pm-muted pm-small">Michango ambayo jumuiya hii imepangiwa au imelipa mwaka ${year}. Bonyeza mchango kuona familia na wanaolipa wake tu.</p>
-          <div class="pm-actions">${canPledge() ? '<button class="pm-btn pm-btn--primary" data-target><span class="material-symbols-outlined">assignment_add</span>Pangia mchango</button>' : ''}</div></div>
+          <div class="pm-actions">${canRecord() ? '<button class="pm-btn" data-pay-batch><span class="material-symbols-outlined">call_split</span>Wasilisha risiti ya michango</button>' : ''}${canPledge() ? '<button class="pm-btn pm-btn--primary" data-target><span class="material-symbols-outlined">assignment_add</span>Pangia mchango</button>' : ''}</div></div>
         <section class="pm-card">${contribTable(rows, j, { link: mlink, actions, empty: 'Jumuiya hii haijapangiwa mchango wowote mwaka huu. Bonyeza "Pangia mchango".' })}</section>
         <div data-detail></div>`;
       const tb = box.querySelector('[data-target]');
       tb && tb.addEventListener('click', () => targetForm(j, year));
+      box.querySelector('[data-pay-batch]')?.addEventListener('click',async()=>{
+        try { const r=await P.paymentBatchForm({}, {reviewSubmission:true,scopeUnitIds:[j.id]}); if(r?.status==='pending_review'){Toast.success('Risiti na mgao vimetumwa kwa uhakiki.');P.refresh();} }
+        catch(e){Toast.error(P.friendlyError(e));if(e.batchSubmitted)P.refresh();}
+      });
       box.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => targetForm(j, year, rows.find(r => r.campaign_id === b.dataset.edit))));
       box.querySelectorAll('[data-lipa]').forEach(b => b.addEventListener('click', () => {
         const r = rows.find(x => x.campaign_id === b.dataset.lipa);

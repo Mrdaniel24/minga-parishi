@@ -7,7 +7,7 @@
     title: 'Matumizi', perm: 'finance.read',
     async render(el) {
       const [pending, posted] = await Promise.all([
-        P.q(P.from('approval_requests').select('*').eq('status', 'pending').neq('request_type', 'legacy_review').order('requested_at', { ascending: false })),
+        P.q(P.from('approval_requests').select('*').eq('request_type','expense').eq('status', 'pending').order('requested_at', { ascending: false })),
         P.q(P.from('v_ledger').select('*').eq('kind', 'expense').order('txn_date', { ascending: false }).limit(300)),
       ]);
       const txIds = pending.map(p => p.transaction_id).filter(Boolean);
@@ -64,24 +64,30 @@
       ]);
       const txById = Object.fromEntries(tx.map(t => [t.id,t]));
       const proofSet = new Set(proofs.map(x => x.transaction_id));
-      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Uhakiki wa malipo</h1><p class="pm-muted">Kagua jina, aina, kiasi, tarehe na risiti. Malipo yanaingia kwenye taarifa baada tu ya kuidhinishwa.</p></div></div>
-        <section class="pm-card"><h2 class="pm-h3">Yanayosubiri (${reqs.length})</h2>${P.table(reqs.map(r => ({...r,t:txById[r.transaction_id]||{},has_proof:proofSet.has(r.transaction_id)})),[
-          {key:'txn_date',label:'Tarehe',html:r=>P.date(r.t.txn_date)},
-          {key:'payer_name',label:'Mlipaji',html:r=>P.esc(r.t.payer_name||'—')},
-          {key:'category_name',label:'Mchango',html:r=>P.esc(r.t.category_name||'—')},
-          {key:'unit',label:'Eneo',html:r=>P.esc([r.t.jumuiya_name,r.t.kigango_name].filter(Boolean).join(' · ')||'Parokia')},
-          {key:'amount',label:'Kiasi',html:r=>P.tzs(r.t.amount),cls:'pm-num'},
+      const txMeta=ids.length?await P.q(P.from('finance_transactions').select('id,batch_id').in('id',ids)):[];
+      const batchById=Object.fromEntries(txMeta.map(x=>[x.id,x.batch_id]));
+      const groups=new Map();
+      for(const r of reqs){const t=txById[r.transaction_id]||{}, batch=batchById[r.transaction_id], key=batch||r.id; if(!groups.has(key))groups.set(key,{id:r.id,batch_id:batch,rows:[],t,requested_by:r.requested_by});groups.get(key).rows.push({...r,t});}
+      const reviewRows=[...groups.values()].map(g=>({...g,ids:g.rows.map(x=>x.transaction_id),has_proof:g.rows.every(x=>proofSet.has(x.transaction_id)),total:g.rows.reduce((n,x)=>n+(Number(x.t.amount)||0),0)}));
+      el.innerHTML = `<div class="pm-head"><div><h1 class="pm-h1">Uhakiki wa malipo</h1><p class="pm-muted">Kagua risiti na mgao. Risiti yenye mistari mingi itaidhinishwa au kukataliwa kwa pamoja.</p></div></div>
+        <section class="pm-card"><h2 class="pm-h3">Yanayosubiri (${reqs.length})</h2>${P.table(reviewRows,[
+          {key:'date',label:'Tarehe',html:r=>P.date(r.t.txn_date)},
+          {key:'payer',label:'Mlipaji / kundi',html:r=>r.rows.length>1?`Malipo yenye michango ${r.rows.length}`:P.esc(r.t.payer_name||'—')},
+          {key:'lines',label:'Mgao',html:r=>r.rows.map(x=>`${P.esc(x.t.category_name||'Mchango')} · ${P.esc(x.t.payer_name||'—')} — ${P.tzs(x.t.amount)}`).join('<br>')},
+          {key:'unit',label:'Eneo',html:r=>P.esc([...new Set(r.rows.map(x=>[x.t.jumuiya_name,x.t.kigango_name].filter(Boolean).join(' · ')||'Parokia'))].join(', '))},
+          {key:'amount',label:'Jumla',html:r=>P.tzs(r.total),cls:'pm-num'},
           {key:'reference_no',label:'Kumbukumbu',html:r=>P.esc(r.t.reference_no||'—')},
-          {key:'proof',label:'Risiti',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm" data-proof="${r.transaction_id}">Angalia risiti</button>`:P.badge('Risiti haijapakiwa','rose')},
-          {key:'actions',label:'Uamuzi',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm pm-btn--primary" data-approve="${r.id}">Idhinisha</button> <button class="pm-btn pm-btn--sm" data-reject="${r.id}">Kataa</button>`:'<small class="pm-muted">Subiri risiti ipakiwe</small>'}
+          {key:'proof',label:'Risiti',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm" data-proof="${r.ids[0]}">Angalia risiti</button>`:P.badge('Risiti haijapakiwa','rose')},
+          {key:'actions',label:'Uamuzi',html:r=>r.has_proof?`<button class="pm-btn pm-btn--sm pm-btn--primary" data-approve="${r.batch_id||''}" data-request="${r.id}">Idhinisha${r.rows.length>1?' kundi':''}</button> <button class="pm-btn pm-btn--sm" data-reject="${r.batch_id||''}" data-request="${r.id}">Kataa${r.rows.length>1?' kundi':''}</button>`:'<small class="pm-muted">Subiri risiti ipakiwe</small>'}
         ],{empty:'Hakuna malipo yanayosubiri uhakiki.'})}</section>`;
       el.querySelectorAll('[data-proof]').forEach(b=>b.addEventListener('click',()=>P.openProofs(b.dataset.proof)));
       el.querySelectorAll('[data-approve],[data-reject]').forEach(b=>b.addEventListener('click',async()=>{
         const approve=b.hasAttribute('data-approve'), id=b.dataset.approve||b.dataset.reject;
+        const request=b.dataset.request;
         let note=null;
         if(!approve){const v=await P.modal({title:'Sababu ya kukataa malipo',submit:'Kataa malipo',body:'<div class="pm-form"><label class="pm-span2">Sababu<input name="note" required minlength="3"></label></div>'});if(!v)return;note=v.note;}
         try {
-          const r=await P.busy(b,()=>P.rpc('decide_approval',{p_request:id,p_approve:approve,p_note:note}));
+          const r=await P.busy(b,()=>id?P.rpc('decide_payment_submission_batch',{p_batch:id,p_approve:approve,p_note:note}):P.rpc('decide_approval',{p_request:request,p_approve:approve,p_note:note}));
           Toast.success(approve?`Malipo yameidhinishwa. Risiti ${r.receipt_no||''}`:'Malipo yamekataliwa; sababu imehifadhiwa.');
           P.reload();
         } catch(e) { if (!e.__shown) Toast.error(P.friendlyError(e)); }

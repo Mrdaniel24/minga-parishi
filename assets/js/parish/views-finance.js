@@ -344,6 +344,109 @@
   }
   P.paymentForm = paymentForm;
 
+  /* One receipt may be allocated across several contribution types and people.
+     Every resulting ledger line stays pending until the whole batch is approved. */
+  async function paymentBatchForm(prefill = {}, options = {}) {
+    if (!options.reviewSubmission) throw new Error('Malipo ya pamoja yanahitaji uhakiki wa risiti.');
+    const categories = P.ref.cats.filter(c => c.is_active && c.kind !== 'expense');
+    if (!categories.length) throw new Error('Hakuna aina ya mchango inayopatikana.');
+    let recipients = options.recipients || [];
+    if (!recipients.length && options.memberContext) {
+      const c = options.memberContext;
+      recipients = (c.is_representative ? c.family_members || [] : [{ id: c.parishioner_id, name: c.full_name }])
+        .filter(x => x.id).map(x => ({ kind: 'parishioner', id: x.id, name: x.name }));
+    }
+    if (!recipients.length && options.scopeUnitIds?.length) {
+      const scopeIds = [...new Set([...options.scopeUnitIds,...P.ref.units.filter(u=>options.scopeUnitIds.includes(u.parent_id)).map(u=>u.id)])];
+      const [families, people, units] = await Promise.all([
+        P.q(P.from('families').select('id,family_name,jumuiya_id').in('jumuiya_id', scopeIds).eq('status','active').order('family_name').limit(2000)),
+        P.q(P.from('parishioners').select('id,full_name,family_id,jumuiya_id').in('jumuiya_id', scopeIds).eq('membership_status','active').order('full_name').limit(5000)),
+        P.ref.units.filter(u => scopeIds.includes(u.id) || scopeIds.includes(u.parent_id)),
+      ]);
+      recipients = [
+        ...units.map(u => ({ kind:'org_unit', id:u.id, name:`${u.unit_type === 'kigango' ? 'Kigango cha' : 'Jumuiya ya'} ${u.name}` })),
+        ...families.map(f => ({ kind:'family', id:f.id, name:`Familia ya ${f.family_name}` })),
+        ...people.map(m => ({ kind:'parishioner', id:m.id, name:m.full_name })),
+      ];
+    }
+    if (!recipients.length) throw new Error('Hakuna mpokeaji aliyeruhusiwa kwenye eneo hili.');
+    const recipientOptions = `<option value="">Chagua mpokeaji…</option>${recipients.map(r => `<option value="${r.kind}:${r.id}">${P.esc(r.name)}</option>`).join('')}`;
+    const categoryOptions = `<option value="">Chagua mchango…</option>${categories.map(c => `<option value="${c.id}">${P.esc(c.name_sw)}</option>`).join('')}`;
+    const campaigns = P.ref.camps.filter(c => c.status !== 'closed');
+    const key = P.uuid();
+    let sequence = 0;
+    const rowHtml = i => `<div class="pm-card pm-pad" data-payment-batch-line="${i}">
+      <div class="pm-row"><b>Mchango ${i + 1}</b><button type="button" class="pm-btn pm-btn--sm" data-remove-line>Ondoa</button></div>
+      <div class="pm-form"><label>Mchango<select name="category_id_${i}" data-batch-category required>${categoryOptions}</select></label>
+      <label>Kampeni / mwaka<select name="campaign_id_${i}" data-batch-campaign><option value="">— Bila kampeni —</option></select></label>
+      <label>Mlipaji / anayepangiwa<select name="recipient_${i}" required>${recipientOptions}</select></label>
+      <label>Kiasi (TZS)<input name="amount_${i}" type="number" min="1" step="1" inputmode="numeric" required data-batch-amount></label>
+      <label data-batch-period-wrap hidden>Mwezi wa Zaka<input name="period_month_${i}" type="month" value="${P.today().slice(0,7)}"></label></div></div>`;
+    const result = await P.modal({ title:'Wasilisha malipo yenye michango mingi', submit:'Tuma risiti kwa uhakiki', wide:true,
+      body:`<p class="pm-muted">Ambatisha risiti moja, kisha gawanya kiasi chake kwa michango na wapokeaji. Hakuna taarifa itakayoingia kwenye jumla mpaka kundi lote liidhinishwe.</p>
+      <div class="pm-form"><label>Tarehe ya malipo<input name="txn_date" type="date" value="${P.today()}" required></label>
+      <label>Njia ya malipo<select name="payment_method">${Object.entries(P.METHODS).filter(([k])=>k!=='envelope').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+      <label class="pm-span2">Namba ya kumbukumbu<input name="reference_no" placeholder="M-Pesa / benki (ikiwa ipo)"></label>
+      <input type="hidden" name="batch_line_indexes" value="0"><div class="pm-span2" data-payment-batch-lines>${rowHtml(sequence++)}</div>
+      <div class="pm-span2 pm-row"><button type="button" class="pm-btn" data-add-line>Ongeza mchango</button><b data-batch-total>Jumla: TZS 0</b></div>
+      <label class="pm-span2">Risiti moja (picha au PDF, hadi MB 10)<input type="file" name="proof" accept="image/*,application/pdf" required></label>
+      <label class="pm-span2">Maelezo (hiari)<input name="description" maxlength="300"></label></div>`,
+      onOpen(m) {
+        const list=m.querySelector('[data-payment-batch-lines]');
+        const method=m.querySelector('[name=payment_method]'), reference=m.querySelector('[name=reference_no]');
+        const syncReference=()=>{reference.required=['cheque','bank_transfer','mobile_money'].includes(method.value);};
+        method.addEventListener('change',syncReference);syncReference();
+        const renderCampaigns=row=>{
+          const index=row.dataset.paymentBatchLine, cat=row.querySelector('[data-batch-category]'), camp=row.querySelector('[data-batch-campaign]');
+          const selected=cat.value, c=P.ref.catsById[selected];
+          const available=campaigns.filter(x=>x.category_id===selected);
+          camp.innerHTML='<option value="">— Bila kampeni —</option>'+P.options(available,{label:'name'});
+          camp.disabled=!c || available.length===0;
+          row.querySelector('[data-batch-period-wrap]').hidden=!(c?.uses_period_month);
+        };
+        const syncIndexes=()=>{m.querySelector('[name=batch_line_indexes]').value=[...list.children].map(x=>x.dataset.paymentBatchLine).join(',');};
+        const bind=row=>{
+          row.querySelector('[data-batch-category]').addEventListener('change',()=>renderCampaigns(row));
+          row.querySelector('[data-remove-line]').addEventListener('click',()=>{if(list.children.length>1){row.remove();syncIndexes();} updateTotal();});
+          row.querySelector('[data-batch-amount]').addEventListener('input',updateTotal);
+        };
+        function updateTotal(){const sum=[...list.querySelectorAll('[data-batch-amount]')].reduce((n,x)=>n+(Number(x.value)||0),0);m.querySelector('[data-batch-total]').textContent=`Jumla ya risiti: ${P.tzs(sum)}`;}
+        bind(list.firstElementChild);
+        m.querySelector('[data-add-line]').addEventListener('click',()=>{const row=P.h(rowHtml(sequence++));list.append(row);bind(row);syncIndexes();});
+      }});
+    if (!result) return null;
+    const lineIndexes=String(result.batch_line_indexes||'0').split(',').map(Number);
+    const lines=[];
+    for(const i of lineIndexes){
+      const category_id=result[`category_id_${i}`], recipient=String(result[`recipient_${i}`]||'').split(':');
+      const amount=Number(result[`amount_${i}`])||0;
+      if(!category_id||recipient.length!==2||!recipient[1]||amount<=0)continue;
+      const line={category_id,amount,[`${recipient[0]}_id`]:recipient[1]};
+      const campaign_id=result[`campaign_id_${i}`]; if(campaign_id)line.campaign_id=campaign_id;
+      const period=result[`period_month_${i}`]; if(period)line.period_month=`${period}-01`;
+      lines.push(line);
+    }
+    const total=lines.reduce((n,x)=>n+x.amount,0);
+    if(!lines.length||lines.length!==lineIndexes.length)throw new Error('Jaza aina, mpokeaji na kiasi kwa kila mstari.');
+    if(!P.hasFile(result.proof))throw new Error('Ambatisha picha ya risiti au PDF.');
+    const payload={idempotency_key:key,amount:total,txn_date:result.txn_date,payment_method:result.payment_method,
+      reference_no:result.reference_no||null,description:result.description||null,lines};
+    let r;
+    try { r=await P.rpc('submit_payment_batch_for_review',{p:payload}); }
+    catch(e) {
+      if(!/Huenda kuna mstari unaorudiwa/i.test(P.friendlyError(e)))throw e;
+      const ok=await P.confirm('Huenda kuna malipo yanayofanana','Angalia kama mstari unaorudiwa ni malipo mapya. Ukiendelea, mistari yote ya risiti itatumwa kwa uhakiki.','Ndiyo, tuma kwa uhakiki');
+      if(!ok)return null;
+      r=await P.rpc('submit_payment_batch_for_review',{p:{...payload,confirm_duplicate:true}});
+    }
+    if(r.status==='pending_review'){
+      try { await P.attachProof(result.proof,r.transaction_ids); }
+      catch(e){e.batchSubmitted=true;e.message=`Ombi la malipo limehifadhiwa lakini risiti haikupanda: ${P.friendlyError(e)}. Pakia tena kwenye Yanayosubiri.`;throw e;}
+    }
+    return r;
+  }
+  P.paymentBatchForm = paymentBatchForm;
+
   /* ================= MIAMALA — Vigango → Kigango → Jumuiya → Familia → Muumini =================
      Each level shows one line per unit below it (totals computed in the database),
      plus one line for what was paid at that level itself. Click to go one level

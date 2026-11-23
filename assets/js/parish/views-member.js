@@ -33,22 +33,30 @@
     const c = await context();
     if (!c.parishioner_id) { el.innerHTML = `<div class="pm-member-wrap">${noLink}</div>`; return; }
     await V.statement.render(el, { parishioner: c.parishioner_id });
-    const pending = await P.q(P.from('finance_transactions').select('id,txn_no,amount,txn_date,category_id')
-      .eq('recorded_by', P.profile.id).eq('parishioner_id', c.parishioner_id).eq('kind', 'income').eq('status', 'pending')
+    const pending = await P.q(P.from('finance_transactions').select('id,batch_id,txn_no,amount,txn_date,category_id,payer_name')
+      .eq('recorded_by', P.profile.id).eq('kind', 'income').eq('status', 'pending')
       .order('created_at', { ascending: false }).limit(30));
     const proofs = pending.length ? new Set((await P.q(P.from('transaction_attachments').select('transaction_id')
       .in('transaction_id', pending.map(t => t.id)))).map(x => x.transaction_id)) : new Set();
+    const pendingGroups=new Map();
+    for(const t of pending){const key=t.batch_id||t.id;if(!pendingGroups.has(key))pendingGroups.set(key,{id:key,items:[],ids:[],hasProof:true});const g=pendingGroups.get(key);g.items.push(t);g.ids.push(t.id);g.hasProof=g.hasProof&&proofs.has(t.id);}
     const head = el.querySelector('.pm-member-finance-head');
-    head?.insertAdjacentHTML('afterend', `<section class="pm-card pm-pad pm-member-payment-submit"><div class="pm-row"><div><h2 class="pm-h3">Wasilisha malipo</h2><p class="pm-muted pm-small">Ambatisha risiti. Malipo yataonekana kwenye taarifa baada ya kuhakikiwa.</p></div><button class="pm-btn pm-btn--primary" data-submit-own-payment><span class="material-symbols-outlined">add</span>Wasilisha</button></div>${pending.length ? `<h3 class="pm-h3 mt-3">Yanayosubiri (${pending.length})</h3><div class="pm-mobile-records">${pending.map(t => `<article class="pm-mobile-record"><div class="pm-mobile-record__top"><span>${P.date(t.txn_date)} · Na. ${P.esc(t.txn_no)}</span><b>${P.tzs(t.amount)}</b></div><strong>${P.esc(P.ref.catsById[t.category_id]?.name_sw || 'Mchango')}</strong><small>${proofs.has(t.id) ? 'Inasubiri uhakiki' : 'Inasubiri risiti ya uthibitisho'}</small>${proofs.has(t.id) ? '' : `<label class="pm-btn pm-btn--sm">Ambatisha risiti<input type="file" accept="image/*,application/pdf" data-retry-proof="${t.id}" hidden></label>`}</article>`).join('')}</div>` : ''}</section>`);
+    head?.insertAdjacentHTML('afterend', `<section class="pm-card pm-pad pm-member-payment-submit"><div class="pm-row"><div><h2 class="pm-h3">Wasilisha malipo</h2><p class="pm-muted pm-small">Ambatisha risiti. Taarifa huonekana baada ya uhakiki.</p></div><div class="pm-actions"><button class="pm-btn" data-submit-own-batch><span class="material-symbols-outlined">call_split</span>Gawa risiti</button><button class="pm-btn pm-btn--primary" data-submit-own-payment><span class="material-symbols-outlined">add</span>Malipo moja</button></div></div>${pending.length ? `<h3 class="pm-h3 mt-3">Yanayosubiri (${pending.length})</h3><div class="pm-mobile-records">${[...pendingGroups.values()].map(g => `<article class="pm-mobile-record"><div class="pm-mobile-record__top"><span>${g.items.length} mstari wa malipo · ${P.date(g.items[0].txn_date)}</span><b>${P.tzs(P.sum(g.items,'amount'))}</b></div><strong>${g.items.map(t=>P.esc(P.ref.catsById[t.category_id]?.name_sw||'Mchango')).join(' · ')}</strong><small>${g.hasProof ? 'Inasubiri uhakiki' : 'Inasubiri risiti ya uthibitisho'}</small>${g.hasProof ? '' : `<label class="pm-btn pm-btn--sm">Ambatisha risiti<input type="file" accept="image/*,application/pdf" data-retry-proof="${g.id}" hidden></label>`}</article>`).join('')}</div>` : ''}</section>`);
     el.querySelector('[data-submit-own-payment]')?.addEventListener('click', async () => {
       try {
         const result = await P.paymentForm({ payer: { kind: 'parishioner', id: c.parishioner_id }, payerName: c.full_name }, { reviewSubmission: true, fixedPayer: true });
         if (result?.status === 'pending_review') { Toast.success('Malipo yametumwa kwa uhakiki.'); P.refresh(); }
       } catch (e) { Toast.error(`Ombi limehifadhiwa lakini risiti haikupanda: ${P.friendlyError(e)}. Ambatisha risiti kwenye orodha ya yanayosubiri.`); P.refresh(); }
     });
+    el.querySelector('[data-submit-own-batch]')?.addEventListener('click', async () => {
+      try {
+        const result=await P.paymentBatchForm({}, {reviewSubmission:true,memberContext:c});
+        if(result?.status==='pending_review'){Toast.success('Risiti na mgao wake vimetumwa kwa uhakiki.');P.refresh();}
+      } catch(e) { Toast.error(P.friendlyError(e)); if(e.batchSubmitted)P.refresh(); }
+    });
     el.querySelectorAll('[data-retry-proof]').forEach(input => input.addEventListener('change', async () => {
       if (!input.files?.[0]) return;
-      try { await P.attachProof(input.files[0], [input.dataset.retryProof]); Toast.success('Risiti imeambatishwa.'); P.refresh(); }
+      try { const group=pendingGroups.get(input.dataset.retryProof); await P.attachProof(input.files[0], group?.ids||[input.dataset.retryProof]); Toast.success('Risiti imeambatishwa kwa mistari yote ya malipo.'); P.refresh(); }
       catch (e) { Toast.error(P.friendlyError(e)); }
     }));
   }};
@@ -57,14 +65,19 @@
     const c = await context();
     if (!c.parishioner_id) { el.innerHTML = `<div class="pm-member-wrap">${noLink}</div>`; return; }
     if (!c.family_id) { el.innerHTML = `<div class="pm-member-wrap"><h1 class="pm-h1">Familia Yangu</h1><p class="pm-muted">Rekodi yako bado haina familia iliyothibitishwa. Wasiliana na Ofisi ya Parokia.</p></div>`; return; }
-    const [tx, pledges] = await Promise.all([
+    const familyMemberIds=(c.family_members||[]).map(m=>m.id).filter(Boolean);
+    const [tx, pledges, familyTx, jumStatus] = await Promise.all([
       P.q(P.from('v_ledger').select('id,net_amount,txn_date,category_name,receipt_no').eq('family_id',c.family_id).is('parishioner_id',null).eq('status','posted').order('txn_date',{ascending:false}).limit(500)),
       P.q(P.from('v_pledge_balances').select('campaign_name,pledged,paid,outstanding,completion_pct').eq('family_id',c.family_id).is('parishioner_id',null).order('campaign_year',{ascending:false}).limit(100)),
+      c.is_representative&&familyMemberIds.length ? P.q(P.from('v_ledger').select('id,parishioner_id,payer_name,net_amount,txn_date,category_name,receipt_no').in('parishioner_id',familyMemberIds).eq('status','posted').order('txn_date',{ascending:false}).limit(500)) : Promise.resolve([]),
+      P.rpc('member_jumuiya_contributions',{p_year:P.year()}).catch(()=>[]),
     ]);
     const total=P.sum(tx,'net_amount'), open=P.sum(pledges,'outstanding');
     el.innerHTML = `<div class="pm-member-wrap"><div class="pm-head"><div><p class="pm-member-eyebrow">FAMILIA YANGU</p><h1 class="pm-h1">${P.esc(c.family_name)}</h1><p class="pm-muted">${P.esc([c.jumuiya_name&&`Jumuiya ya ${c.jumuiya_name}`,c.kigango_name&&`Kigango cha ${c.kigango_name}`].filter(Boolean).join(' · '))}</p></div></div>
       <section class="pm-member-kpis"><section><small>Michango ya pamoja</small><b>${P.tzs(total)}</b></section><section><small>Salio la ahadi za familia</small><b>${P.tzs(open)}</b></section><section><small>Wanafamilia</small><b>${P.num(c.family_members?.length||0)}</b></section></section>
       <section class="pm-card pm-pad"><h2 class="pm-h3">Wanafamilia</h2><div class="pm-member-list">${(c.family_members||[]).map(m=>`<article><span class="pm-member-avatar">${P.esc((m.name||'?').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span><div><b>${P.esc(m.name)}</b><small>${P.esc(m.relationship||'Muumini')}${m.id===c.parishioner_id?' · Wewe':''}</small></div>${m.id===c.parishioner_id?`<span class="pm-member-tag">${c.is_representative?'Mwakilishi':'Akaunti yako'}</span>`:''}</article>`).join('')||'<p class="pm-muted">Hakuna wanafamilia waliothibitishwa.</p>'}</div></section>
+      ${c.is_representative?`<section class="pm-card pm-pad"><h2 class="pm-h3">Michango ya wanafamilia</h2><p class="pm-muted pm-small">Taarifa za kina zinaonekana kwa mwakilishi wa familia aliyeidhinishwa.</p>${P.mobileTransactionList(familyTx,'Hakuna michango binafsi ya wanafamilia iliyoidhinishwa.')}</section>`:''}
+      <section class="pm-card pm-pad"><h2 class="pm-h3">Hali ya michango ya Jumuiya ya ${P.esc(c.jumuiya_name||'')}</h2><p class="pm-muted pm-small">Muhtasari huu unaonyesha michango ya jumuiya yako tu.</p><div class="pm-mobile-records">${(jumStatus||[]).map(x=>`<article class="pm-mobile-record"><strong>${P.esc(x.campaign_name)}</strong><div class="pm-mobile-record__top"><span>Imelipwa ${P.tzs(x.collected||x.paid||0)}</span><b>${Number(x.target)>0?`Lengo ${P.tzs(x.target)} · Bado ${P.tzs(x.balance||0)}`:`Ahadi ${P.tzs(x.pledged||0)}`}</b></div></article>`).join('')||'<p class="pm-muted pm-small">Hakuna michango ya jumuiya iliyopangiwa mwaka huu.</p>'}</div></section>
       <section class="pm-card pm-pad"><div class="pm-row"><h2 class="pm-h3">Michango ya pamoja ya familia</h2><a class="pm-link" href="#/member-giving">Michango yangu</a></div><div class="pm-mobile-hide">${P.table(tx,[{key:'txn_date',label:'Tarehe',fmt:P.date},{key:'category_name',label:'Mchango'},{key:'net_amount',label:'Kiasi',fmt:P.tzs,cls:'pm-num'},{key:'receipt_no',label:'Risiti'}],{empty:'Hakuna michango ya pamoja iliyoingizwa.'})}</div>${P.mobileTransactionList(tx.slice(0,12),'Hakuna michango ya pamoja iliyoingizwa.')}${tx.length>12?`<p class="pm-muted pm-small">Inaonyesha miamala 12 ya karibuni. Jumla: ${P.num(tx.length)}.</p>`:''}</section>
       <section class="pm-card pm-pad"><h2 class="pm-h3">Ahadi za familia</h2><div class="pm-mobile-hide">${P.table(pledges,[{key:'campaign_name',label:'Mchango'},{key:'pledged',label:'Ahadi',fmt:P.tzs,cls:'pm-num'},{key:'paid',label:'Imelipwa',fmt:P.tzs,cls:'pm-num'},{key:'outstanding',label:'Salio',fmt:P.tzs,cls:'pm-num'}],{empty:'Hakuna ahadi za pamoja za familia.'})}</div><div class="pm-mobile-records">${pledges.length ? pledges.map(p => `<article class="pm-mobile-record"><strong>${P.esc(p.campaign_name)}</strong><div class="pm-mobile-record__top"><span>Ahadi ${P.tzs(p.pledged)} · Imelipwa ${P.tzs(p.paid)}</span><b>Salio ${P.tzs(p.outstanding)}</b></div></article>`).join('') : '<p class="pm-muted pm-small">Hakuna ahadi za pamoja za familia.</p>'}</div></section>
       <div class="pm-member-actions"><button class="pm-btn" data-correct>Omba kusahihisha taarifa</button>${c.is_representative?'<button class="pm-btn pm-btn--primary" data-add>Omba kuongeza mwanafamilia</button><button class="pm-btn" data-move>Omba kuhamisha familia</button>':'<button class="pm-btn" data-rep>Omba kuwa mwakilishi</button>'}</div>
