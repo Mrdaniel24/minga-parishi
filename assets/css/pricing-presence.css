@@ -22,8 +22,9 @@ section.pricing {
 }
 
 .plan-grid {
-  max-width: 1160px;
-  gap: clamp(1.75rem, 3vw, 2.75rem);
+  max-width: 1120px;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr) minmax(0, .92fr);
+  gap: clamp(1rem, 1.7vw, 1.5rem);
 }
 
 .plan-grid > .plan,
@@ -36,6 +37,11 @@ section.pricing {
   border-color: #d7e7df;
   background: linear-gradient(160deg, #fff 0%, #f3f8f5 100%);
   box-shadow: 0 18px 48px #003f3210;
+}
+
+.plan-grid > .plan--left,
+.plan-grid > .plan--right {
+  padding-inline: clamp(1.2rem, 1.65vw, 1.65rem);
 }
 
 .plan-grid > .plan h3,
@@ -87,7 +93,7 @@ section.pricing {
 }
 
 @media (max-width: 900px) {
-  .plan-grid { gap: 1.5rem; }
+  .plan-grid { gap: 1rem; }
   .plan-grid > .plan,
   .plan-grid > .plan--featured,
   .plan-grid > .plan--popular,
@@ -101,7 +107,7 @@ section.pricing {
 
   .pricing .section-heading h2 { font-size: clamp(1.9rem, 7vw, 2.5rem); }
 
-  .plan-grid { gap: 1.5rem; }
+  .plan-grid { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
   .plan-grid > .plan,
   .plan-grid > .plan--featured,
   .plan-grid > .plan--popular,
