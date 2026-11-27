@@ -55,4 +55,45 @@
       observer.observe(plan);
     });
   } else plans.forEach(plan => plan.classList.add('is-visible'));
+
+  const motionTargets = [...document.querySelectorAll(
+    '.site-header .brand, .site-header nav a, .site-header > .button, .hero-copy > *, .showcase, .section-heading > *, .feature, .chat-copy > *, .chat-copy li, .chat-visual, .billing-switch, .pricing-footnote, .closing > *, .site-footer > *'
+  )];
+  const headings = [...document.querySelectorAll('.hero h1, .section-heading h2, .chat-copy h2, .closing h2')];
+  const animateWords = element => {
+    const readable = element.textContent.replace(/\s+/g, ' ').trim();
+    element.setAttribute('aria-label', readable);
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) if (walker.currentNode.nodeValue.trim()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const fragment = document.createDocumentFragment();
+      (node.nodeValue.match(/\s+|[^\s]+/g) || []).forEach(part => {
+        if (/^\s+$/.test(part)) fragment.append(document.createTextNode(part));
+        else {
+          const word = document.createElement('span');
+          word.className = 'motion-word';
+          word.style.setProperty('--word-delay', `${Math.min([...element.querySelectorAll('.motion-word')].length * 42, 420)}ms`);
+          word.textContent = part;
+          fragment.append(word);
+        }
+      });
+      node.replaceWith(fragment);
+    });
+  };
+  headings.forEach(animateWords);
+
+  if ('IntersectionObserver' in window && !reduced.matches) {
+    const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-in');
+        revealObserver.unobserve(entry.target);
+      }
+    }), { threshold: 0.12, rootMargin: '0px 0px -28px 0px' });
+    motionTargets.forEach((element, i) => {
+      element.classList.add('reveal-on-scroll');
+      element.style.setProperty('--reveal-delay', `${(i % 5) * 75}ms`);
+      revealObserver.observe(element);
+    });
+  } else motionTargets.forEach(element => element.classList.add('is-in'));
 })();
