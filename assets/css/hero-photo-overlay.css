@@ -1,0 +1,159 @@
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: min(780px, calc(100svh - 78px));
+  padding: clamp(70px, 10vh, 120px) clamp(24px, 8vw, 126px) 118px;
+  overflow: hidden;
+  background: var(--emerald);
+}
+
+.hero::before {
+  z-index: 1;
+  background:
+    linear-gradient(108deg, rgba(0, 47, 37, .91) 0%, rgba(0, 63, 50, .78) 48%, rgba(0, 63, 50, .32) 100%),
+    linear-gradient(0deg, rgba(0, 47, 37, .37), transparent 42%);
+  opacity: 1;
+}
+
+.hero-copy {
+  z-index: 2;
+  width: min(100%, 790px);
+  max-width: 790px;
+  color: #fff;
+}
+
+.hero-copy > .eyebrow {
+  padding: 10px 15px;
+  border: 1px solid rgba(255, 255, 255, .27);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  letter-spacing: .08em;
+  backdrop-filter: blur(10px);
+}
+
+.hero-copy > .eyebrow i { background: var(--gold); }
+
+.hero h1 {
+  max-width: 14ch;
+  margin: 27px 0 20px;
+  color: #fff;
+  font-size: clamp(2.8rem, 6.2vw, 5.5rem);
+  line-height: 1.03;
+  letter-spacing: -.055em;
+}
+
+.hero h1 em { color: var(--gold); }
+
+.hero-copy > p {
+  max-width: 650px;
+  color: rgba(255, 255, 255, .84);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  line-height: 1.7;
+}
+
+.hero-actions { margin-top: 30px; }
+.hero-actions .button { min-height: 52px; padding-inline: 23px; }
+.hero-actions .button:not(.button--light) {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--emerald);
+}
+.hero-actions .button:not(.button--light):hover { background: #ffd34c; }
+.hero-actions .button--light {
+  border-color: rgba(255, 255, 255, .52);
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+}
+.hero-actions .button--light:hover { background: rgba(255, 255, 255, .16); }
+
+.hero-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 25px;
+  margin-top: 38px;
+  color: rgba(255, 255, 255, .78);
+}
+
+.hero-proof b { color: #fff; }
+.proof-icon { background: rgba(245, 190, 34, .18); color: var(--gold); }
+
+.hero > .showcase {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hero .showcase-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--emerald);
+  box-shadow: none;
+  transform: none;
+}
+
+.hero .showcase-top,
+.hero .float-note,
+.hero .slide figcaption { display: none; }
+
+.hero .slides { position: absolute; inset: 0; height: 100%; aspect-ratio: auto; background: var(--emerald); }
+.hero .slide:after { inset: 0; background: linear-gradient(0deg, rgba(0, 47, 37, .32), transparent 45%); }
+.hero .slide img { object-position: center 53%; }
+
+.hero .slide-controls {
+  position: absolute;
+  z-index: 2;
+  bottom: 34px;
+  left: clamp(24px, 8vw, 126px);
+  height: auto;
+  gap: 16px;
+}
+
+.hero .slide-controls > button {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.hero .slide-controls > button:hover { border-color: var(--gold); background: var(--gold); color: var(--emerald); }
+.hero .slide-dots button { background: rgba(255, 255, 255, .55); }
+.hero .slide-dots button.active { background: var(--gold); }
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: min(760px, calc(100svh - 66px));
+    padding: 72px 22px 108px;
+    align-items: center;
+  }
+  .hero::before {
+    background:
+      linear-gradient(100deg, rgba(0, 47, 37, .84), rgba(0, 63, 50, .61)),
+      linear-gradient(0deg, rgba(0, 47, 37, .5), transparent 75%);
+  }
+  .hero-copy { max-width: 560px; }
+  .hero-copy > .eyebrow { padding: 8px 12px; font-size: .62rem; }
+  .hero h1 { max-width: 12ch; margin: 22px 0 16px; font-size: clamp(2.65rem, 12vw, 4rem); }
+  .hero-copy > p { max-width: 37ch; font-size: .98rem; line-height: 1.62; }
+  .hero-actions { gap: 10px; margin-top: 24px; }
+  .hero-actions .button { min-height: 48px; padding: 12px 16px; font-size: .83rem; }
+  .hero-proof { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; margin-top: 28px; font-size: .75rem; }
+  .hero .slide img { object-position: 27% center; }
+  .hero .slide-controls { bottom: 22px; left: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero .slide,
+  .hero .slide img { transition: none; }
+}
