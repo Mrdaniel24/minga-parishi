@@ -15,7 +15,7 @@
 
 .landing-header.is-scrolled .landing-header__inner { min-height: 82px; }
 .landing-header .brand { flex: 0 0 auto; color: #fff; font-size: 1.05rem; text-shadow: 0 2px 12px rgba(0, 35, 28, .45); }
-.landing-header .brand-mark { display: none; }
+.landing-header .brand-mark { display: grid; width: 40px; height: 40px; }
 
 .landing-nav {
   position: absolute;
@@ -62,7 +62,7 @@
   .landing-header__inner { min-height: 72px; padding-inline: 20px; }
   .landing-header.is-scrolled .landing-header__inner { min-height: 72px; }
   .landing-header .brand { font-size: .94rem; }
-  .landing-header .brand-mark { display: none; }
+  .landing-header .brand-mark { display: grid; width: 37px; height: 37px; }
   .landing-header__actions { display: none; }
   .landing-menu-toggle {
     display: grid;
