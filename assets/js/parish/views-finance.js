@@ -74,9 +74,9 @@
         new Chart(document.getElementById('pm-trend'), {
           type: 'bar',
           data: { labels: P.MONTHS, datasets: [
-            { label: 'Mapato', data: m.map(x => x.income), backgroundColor: '#3d5650', borderRadius: 6 },
-            { label: 'Matumizi', data: m.map(x => x.expense), backgroundColor: '#d4a72c', borderRadius: 6 }] },
-          options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => P.num(v) } } } },
+            { label: 'Mapato', data: m.map(x => x.income), backgroundColor: '#005C40', hoverBackgroundColor: '#003F32', borderRadius: 7, maxBarThickness: 34 },
+            { label: 'Matumizi', data: m.map(x => x.expense), backgroundColor: '#F5BE22', hoverBackgroundColor: '#d9a300', borderRadius: 7, maxBarThickness: 34 }] },
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 20, color: '#003F32', font: { family: 'Inter', size: 12 } } }, tooltip: { backgroundColor: '#003F32', padding: 12, titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' }, callbacks: { label: context => `${context.dataset.label}: TZS ${P.num(context.raw)}` } } }, scales: { x: { grid: { display: false }, ticks: { color: '#58736a' } }, y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(0,63,50,.09)' }, ticks: { color: '#58736a', callback: v => P.num(v) } } } },
         });
       }
     },

@@ -1,0 +1,114 @@
+/* Dashboard visual system: brand-led metrics, clean charts, calm responsive panels. */
+.app-shell {
+  --dash-green: #005C40;
+  --dash-emerald: #003F32;
+  --dash-gold: #F5BE22;
+  --dash-mint: #F3F8F5;
+}
+
+/* Parish home: highlight people and places, then keep money cards quieter. */
+.app-shell #pm-view > .pm-head {
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid rgba(0,63,50,.12);
+  border-radius: 1.15rem;
+  background: linear-gradient(115deg, #F3F8F5, rgba(255,255,255,.92));
+  box-shadow: 0 10px 26px rgba(0,63,50,.055);
+}
+.app-shell .pm-dashboard-section { padding: 0 .1rem; }
+.app-shell .pm-dashboard-section .pm-section-heading h2 { font-size: 1.12rem; color: var(--dash-emerald); }
+.app-shell .pm-dashboard-section .pm-section-heading p { color: rgba(0,63,50,.68); }
+.app-shell .pm-kpis--people .pm-kpi {
+  min-height: 112px;
+  padding: 1.05rem 1.15rem !important;
+  border: 0 !important;
+  background: var(--dash-green) !important;
+  color: var(--dash-mint);
+  box-shadow: 0 9px 22px rgba(0,63,50,.13) !important;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.app-shell .pm-kpis--people .pm-kpi:nth-child(2) { background: var(--dash-emerald) !important; }
+.app-shell .pm-kpis--people .pm-kpi:nth-child(3) { background: var(--dash-gold) !important; color: var(--dash-emerald); }
+.app-shell .pm-kpis--people .pm-kpi:nth-child(4) { background: #e1eee8 !important; color: var(--dash-emerald); }
+.app-shell .pm-kpis--people .pm-kpi:hover { transform: translateY(-3px); box-shadow: 0 14px 26px rgba(0,63,50,.18) !important; }
+.app-shell .pm-kpis--people .pm-kpi p { color: inherit !important; opacity: .88; font-size: .82rem !important; }
+.app-shell .pm-kpis--people .pm-kpi h3 { color: inherit !important; font-size: clamp(1.45rem, 2vw, 1.85rem) !important; font-weight: 700 !important; }
+.app-shell .pm-kpis--people .pm-kpi > .material-symbols-outlined {
+  top: .8rem; right: .8rem; display: grid; width: 2.3rem; height: 2.3rem; place-items: center;
+  border-radius: .75rem; color: inherit !important; opacity: 1; background: rgba(243,248,245,.16); font-size: 1.25rem;
+}
+.app-shell .pm-kpis--people .pm-kpi:nth-child(n+3) > .material-symbols-outlined { background: rgba(0,63,50,.09); }
+.app-shell .pm-kpis--finance .pm-kpi {
+  min-height: 104px;
+  border: 1px solid rgba(0,63,50,.12) !important;
+  border-top: 3px solid var(--dash-green) !important;
+  background: var(--dash-mint) !important;
+  box-shadow: 0 6px 18px rgba(0,63,50,.055) !important;
+}
+.app-shell .pm-kpis--finance .pm-kpi:nth-child(2) { border-top-color: var(--dash-emerald) !important; }
+.app-shell .pm-kpis--finance .pm-kpi:nth-child(3) { border-top-color: var(--dash-gold) !important; }
+.app-shell .pm-kpis--finance .pm-kpi:nth-child(4) { border-top-color: var(--dash-green) !important; }
+.app-shell .pm-kpis--finance .pm-kpi > .material-symbols-outlined {
+  display: grid; width: 2.15rem; height: 2.15rem; place-items: center; border-radius: .7rem;
+  color: var(--dash-green) !important; opacity: 1; background: rgba(0,92,64,.08); font-size: 1.2rem;
+}
+.app-shell .pm-finance-details,
+.app-shell #pm-view > .pm-grid2 > .pm-card,
+.app-shell #pm-view > .pm-card:last-child {
+  border: 1px solid rgba(0,63,50,.12) !important;
+  background: #fff !important;
+  box-shadow: 0 9px 26px rgba(0,63,50,.055) !important;
+}
+.app-shell #pm-view > .pm-grid2 > .pm-card:first-child { min-height: 350px; }
+.app-shell #pm-view > .pm-grid2 > .pm-card:first-child canvas { width: 100% !important; height: 285px !important; }
+.app-shell .pm-finance-list > div { border-color: rgba(0,63,50,.1); }
+.app-shell .pm-finance-list .material-symbols-outlined { color: var(--dash-green); }
+.app-shell .pm-pledges-card { border-color: rgba(245,190,34,.5); background: rgba(245,190,34,.13); color: var(--dash-emerald); }
+.app-shell .pm-pledges-card > .material-symbols-outlined { color: var(--dash-green); }
+
+/* Local leader dashboards share the same hierarchy without copying parish totals. */
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi {
+  min-height: 108px;
+  border: 1px solid rgba(0,63,50,.12) !important;
+  border-top: 3px solid var(--dash-green) !important;
+  background: #fff !important;
+  box-shadow: 0 7px 20px rgba(0,63,50,.06) !important;
+}
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi:nth-child(2) { border-top-color: var(--dash-emerald) !important; }
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi:nth-child(3) { border-top-color: var(--dash-gold) !important; }
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi:nth-child(4) { border-top-color: var(--dash-green) !important; }
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi:nth-child(5) { border-top-color: var(--dash-gold) !important; }
+.app-shell .pm-leader-home .pm-leader-kpis .pm-kpi h3 { font-size: clamp(1.12rem, 1.5vw, 1.45rem) !important; }
+
+/* Member dashboard: three compact summary blocks that stack cleanly on phones. */
+.app-shell .pm-member-kpis > section {
+  min-height: 104px;
+  align-content: center;
+  gap: .5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(0,63,50,.12);
+  border-top: 3px solid var(--dash-green);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(0,63,50,.055);
+}
+.app-shell .pm-member-kpis > section:nth-child(2) { border-top-color: var(--dash-gold); }
+.app-shell .pm-member-kpis > section:nth-child(3) { border-top-color: var(--dash-emerald); }
+.app-shell .pm-member-kpis small { color: rgba(0,63,50,.72); font-size: .78rem; }
+.app-shell .pm-member-kpis b { color: var(--dash-emerald); font-size: clamp(1.05rem, 1.5vw, 1.3rem); font-weight: 650; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .app-shell #pm-view > .pm-head { padding: .95rem; border-radius: .95rem; }
+  .app-shell .pm-kpis--people .pm-kpi { min-height: 96px; padding: .8rem !important; }
+  .app-shell .pm-kpis--people .pm-kpi h3 { font-size: clamp(1.2rem, 6vw, 1.55rem) !important; }
+  .app-shell .pm-kpis--people .pm-kpi > .material-symbols-outlined { top: .55rem; right: .55rem; width: 1.9rem; height: 1.9rem; font-size: 1.05rem; }
+  .app-shell .pm-kpis--finance .pm-kpi { min-height: 92px; }
+  .app-shell #pm-view > .pm-grid2 > .pm-card:first-child { min-height: 300px; }
+  .app-shell #pm-view > .pm-grid2 > .pm-card:first-child canvas { height: 235px !important; }
+  .app-shell .pm-member-kpis > section { min-height: 82px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .pm-kpis--people .pm-kpi { transition: none; }
+}
