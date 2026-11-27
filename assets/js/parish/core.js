@@ -299,10 +299,15 @@
     }
     XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : filename + '.xlsx');
   };
-  P.print = (title) => {
+  P.print = (title, { orientation = 'portrait' } = {}) => {
     const t = document.title; document.title = title || t;
+    let pageStyle = document.getElementById('pm-print-page-style');
+    if (!pageStyle) { pageStyle = document.createElement('style'); pageStyle.id = 'pm-print-page-style'; document.head.appendChild(pageStyle); }
+    pageStyle.textContent = `@media print { @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 10mm; } }`;
+    const cleanup = () => { document.title = t; pageStyle.remove(); window.removeEventListener('afterprint', cleanup); };
+    window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
-    setTimeout(() => { document.title = t; }, 500);
+    setTimeout(cleanup, 3000);
   };
   P.reportHeader = (title, subtitle = '') => {
     const p = P.ref.parish;

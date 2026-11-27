@@ -210,7 +210,7 @@
     const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     return { from: iso(a), to: iso(b) };
   };
-  V.reports = {
+  V.financeReport = {
     title: 'Taarifa ya Fedha', perm: 'finance.read',
     async render(el, params) {
       const period = params.period || 'month', year = Number(params.year || P.year());
@@ -244,7 +244,7 @@
         if(values.period==='custom'){
           if(!values.from||!values.to||values.to<values.from){Toast.error('Weka tarehe sahihi za mwanzo na mwisho.');return;}
         } else {const range=periodRange(values.period,Number(values.period_index||1),Number(values.year));values.from=range.from;values.to=range.to;}
-        P.go('#/reports?'+new URLSearchParams(values));
+        P.go('#/reports?'+new URLSearchParams({...values,group:'finance'}));
       });
       const data=await P.rpc('financial_period_report',{p_from:from,p_to:to,p_scope:scope||null});
       const rows=data.lines||[], incomeRows=rows.filter(x=>x.kind!=='expense'), expenseRows=rows.filter(x=>x.kind==='expense');
@@ -262,9 +262,266 @@
         const v=await P.modal({title:'Bajeti na sababu ya tofauti',body:`<div class="pm-form"><label>Aina ya mapato/matumizi<select name="category_id" required>${P.options(choices,{label:'name_sw',blank:'Chagua…'})}</select></label><label>Bajeti ya kipindi (TZS)<input name="budget_amount" type="number" min="0" step="1" required></label><label class="pm-span2">Sababu ya tofauti (ikiwezekana)<textarea name="variance_reason" rows="3" maxlength="500"></textarea></label></div><p class="pm-muted pm-small">Kipindi: ${P.date(from)} – ${P.date(to)}. Bajeti itahifadhiwa kwa ${P.esc(scopeLbl)}.</p>`,submit:'Hifadhi bajeti'});
         if(!v)return;await P.rpc('save_financial_period_budget',{p:{org_unit_id:scope||null,period_start:from,period_end:to,category_id:v.category_id,budget_amount:v.budget_amount,variance_reason:v.variance_reason}});Toast.success('Bajeti imehifadhiwa.');P.reload();
       });
-      el.querySelector('[data-print]').addEventListener('click',()=>P.print('Taarifa ya fedha'));
+      el.querySelector('[data-print]').addEventListener('click',()=>P.print('Taarifa ya fedha',{orientation:'landscape'}));
       const xlsRows=list=>list.map(x=>({'Kipengele':x.name,'Kadiriwa':Number(x.budget_amount),'Halisi':Number(x.actual_amount),'Tofauti':Number(x.variance_amount),'Sababu':x.variance_reason||''}));
       el.querySelector('[data-xls]').addEventListener('click',()=>P.exportExcel('Taarifa_ya_fedha',{Muhtasari:[{Eneo:scopeLbl,Kipindi:`${from} - ${to}`,'Salio la mwanzo':Number(data.opening_balance),'Mapato':Number(data.income_total),'Matumizi':Number(data.expense_total),'Marekebisho':Number(data.adjustment_total||0),'Salio la mwisho':Number(data.closing_balance)}],Mapato:xlsRows(incomeRows),Matumizi:xlsRows(expenseRows)}));
+    },
+  };
+
+  /* ================= RIPOTI: kitovu na fomu za A4 ================= */
+  const REPORT_GROUPS = [
+    ['parish_read', 'Ripoti za kusoma parokiani'], ['jumuiya', 'Ripoti za kwenda nazo jumuiyani'],
+    ['kigango', 'Ripoti za michango ya vigango'], ['parish', 'Ripoti za kiparokia'],
+    ['finance', 'Taarifa za fedha'], ['forms', 'Fomu mbalimbali'],
+  ];
+  const REPORT_TYPES = {
+    parish_read: [['family', 'Michango inayopangiwa familia'], ['zaka', 'Zaka ya kila mwezi kwa muumini'], ['assigned', 'Michango inayopangiwa jumuiya'], ['parish_summary', 'Muhtasari wa michango parokiani']],
+    jumuiya: [['tracker', 'Ufuatiliaji wa michango ya jumuiya'], ['zaka', 'Zaka ya kila mwezi kwa waumini'], ['family', 'Mavuno na Ujenzi kwa familia']],
+    kigango: [['kigango', 'Michango ya kigango kimoja'], ['all_kigango', 'Michango ya vigango vyote']],
+    parish: [['parish_summary', 'Muhtasari wa michango yote'], ['family', 'Utoaji wa kila familia parokiani']],
+    finance: [['finance_period', 'Mapato na Matumizi (mwezi / robo / mwaka)']],
+    forms: [['zaka_form', 'Fomu ya Zaka'], ['family_form', 'Fomu ya Mavuno na Ujenzi'], ['free_form', 'Fomu huru']],
+  };
+  const REPORT_TITLES = Object.fromEntries(Object.values(REPORT_TYPES).flat().map(x => [x[0], x[1]]));
+  const reportScopeName = id => {
+    if (!id) return 'Parokia nzima';
+    const u = P.ref.unitsById[id];
+    return u ? `${u.unit_type === 'kigango' ? 'Kigango cha' : 'Jumuiya ya'} ${u.name}` : 'Eneo lililochaguliwa';
+  };
+  const reportScopeUnits = id => {
+    if (!id) return null;
+    const u = P.ref.unitsById[id];
+    if (!u) return [];
+    return u.unit_type === 'kigango' ? [u.id, ...P.unitsOf('jumuiya').filter(j => j.parent_id === u.id).map(j => j.id)] : [u.id];
+  };
+  const reportScopeJumuiyaIds = id => {
+    if (!id) return null;
+    const u=P.ref.unitsById[id];
+    if(u?.unit_type==='kigango') return P.unitsOf('jumuiya').filter(j=>j.parent_id===id).map(j=>j.id);
+    return u?.unit_type==='jumuiya'?[id]:[];
+  };
+  const reportSort = (rows, key) => [...rows].sort((a,b) => {
+    if (key === 'name') return String(a.name || a.family_name || '').localeCompare(String(b.name || b.family_name || ''), 'sw');
+    const value = r => key==='pledged' ? (r.pledged??r.target??r.total) : key==='paid' ? (r.paid??r.collected??r.total) : key==='balance' ? (r.balance??r.months_unpaid) : (r.pct??r.completion_pct??r.months_paid);
+    return (Number(value(b)) || 0) - (Number(value(a)) || 0);
+  });
+  const reportGroupCampaigns = (ids, year, eligible) => {
+    const all = P.ref.camps.filter(c => Number(c.campaign_year) === Number(year) && c.status !== 'closed');
+    const eligibleCampaigns = all.filter(eligible || (() => true));
+    const chosen = ids.length ? eligibleCampaigns.filter(c => ids.includes(c.id)) : [];
+    return chosen;
+  };
+  const reportCampaignPicker = (campaigns, selected, max = 0) => `<details class="pm-report-campaigns" data-campaign-picker><summary>Chagua michango <small data-campaign-count>${selected.length} imechaguliwa</small></summary>
+    <div class="pm-report-campaign-list">${campaigns.length ? campaigns.map(c => `<label><input type="checkbox" name="campaign_id" value="${P.esc(c.id)}" ${selected.includes(c.id) ? 'checked' : ''}><span>${P.esc(c.name)} <small>${P.esc(c.category_name || P.ref.catsById[c.category_id]?.name_sw || '')}</small></span></label>`).join('') : '<p class="pm-muted">Hakuna michango ya mwaka huu.</p>'}</div>
+    ${max ? `<small class="pm-muted" data-campaign-limit>Chagua hadi michango ${max}.</small>` : ''}</details>`;
+  const reportMembersAndFamilies = async scope => {
+    let fq = P.from('families').select('id,family_name,family_code,head_parishioner_id,jumuiya_id').eq('status','active').order('family_name').limit(10000);
+    const units = reportScopeJumuiyaIds(scope);
+    if (units) fq = fq.in('jumuiya_id', units.length?units:['00000000-0000-0000-0000-000000000000']);
+    const families = await P.q(fq);
+    const ids = families.map(f => f.id);
+    if (!ids.length) return { families, people: [] };
+    const people = await P.q(P.from('parishioners').select('id,full_name,phone,family_id,jumuiya_id').in('family_id', ids).eq('membership_status','active').order('full_name').limit(10000));
+    return { families, people };
+  };
+  const reportZakaRows = async (year, scope) => {
+    const grid = await P.rpc('zaka_grid_tree', { p_year: year, p_level: 'parishioner', p_scope: scope || null });
+    const units = reportScopeJumuiyaIds(scope);
+    let q = P.from('parishioners').select('id,full_name,phone,family_id,jumuiya_id').eq('membership_status','active').order('full_name').limit(10000);
+    if (units) q = q.in('jumuiya_id', units.length?units:['00000000-0000-0000-0000-000000000000']);
+    const people = await P.q(q), byId = Object.fromEntries(grid.map(r => [r.group_id, r]));
+    const now=new Date(), elapsed=Number(year)<now.getFullYear()?12:Number(year)>now.getFullYear()?0:now.getMonth()+1;
+    return people.map(p => {
+      const g = byId[p.id] || {};
+      const row = { id: p.id, name: p.full_name, phone: p.phone, family_id: p.family_id, jumuiya_name: P.ref.unitsById[p.jumuiya_id]?.name || '', total: Number(g.total) || 0,
+        months_paid: Number(g.months_paid) || 0, months_unpaid: g.group_id?Number(g.months_unpaid)||0:elapsed };
+      for (let i=1;i<=12;i++) row[`m${String(i).padStart(2,'0')}`] = Number(g[`m${String(i).padStart(2,'0')}`]) || 0;
+      return row;
+    });
+  };
+  const renderZakaReport = async (out, year, scope, sort) => {
+    const rows = reportSort(await reportZakaRows(year, scope).then(x => x.map(r => ({...r, balance: r.months_unpaid}))), sort);
+    const cols = [{key:'name',label:'Muumini'},{key:'phone',label:'Simu'},{key:'jumuiya_name',label:'Jumuiya'}, ...P.MONTHS.map((m,i)=>({key:`m${String(i+1).padStart(2,'0')}`,label:m,fmt:v=>Number(v)?P.tzs(v):'—',cls:'pm-num'})),
+      {key:'total',label:'Jumla',fmt:P.tzs,cls:'pm-num pm-strong'},{key:'months_paid',label:'Amelipa miezi',fmt:v=>P.num(v),cls:'pm-num'},{key:'months_unpaid',label:'Bado miezi',fmt:v=>P.num(v),cls:'pm-num'}];
+    const monthFoot={name:'<b>JUMLA</b>',total:`<b>${P.tzs(P.sum(rows,'total'))}</b>`,months_paid:P.num(P.sum(rows,'months_paid')),months_unpaid:P.num(P.sum(rows,'months_unpaid'))};
+    P.MONTHS.forEach((_,i)=>monthFoot[`m${String(i+1).padStart(2,'0')}`]=P.tzs(P.sum(rows,`m${String(i+1).padStart(2,'0')}`)));
+    out.innerHTML = P.reportHeader(`Taarifa ya Zaka ${year}`, `${reportScopeName(scope)} · Zaka ya kila mwezi kwa muumini`) + P.table(rows,cols,{foot:monthFoot,empty:'Hakuna waumini au malipo ya Zaka kwenye eneo hili.'});
+    return {rows, cols};
+  };
+  const renderFamilyContribution = async (out, campaigns, year, scope, sort) => {
+    const ids=campaigns.map(c=>c.id);
+    let q=P.from('v_pledge_balances').select('*').eq('campaign_year',year).eq('status','active').limit(10000);
+    if(ids.length) q=q.in('campaign_id',ids);
+    const scopeUnit=P.ref.unitsById[scope];
+    if(scopeUnit?.unit_type==='kigango'){
+      const jumIds=P.unitsOf('jumuiya').filter(j=>j.parent_id===scope).map(j=>j.id);
+      if(jumIds.length)q=q.in('jumuiya_id',jumIds);else q=q.eq('jumuiya_id','00000000-0000-0000-0000-000000000000');
+    } else if(scopeUnit?.unit_type==='jumuiya') q=q.eq('jumuiya_id',scope);
+    const pledges=await P.q(q);
+    const chosen=campaigns.length?campaigns:P.ref.camps.filter(c=>Number(c.campaign_year)===Number(year)&&c.status!=='closed'&&(c.giver_level==='family'||['mavuno','ujenzi'].includes(P.ref.catsById[c.category_id]?.kind)));
+    let html=P.reportHeader(`Utoaji wa familia ${year}`,`${reportScopeName(scope)} · ${chosen.map(c=>c.name).join(' + ')||'Michango inayopangiwa familia'}`);
+    const sets=[];
+    for(const c of chosen){
+      const by={};
+      pledges.filter(r=>r.campaign_id===c.id).forEach(r=>{
+        const key=r.family_id||`person:${r.parishioner_id}`;
+        const x=by[key]||=( {family_name:r.family_name||r.parishioner_name||'—',jumuiya_name:r.jumuiya_name||P.ref.unitsById[r.jumuiya_id]?.name||'',pledged:0,paid:0,balance:0,excess:0,completion_pct:0} );
+        x.pledged+=Number(r.pledged)||0;x.paid+=Number(r.paid)||0;x.balance+=Number(r.outstanding)||0;x.excess+=Number(r.excess)||0;
+      });
+      let rows=Object.values(by).map(r=>({...r,completion_pct:r.pledged?Math.round(r.paid/r.pledged*1000)/10:0}));
+      rows=reportSort(rows.map(r=>({...r,pct:r.completion_pct})),sort);
+      const foot={family_name:'<b>JUMLA</b>',pledged:P.tzs(P.sum(rows,'pledged')),paid:`<b>${P.tzs(P.sum(rows,'paid'))}</b>`,balance:P.tzs(P.sum(rows,'balance')),excess:P.tzs(P.sum(rows,'excess')),completion_pct:P.pct(P.sum(rows,'pledged')?P.sum(rows,'paid')/P.sum(rows,'pledged')*100:0)};
+      html+=`<h2 class="pm-h3">${P.esc(c.name)}</h2>${P.table(rows,[{key:'family_name',label:'Familia / Mlipaji'},{key:'jumuiya_name',label:'Jumuiya'},{key:'pledged',label:'Pangiwa',fmt:P.tzs,cls:'pm-num'},{key:'paid',label:'Amelipa',fmt:P.tzs,cls:'pm-num'},{key:'balance',label:'Bado',fmt:P.tzs,cls:'pm-num'},{key:'excess',label:'Ziada',fmt:P.tzs,cls:'pm-num'},{key:'completion_pct',label:'% ya utekelezaji',fmt:P.pct,cls:'pm-num'}],{foot,empty:'Hakuna mgao wa familia kwa mchango huu.'})}`;
+      sets.push({campaign:c.name,rows});
+    }
+    out.innerHTML=html;
+    return {sets};
+  };
+  const renderCampaignUnitReport = async (out, campaigns, year, scope, sort, allKigango=false) => {
+    let html=P.reportHeader(allKigango?'Michango ya vigango vyote':`Michango ${year}`,`${reportScopeName(scope)} · ${campaigns.map(c=>c.name).join(' + ')||'Michango yote'}`), sets=[];
+    for(const c of campaigns){
+      const scopeType=P.ref.unitsById[scope]?.unit_type;
+      const scopedType=allKigango?'kigango':(scopeType==='kigango'||scopeType==='jumuiya'?'jumuiya':'kigango');
+      let rows=await P.rpc('campaign_org_progress',{p_campaign:c.id,p_level:scopedType});
+      if(!allKigango&&scopeType==='kigango') rows=rows.filter(r=>P.ref.unitsById[r.org_unit_id]?.parent_id===scope);
+      else if(!allKigango&&scopeType==='jumuiya') rows=rows.filter(r=>r.org_unit_id===scope);
+      rows=reportSort(rows.map(r=>({...r,name:r.org_unit_name,paid:Number(r.collected)||0,pct:r.pct})),sort);
+      const unitLabel=scopedType==='kigango'?'Kigango':'Jumuiya';
+      const foot={org_unit_name:'<b>JUMLA</b>',target:P.tzs(P.sum(rows,'target')),collected:`<b>${P.tzs(P.sum(rows,'collected'))}</b>`,balance:P.tzs(P.sum(rows,'balance')),pct:P.pct(P.sum(rows,'target')?P.sum(rows,'collected')/P.sum(rows,'target')*100:0),payers:P.num(P.sum(rows,'payers'))};
+      html+=`<h2 class="pm-h3">${P.esc(c.name)}</h2>${P.table(rows,[{key:'org_unit_name',label:unitLabel},{key:'kigango_name',label:'Kigango'},{key:'target',label:'Pangiwa',fmt:P.tzs,cls:'pm-num'},{key:'collected',label:'Kilichotolewa',fmt:P.tzs,cls:'pm-num'},{key:'balance',label:'Bado',fmt:P.tzs,cls:'pm-num'},{key:'pct',label:'% ya utekelezaji',fmt:P.pct,cls:'pm-num'},{key:'payers',label:'Walipaji',fmt:P.num,cls:'pm-num'}],{foot,empty:'Hakuna mgao au malipo ya mchango huu.'})}`;
+      sets.push({campaign:c.name,rows});
+    }
+    out.innerHTML=html; return {sets};
+  };
+  const renderParishSummary = async (out, year, campaigns, scope, sort) => {
+    const rows0=await P.q(P.from('v_campaign_progress').select('*').eq('campaign_year',year).order('name').limit(1000)), ids=campaigns.map(c=>c.id), units=reportScopeUnits(scope);
+    let rows=rows0.filter(r=>!ids.length||ids.includes(r.campaign_id));
+    const scopeType=P.ref.unitsById[scope]?.unit_type;
+    if(units?.length&&scopeType){
+      rows=await Promise.all(rows.map(async r=>{
+        const progress=await P.rpc('campaign_org_progress',{p_campaign:r.campaign_id,p_level:scopeType});
+        const inScope=progress.filter(x=>x.org_unit_id===scope);
+        return {...r,target:P.sum(inScope,'target'),pledged:P.sum(inScope,'pledged'),collected:P.sum(inScope,'collected'),outstanding_pledges:P.sum(inScope,'balance')};
+      }));
+    }
+    rows=reportSort(rows.map(r=>({...r,name:r.name,paid:Number(r.collected)||0,balance:Number(r.outstanding_pledges)||Math.max((Number(r.target)||0)-(Number(r.collected)||0),0),pct:r.target?Number(r.collected)/Number(r.target)*100:0})),sort);
+    const foot={name:'<b>JUMLA</b>',target:P.tzs(P.sum(rows,'target')),collected:`<b>${P.tzs(P.sum(rows,'collected'))}</b>`,balance:P.tzs(P.sum(rows,'balance')),pledged:P.tzs(P.sum(rows,'pledged'))};
+    out.innerHTML=P.reportHeader(`Muhtasari wa michango ${year}`,reportScopeName(scope))+P.table(rows,[{key:'name',label:'Mchango'},{key:'category_name',label:'Aina'},{key:'target',label:'Lengo / Pangiwa',fmt:P.tzs,cls:'pm-num'},{key:'pledged',label:'Ahadi',fmt:P.tzs,cls:'pm-num'},{key:'collected',label:'Imekusanywa',fmt:P.tzs,cls:'pm-num'},{key:'balance',label:'Bado',fmt:P.tzs,cls:'pm-num'},{key:'pct',label:'%',fmt:P.pct,cls:'pm-num'}],{foot,empty:`Hakuna michango ya ${year} kwa eneo hili.`}); return {rows};
+  };
+  const renderJumuiyaTracker = async (out, year, scope, sort) => {
+    const unit=P.ref.unitsById[scope]; if(!unit||unit.unit_type!=='jumuiya'){out.innerHTML=P.empty('Chagua jumuiya moja ili kuandaa ripoti ya kufuatilia michango.');return {rows:[]};}
+    const [campaignRows,zakaRows,pledges]=await Promise.all([
+      P.rpc('unit_contributions',{p_year:year,p_unit:scope}),reportZakaRows(year,scope),
+      P.q(P.from('v_pledge_balances').select('*').eq('jumuiya_id',scope).eq('campaign_year',year).eq('status','active').limit(10000)),
+    ]);
+    const campaignTotals=campaignRows.map(r=>({name:r.campaign_name,category_name:r.category_name,pledged:Number(r.obligation)||0,collected:Number(r.collected)||Number(r.paid)||0,balance:Number(r.balance)||0,pct:Number(r.pct)||0,kind:'Mchango'}));
+    const monthsElapsed=year<new Date().getFullYear()?12:year>new Date().getFullYear()?0:new Date().getMonth()+1;
+    const zakaTotal=P.sum(zakaRows,'total'), zakaUnpaid=zakaRows.reduce((s,r)=>s+Math.max(monthsElapsed-r.months_paid,0),0);
+    const status=[...campaignTotals,{name:`Zaka ${year}`,category_name:'Zaka ya kila mwezi',pledged:0,collected:zakaTotal,balance:0,pct:zakaRows.length?P.sum(zakaRows,'months_paid')/(zakaRows.length*Math.max(monthsElapsed,1))*100:0,kind:`${zakaUnpaid} miezi bado`}];
+    const detailed={};
+    pledges.forEach(r=>{const key=r.campaign_id;const x=(detailed[key]||={name:r.campaign_name,rows:[]});x.rows.push({name:r.family_name||r.parishioner_name||r.org_unit_name,pledged:Number(r.pledged)||0,paid:Number(r.paid)||0,balance:Number(r.outstanding)||0});});
+    let sorted=reportSort(status.map(r=>({...r,paid:r.collected,balance:r.balance,pct:r.pct})),sort);
+    const dash=`<section class="pm-report-dashboard"><div class="pm-kpis">${P.kpi('Michango',P.num(status.length),'volunteer_activism')}${P.kpi('Jumla iliyolipwa',P.tzs(P.sum(campaignTotals,'collected')+zakaTotal),'payments')}${P.kpi('Miezi ya Zaka bado',P.num(zakaUnpaid),'calendar_month')}${P.kpi('Familia',P.num(new Set(pledges.map(p=>p.family_id).filter(Boolean)).size),'family_restroom')}</div>
+      <h2 class="pm-h3">Hali ya michango yote</h2>${P.table(sorted,[{key:'name',label:'Mchango'},{key:'category_name',label:'Aina'},{key:'pledged',label:'Pangiwa',fmt:P.tzs,cls:'pm-num'},{key:'collected',label:'Imelipwa',fmt:P.tzs,cls:'pm-num'},{key:'balance',label:'Bado',fmt:P.tzs,cls:'pm-num'},{key:'pct',label:'Utekelezaji',fmt:P.pct,cls:'pm-num'},{key:'kind',label:'Maelezo'}],{empty:'Hakuna michango iliyopangwa.'})}</section>`;
+    let body=P.reportHeader(`Ufuatiliaji wa michango ${year}`,reportScopeName(scope))+dash;
+    for(const g of Object.values(detailed)) body+=`<h2 class="pm-h3">${P.esc(g.name)}</h2>${P.table(reportSort(g.rows,sort),[{key:'name',label:'Familia / Mlipaji'},{key:'pledged',label:'Pangiwa',fmt:P.tzs,cls:'pm-num'},{key:'paid',label:'Amelipa',fmt:P.tzs,cls:'pm-num'},{key:'balance',label:'Bado',fmt:P.tzs,cls:'pm-num'}],{empty:'Hakuna mgao kwa sasa.'})}`;
+    body+=`<h2 class="pm-h3">Zaka ya waumini ${year}</h2>${P.table(zakaRows.map(r=>({...r,balance:r.months_unpaid})),[{key:'name',label:'Muumini'},{key:'phone',label:'Simu'},{key:'total',label:'Zaka imelipwa',fmt:P.tzs,cls:'pm-num'},{key:'months_paid',label:'Miezi amelipa',fmt:P.num,cls:'pm-num'},{key:'months_unpaid',label:'Miezi bado',fmt:P.num,cls:'pm-num'}],{empty:'Hakuna taarifa za Zaka.'})}`;
+    out.innerHTML=body; return {rows:sorted,campaignRows,zakaRows,pledges};
+  };
+  const renderReportForms = async (out, type, scope, year, labels) => {
+    const {families,people}=await reportMembersAndFamilies(scope);
+    const familyPerson=Object.fromEntries(people.map(p=>[p.id,p]));
+    const famRow=f=>{const p=familyPerson[f.head_parishioner_id]||people.find(x=>x.family_id===f.id);return {family_name:f.family_name,phone:f.phone||p?.phone||'',head_name:p?.full_name||''};};
+    let html='',orientation='landscape';
+    if(type==='zaka_form'){
+      const rows=people.map(p=>({name:p.full_name,family_name:families.find(f=>f.id===p.family_id)?.family_name||'',phone:p.phone||''}));
+      html=P.reportHeader(`Fomu ya utoaji wa Zaka ${year}`,reportScopeName(scope))+P.table(rows.map((r,i)=>({no:i+1,...r,...Object.fromEntries(P.MONTHS.map((_,j)=>[`m${j+1}`, '']))})),[{key:'no',label:'Na.'},{key:'name',label:'Jina la muumini'},{key:'family_name',label:'Familia'},{key:'phone',label:'Namba ya simu'},...P.MONTHS.map((m,i)=>({key:`m${i+1}`,label:m})),{key:'total',label:'Jumla'}],{empty:'Hakuna waumini katika eneo hili.'});
+    } else if(type==='family_form'){
+      html=P.reportHeader(`Fomu ya Mavuno na Ujenzi ${year}`,reportScopeName(scope))+`<p class="pm-muted">Jaza mawasilisho ya familia; kiasi na thamani za mazao/mifugo hujazwa wakati wa kupokea.</p>`+P.table(families.map((f,i)=>({no:i+1,...famRow(f)})),[{key:'no',label:'Na.'},{key:'family_name',label:'Familia'},{key:'phone',label:'Simu'},{key:'mavuno',label:'Mavuno (TZS)'},{key:'mifugo',label:'Mifugo'},{key:'mazao',label:'Mazao'},{key:'thamani',label:'Thamani (TZS)'},{key:'ujenzi',label:'Ujenzi (TZS)'},{key:'zaka',label:'Zaka (TZS)'},{key:'shukrani',label:'Shukrani / Baraka'}],{empty:'Hakuna familia katika eneo hili.'});
+    } else {
+      const custom=(labels||'').split(/[\n,;]/).map(x=>x.trim()).filter(Boolean).slice(0,8);
+      orientation=custom.length>3?'landscape':'portrait';
+      const rows=families.map((f,i)=>({no:i+1,...famRow(f),...Object.fromEntries(custom.map((_,j)=>[`c${j}`, '']))}));
+      html=P.reportHeader(`Fomu huru ${year}`,reportScopeName(scope))+P.table(rows,[{key:'no',label:'Na.'},{key:'family_name',label:'Familia'},{key:'phone',label:'Namba ya simu'},...custom.map((label,i)=>({key:`c${i}`,label}))],{empty:'Hakuna familia katika eneo hili.'});
+    }
+    out.innerHTML=html; return {families,people,orientation};
+  };
+  V.reports = {
+    title:'Ripoti', perm:'finance.read',
+    async render(el,params){
+      if((params.group==='finance'&&params.type==='finance_period')||params.period||params.from||(!params.group&&!params.type&&params.scope)) return V.financeReport.render(el,params);
+      const group=params.group||'', type=params.type||'', year=Number(params.year||P.year()), scope=params.scope||P.scopeUnit()||'', sort=params.sort||'name';
+      const reportCamps=P.ref.camps.filter(c=>Number(c.campaign_year)===year&&c.status!=='closed');
+      const defaultFam=reportCamps.filter(c=>['mavuno','ujenzi'].includes(P.ref.catsById[c.category_id]?.kind)).slice(0,2).map(c=>c.id);
+      const ids=String(params.campaigns||'').split(',').filter(Boolean), hasCampaignParam=Object.prototype.hasOwnProperty.call(params,'campaigns'), selected=hasCampaignParam?ids:((type==='family')?defaultFam:[]);
+      const typeDefs=REPORT_TYPES[group]||[];
+      const typesOptions=typeDefs.map(([v,l])=>`<option value="${v}" ${v===type?'selected':''}>${l}</option>`).join('');
+      const filterCampaigns=['family','assigned','kigango','all_kigango','parish_summary'].includes(type);
+      const maxCampaigns=['family','assigned'].includes(type)?2:0;
+      const scopeTypes=group==='jumuiya'?['jumuiya']:['kigango','jumuiya'];
+      const scopeOptions=P.unitOptions(scopeTypes,{blank:group==='jumuiya'?'Chagua jumuiya…':'Parokia nzima',selected:scope});
+      el.innerHTML=`<div class="pm-head"><div><h1 class="pm-h1">Ripoti</h1><p class="pm-muted">Chagua kundi, eneo na ripoti. Kila ripoti huweka tarehe ya kuchapishwa na ukurasa wa A4 unaofaa.</p></div></div>
+        <section class="pm-card pm-report-controls"><form class="pm-form pm-report-filters" data-report-form>
+          <label>Kundi la ripoti<select name="group"><option value="">Chagua kundi…</option>${REPORT_GROUPS.map(([v,l])=>`<option value="${v}" ${v===group?'selected':''}>${l}</option>`).join('')}</select></label>
+          <label>Ripoti<select name="type" data-report-type><option value="">Chagua ripoti…</option>${typesOptions}</select></label>
+          <label>Mwaka<input type="number" name="year" min="2000" max="2100" value="${year}"></label>
+          <label>Eneo<select name="scope">${scopeOptions}</select></label>
+          <label>Mpangilio wa ukurasa<select name="orientation"><option value="auto" ${(params.orientation||'auto')==='auto'?'selected':''}>Uliopendekezwa</option><option value="portrait" ${params.orientation==='portrait'?'selected':''}>Portrait</option><option value="landscape" ${params.orientation==='landscape'?'selected':''}>Landscape</option></select></label>
+          <label>Panga kwa<select name="sort"><option value="name" ${sort==='name'?'selected':''}>Jina</option><option value="pledged" ${sort==='pledged'?'selected':''}>Kiasi kilichopangiwa</option><option value="paid" ${sort==='paid'?'selected':''}>Kilicholipwa</option><option value="balance" ${sort==='balance'?'selected':''}>Kiasi kilichobaki</option><option value="pct" ${sort==='pct'?'selected':''}>Asilimia ya utekelezaji</option></select></label>
+          <label class="pm-span2" data-campaign-wrap ${filterCampaigns?'':'hidden'}>${reportCampaignPicker(type==='family'?reportCamps.filter(c=>c.giver_level==='family'||['mavuno','ujenzi'].includes(P.ref.catsById[c.category_id]?.kind)):reportCamps,selected,maxCampaigns)}</label>
+          <label class="pm-span2" data-free-labels ${type==='free_form'?'':'hidden'}>Vichwa vya safu za fomu huru<input name="labels" maxlength="300" value="${P.esc(params.labels||'')}" placeholder="Mfano: Mavuno, Mifugo, Mazao, Maelezo"></label>
+          <div class="pm-span2 pm-actions"><button class="pm-btn pm-btn--primary"><span class="material-symbols-outlined">description</span>Tengeneza ripoti</button></div>
+        </form></section>
+        <section class="pm-card" data-report-output>${group&&type?P.loading():P.empty('Chagua kundi la ripoti ili kuona aina za ripoti zake.')}</section>`;
+      const form=el.querySelector('[data-report-form]'), groupField=form.elements.group, typeField=form.elements.type, campaignWrap=el.querySelector('[data-campaign-wrap]'), freeLabels=el.querySelector('[data-free-labels]');
+      const syncForm=()=>{
+        const defs=REPORT_TYPES[groupField.value]||[]; typeField.innerHTML='<option value="">Chagua ripoti…</option>'+defs.map(([v,l])=>`<option value="${v}" ${v===type?'selected':''}>${l}</option>`).join('');
+        if(!defs.some(x=>x[0]===typeField.value)) typeField.value='';
+        campaignWrap.hidden=!['family','assigned','kigango','all_kigango','parish_summary'].includes(typeField.value);
+        freeLabels.hidden=typeField.value!=='free_form';
+        form.elements.scope.innerHTML=P.unitOptions(groupField.value==='jumuiya'?['jumuiya']:['kigango','jumuiya'],{blank:groupField.value==='jumuiya'?'Chagua jumuiya…':'Parokia nzima',selected:scope});
+        const max=['family','assigned'].includes(typeField.value)?2:0;
+        let checked=[...campaignWrap.querySelectorAll('[name=campaign_id]:checked')].map(x=>x.value);
+        if(typeField.value==='family'&&!checked.length)checked=defaultFam;
+        const eligible=typeField.value==='family'?reportCamps.filter(c=>c.giver_level==='family'||['mavuno','ujenzi'].includes(P.ref.catsById[c.category_id]?.kind)):reportCamps;
+        campaignWrap.innerHTML=reportCampaignPicker(eligible,checked.filter(id=>eligible.some(c=>c.id===id)),max);
+        const lim=campaignWrap.querySelector('[data-campaign-limit]'); if(lim)lim.hidden=!max;
+      };
+      groupField.addEventListener('change',()=>{syncForm();typeField.focus();});
+      typeField.addEventListener('change',syncForm);
+      form.addEventListener('change',e=>{
+        if(e.target.name!=='campaign_id')return; const boxes=[...form.querySelectorAll('[name=campaign_id]:checked')];
+        const max=['family','assigned'].includes(typeField.value)?2:0;
+        if(max&&boxes.length>max){e.target.checked=false;Toast.info(`Chagua hadi michango ${max}.`);}
+        form.querySelector('[data-campaign-count]').textContent=`${form.querySelectorAll('[name=campaign_id]:checked').length} imechaguliwa`;
+      });
+      form.addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(form),vals=Object.fromEntries(fd),currentType=typeField.value,needsCampaign=['family','assigned','kigango','all_kigango','parish_summary'].includes(currentType);vals.campaigns=[...form.querySelectorAll('[name=campaign_id]:checked')].map(x=>x.value).join(',');if(needsCampaign&&!vals.campaigns){Toast.info('Chagua angalau mchango mmoja.');return;}P.go('#/reports?'+new URLSearchParams(vals));});
+      syncForm();
+      if(!group||!type)return;
+      const out=el.querySelector('[data-report-output]'), campaigns=reportGroupCampaigns(selected,year,type==='family'?c=>c.giver_level==='family'||['mavuno','ujenzi'].includes(P.ref.catsById[c.category_id]?.kind):null);
+      if(filterCampaigns&&!campaigns.length){out.innerHTML=P.empty('Chagua angalau mchango mmoja kwenye orodha kisha tengeneza ripoti.');return;}
+      const exportBtn=data=>data?.rows||data?.sets?'<button class="pm-btn pm-btn--sm" data-report-excel><span class="material-symbols-outlined">download</span>Excel</button>':'';
+      try{
+        let data=null,orientation=['zaka','zaka_form','family_form','family','assigned','tracker','kigango','all_kigango','parish_summary'].includes(type)?'landscape':'portrait';
+        if(type==='zaka')data=await renderZakaReport(out,year,scope,sort);
+        else if(type==='family')data=await renderFamilyContribution(out,campaigns,year,scope,sort);
+        else if(type==='assigned')data=await renderCampaignUnitReport(out,campaigns,year,scope,sort);
+        else if(type==='kigango'||type==='all_kigango')data=await renderCampaignUnitReport(out,campaigns,year,scope,sort,type==='all_kigango');
+        else if(type==='parish_summary')data=await renderParishSummary(out,year,campaigns,scope,sort);
+        else if(type==='tracker')data=await renderJumuiyaTracker(out,year,scope,sort);
+        else if(['zaka_form','family_form','free_form'].includes(type)){data=await renderReportForms(out,type,scope,year,params.labels||'');orientation=data.orientation||orientation;}
+        out.classList.add('pm-report-print');
+        if(params.orientation!=='portrait'&&params.orientation!=='landscape') out.dataset.orientation=orientation;
+        const actions=document.createElement('div');actions.className='pm-report-output-actions';actions.innerHTML=exportBtn(data)+'<button class="pm-btn pm-btn--primary pm-btn--sm" data-report-print><span class="material-symbols-outlined">print</span>Chapa / PDF</button>';
+        out.prepend(actions);
+        out.querySelector('[data-report-print]').addEventListener('click',()=>P.print(REPORT_TITLES[type]||'Ripoti',{orientation:params.orientation==='portrait'||params.orientation==='landscape'?params.orientation:orientation}));
+        const excel=out.querySelector('[data-report-excel]');
+        excel?.addEventListener('click',()=>{
+          if(data?.rows)P.exportExcel(`ripoti_${type}_${year}`,{Ripoti:data.rows.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k,typeof v==='number'?v:String(v??'')]))) });
+          else if(data?.sets)P.exportExcel(`ripoti_${type}_${year}`,Object.fromEntries(data.sets.map((s,i)=>[`Mchango ${i+1}`,s.rows.map(r=>({Jina:r.family_name||r.name||r.org_unit_name,Pangiwa:Number(r.pledged||r.target),Amelipa:Number(r.paid||r.collected),Bado:Number(r.balance)}))])));
+          else Toast.info('Ripoti hii iko tayari kuchapishwa au kuhifadhiwa kama PDF.');
+        });
+      }catch(err){out.innerHTML=`<div class="pm-alert pm-alert--error">${P.esc(P.friendlyError(err))}</div>`;}
     },
   };
   /* ================= UHAKIKI WA FEDHA ================= */

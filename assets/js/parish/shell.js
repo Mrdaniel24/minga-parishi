@@ -121,6 +121,7 @@
     a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
     h('Kazi za Kila Siku');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
+    a('Chat za Parokia', 'forum', 'chat', null, 'shared');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
@@ -166,8 +167,9 @@
       nav.querySelectorAll('[data-pperm]').forEach(el => {
         const p = el.dataset.pperm;
         const memberAllowed = p === 'member' && memberMode;
-        const staffAllowed = el.dataset.portal !== 'member' && !memberMode && (p === 'self' ? !!acc?.parishioner_id : !!acc && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
-        el.hidden = !(memberAllowed || staffAllowed);
+        const sharedAllowed = el.dataset.portal === 'shared' && memberMode && !!acc && (acc.platform_admin || (acc.roles || []).length > 0 || !!acc.parishioner_id);
+        const staffAllowed = el.dataset.portal !== 'member' && (!memberMode || el.dataset.portal === 'shared') && (p === 'self' ? !!acc?.parishioner_id : !!acc && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
+        el.hidden = !(memberAllowed || sharedAllowed || staffAllowed);
       });
       nav.querySelectorAll('[data-psection]').forEach(hd => { hd.hidden = hd.dataset.portal === 'member' ? !memberMode : memberMode; });
       nav.querySelectorAll('[data-psection]').forEach(hd => {

@@ -2,9 +2,72 @@
 <html lang="sw">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mfumo wa Parokia</title>
-  <meta http-equiv="refresh" content="0; url=login.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#003F32" />
+  <meta name="description" content="Mfumo wa Parokia: simamia waumini, michango, risiti, viongozi na ripoti katika sehemu moja." />
+  <title>Mfumo wa Parokia | Usimamizi wa parokia kwa urahisi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/landing.css" />
 </head>
-<body><a href="login.html">Ingia kwenye Mfumo wa Parokia</a></body>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#mwanzo" aria-label="Mfumo wa Parokia, mwanzo"><span class="brand-mark">✣</span><span>Mfumo wa <b>Parokia</b></span></a>
+    <nav aria-label="Menyu kuu"><a href="#vipengele">Vipengele</a><a href="#vifurushi">Vifurushi</a><a href="#chat">Chat</a></nav>
+    <a class="button button--small" href="login.html">Ingia kwenye mfumo</a>
+  </header>
+
+  <main>
+    <section class="hero" id="mwanzo">
+      <div class="hero-copy">
+        <span class="eyebrow"><i></i> Mfumo mmoja, huduma kwa parokia nyingi</span>
+        <h1>Simamia parokia yako <em>kwa mpangilio.</em></h1>
+        <p>Waumini, familia, michango na ripoti zako zikiwa sehemu moja salama. Mfumo umeundwa kusaidia kazi za kila siku za parokia.</p>
+        <div class="hero-actions"><a class="button" href="#vifurushi">Ona vifurushi <span aria-hidden="true">↓</span></a><a class="button button--light" href="login.html">Tayari nina akaunti</a></div>
+        <div class="hero-proof"><span class="proof-icon">✓</span><span>Vigango na jumuiya<br><b>vinafuata muundo wa parokia</b></span><span class="proof-icon">✓</span><span>Ripoti na miamala<br><b>vinaonekana kwa ruhusa</b></span></div>
+      </div>
+      <div class="showcase" aria-label="Picha za kuonyesha mfumo">
+        <div class="showcase-frame">
+          <div class="showcase-top"><span class="window-dots"><i></i><i></i><i></i></span><span>MFUMO WA PAROKIA</span><span class="showcase-tag">MUONEKANO WA MFUMO</span></div>
+          <div class="slides" aria-live="polite">
+            <figure class="slide is-active"><img src="assets/images/login-dashboard-wide.png" alt="Picha ya kuonyesha dashibodi na muhtasari wa parokia" /><figcaption><b>Muhtasari wa parokia</b><span>Takwimu na taarifa muhimu kwa haraka</span></figcaption></figure>
+            <figure class="slide"><img src="assets/images/login-family-wide.png" alt="Picha ya kuonyesha familia na waumini" /><figcaption><b>Familia na waumini</b><span>Rekodi zilizopangwa kwa vigango na jumuiya</span></figcaption></figure>
+            <figure class="slide"><img src="assets/images/login-receipt-wide.png" alt="Picha ya kuonyesha malipo na risiti" /><figcaption><b>Miamala na risiti</b><span>Fuatilia michango na uthibitisho wake</span></figcaption></figure>
+          </div>
+          <div class="slide-controls"><button type="button" data-prev aria-label="Picha iliyopita">←</button><div class="slide-dots"><button class="active" type="button" data-dot="0" aria-label="Picha ya 1" aria-pressed="true"></button><button type="button" data-dot="1" aria-label="Picha ya 2" aria-pressed="false"></button><button type="button" data-dot="2" aria-label="Picha ya 3" aria-pressed="false"></button></div><button type="button" data-next aria-label="Picha inayofuata">→</button></div>
+        </div>
+        <div class="float-note"><span>✓</span><div><b>Muundo unaoeleweka</b><small>Parokia → Kigango → Jumuiya</small></div></div>
+      </div>
+    </section>
+
+    <section class="section features" id="vipengele">
+      <div class="section-heading"><span class="eyebrow">Kazi za parokia, sehemu moja</span><h2>Vifaa vya kusaidia huduma zako</h2><p>Rahisisha ufuatiliaji bila kutawanya taarifa kwenye mifumo mingi.</p></div>
+      <div class="feature-grid">
+        <article class="feature"><span class="feature-icon">♧</span><h3>Waumini na familia</h3><p>Panga taarifa kwa ngazi ya parokia, kigango, jumuiya na familia.</p></article>
+        <article class="feature"><span class="feature-icon">₮</span><h3>Michango na zaka</h3><p>Rekodi malipo, gawanya michango na fuatilia uthibitisho wa risiti.</p></article>
+        <article class="feature"><span class="feature-icon">▤</span><h3>Ripoti na risiti</h3><p>Andaa muhtasari wa makusanyo na ripoti zinazoweza kuchapishwa.</p></article>
+        <article class="feature"><span class="feature-icon">⌘</span><h3>Viongozi na majukumu</h3><p>Weka viongozi katika eneo lao na wape ruhusa kulingana na wajibu.</p></article>
+      </div>
+    </section>
+
+    <section class="section chat-section" id="chat">
+      <div class="chat-copy"><span class="eyebrow">Mawasiliano yenye muktadha</span><h2>Ujumbe ufike kwa watu sahihi</h2><p>Vyumba vya mazungumzo vitafuata muundo wa parokia. Ujumbe wa jumuiya unabaki kwa jumuiya hiyo; ujumbe wa kigango unawaunganisha viongozi na jumuiya zake; ujumbe wa parokia ni wa parokia nzima.</p><ul><li><b>Parokia</b><span>Ujumbe unaonekana kwa parokia nzima</span></li><li><b>Kigango</b><span>Ujumbe unaonekana kwa kigango na jumuiya zake</span></li><li><b>Jumuiya</b><span>Ujumbe unaonekana ndani ya jumuiya husika</span></li></ul></div>
+      <div class="chat-visual" aria-hidden="true"><div class="chat-window"><div class="chat-window__head"><span class="online-dot"></span><div><b>Jumuiya ya Mt. Yosefu</b><small>Jumuiya · Kigango cha Minga</small></div><span>•••</span></div><div class="bubble bubble--other">Karibuni kwenye taarifa za jumuiya yetu.<small>Katibu · 10:42</small></div><div class="bubble bubble--mine">Asante, nimepokea taarifa.<small>Muumini · 10:45</small></div><div class="chat-compose">Andika ujumbe… <span>➤</span></div></div><div class="scope-chip">🔒 Mazungumzo ya eneo husika</div></div>
+    </section>
+
+    <section class="section pricing" id="vifurushi">
+      <div class="section-heading"><span class="eyebrow">Vifurushi vya mfumo</span><h2>Chagua kiwango kinachoendana na parokia yako</h2><p class="sample-note">Bei hizi ni mifano ya kupanga vifurushi; uthibitisho wa bei na malipo utaongezwa baada ya makubaliano.</p></div>
+      <div class="plan-grid">
+        <article class="plan plan--featured"><span class="plan-badge">Vifaa zaidi</span><h3>Huduma Kamili</h3><p class="plan-price">TZS 60,000 <small>/ mwezi</small></p><p class="plan-intro">Kwa parokia zinazohitaji usimamizi mpana.</p><ul><li>Waumini, familia na viongozi</li><li>Michango, zaka na risiti</li><li>Ripoti za kina</li><li>Chat ya parokia, vigango na jumuiya</li><li>Msaada wa kipaumbele</li></ul><a class="button button--wide" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Ulizia kifurushi</a></article>
+        <article class="plan"><h3>Huduma ya Kawaida</h3><p class="plan-price">TZS 50,000 <small>/ mwezi</small></p><p class="plan-intro">Kwa parokia zinazotaka zana muhimu za kila siku.</p><ul><li>Waumini, familia na viongozi</li><li>Rekodi za michango na risiti</li><li>Ripoti za msingi</li><li>Chat ya ngazi za parokia</li></ul><a class="button button--light button--wide" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Ulizia kifurushi</a></article>
+        <article class="plan"><h3>Mwanzo</h3><p class="plan-price">TZS 30,000 <small>/ mwezi</small></p><p class="plan-intro">Kwa parokia zinazoanza kutumia mfumo.</p><ul><li>Muundo wa kigango na jumuiya</li><li>Rejista ya waumini</li><li>Rekodi za msingi</li><li>Ripoti fupi</li></ul><a class="button button--light button--wide" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Ulizia kifurushi</a></article>
+      </div>
+    </section>
+
+    <section class="closing"><div><span class="eyebrow">Anza kutumia</span><h2>Parokia yako iko tayari kwenda hatua inayofuata?</h2><p>Wasiliana nasi kuhusu demo, vifurushi na kuanzisha akaunti ya parokia yako.</p></div><div class="closing-actions"><a class="button button--gold" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Omba demo</a><a class="button button--outline" href="login.html">Ingia kwenye mfumo</a></div></section>
+  </main>
+  <footer class="site-footer"><a class="brand brand--footer" href="#mwanzo"><span class="brand-mark">✣</span><span>Mfumo wa <b>Parokia</b></span></a><span>Powered by <a href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Focus Tech</a></span></footer>
+  <script src="assets/js/landing.js"></script>
+</body>
 </html>

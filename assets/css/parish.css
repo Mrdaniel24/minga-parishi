@@ -148,10 +148,21 @@
 
 /* print header (hidden on screen, shown when printing / saving PDF) */
 .pm-print-head { display: none; }
+.pm-report-campaigns { border: 1px solid var(--pm-line); border-radius: 12px; padding: .7rem .9rem; background: #fff; }
+.pm-report-campaigns summary { cursor: pointer; color: var(--pm-primary); font-weight: 700; display: flex; justify-content: space-between; gap: .75rem; }
+.pm-report-campaigns summary small { color: var(--pm-muted); font-weight: 500; }
+.pm-report-campaign-list { max-height: 230px; overflow-y: auto; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .25rem .8rem; padding-top: .65rem; }
+.pm-report-campaign-list label { display: flex; gap: .5rem; align-items: flex-start; padding: .3rem 0; }
+.pm-report-campaign-list label span { min-width: 0; }
+.pm-report-campaign-list label small { display: block; color: var(--pm-muted); font-size: .75rem; }
+.pm-report-output-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-bottom: .8rem; }
+.pm-report-filters [hidden] { display: none !important; }
+.pm-report-dashboard { break-after: page; page-break-after: always; }
+.pm-report-print .pm-table tr { break-inside: avoid; page-break-inside: avoid; }
 @media print {
-  @page { margin: 12mm; }
+  @page { size: A4 portrait; margin: 10mm; }
   body { background: #fff !important; }
-  #sidebar, .mobile-header, .mobile-bottom-nav, .kh-topbar, .kh-footer, .pm-head .pm-actions, .pm-filters, .pm-tabs, .pm-actions, button, .sidebar-overlay { display: none !important; }
+  #sidebar, .mobile-header, .mobile-bottom-nav, .kh-topbar, .kh-footer, .pm-head .pm-actions, .pm-filters, .pm-tabs, .pm-actions, .pm-report-controls, .pm-report-output-actions, button, .sidebar-overlay { display: none !important; }
   .main-responsive { margin: 0 !important; padding: 0 !important; width: 100% !important; }
   .pm-card { box-shadow: none; padding: 0; }
   .pm-print-head { display: flex; gap: 1rem; align-items: center; border-bottom: 2px solid #000; padding-bottom: .6rem; margin-bottom: .8rem; }
@@ -162,6 +173,11 @@
   .pm-table { font-size: 8.5pt; }
   .pm-table th, .pm-table td { padding: 3px 4px; }
   .pm-progress { display: none; }
+}
+@media (max-width: 680px) {
+  .pm-report-campaign-list { grid-template-columns: 1fr; }
+  .pm-report-output-actions { justify-content: stretch; }
+  .pm-report-output-actions .pm-btn { flex: 1; }
 }
 
 /* family card */
