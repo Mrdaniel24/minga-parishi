@@ -1,0 +1,122 @@
+/* Restore a clear, premium hierarchy to the subscription plans. */
+.pricing-section,
+#pricing,
+section.pricing {
+  padding-block: clamp(5rem, 8vw, 7.5rem);
+}
+
+.pricing .section-heading h2 {
+  max-width: 900px;
+  margin-inline: auto;
+  font-size: clamp(2.35rem, 4.5vw, 4rem);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -.045em;
+}
+
+.pricing .section-heading > p {
+  max-width: 760px;
+  margin: 1rem auto 2.5rem;
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  line-height: 1.7;
+}
+
+.plan-grid {
+  max-width: 1160px;
+  gap: clamp(1.75rem, 3vw, 2.75rem);
+}
+
+.plan-grid > .plan,
+.plan-grid > .plan--featured,
+.plan-grid > .plan--popular,
+.plan-grid > .plan--free {
+  min-height: 550px;
+  padding: 2.5rem clamp(1.5rem, 2vw, 2rem) 2rem;
+  border-radius: 1.5rem;
+  border-color: #d7e7df;
+  background: linear-gradient(160deg, #fff 0%, #f3f8f5 100%);
+  box-shadow: 0 18px 48px #003f3210;
+}
+
+.plan-grid > .plan h3,
+.plan-grid > .plan--featured h3,
+.plan-grid > .plan--popular h3,
+.plan-grid > .plan--free h3 {
+  font-size: clamp(1.25rem, 1.55vw, 1.5rem);
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.plan-grid > .plan .plan-price,
+.plan-grid > .plan--free .plan-price {
+  font-size: clamp(2rem, 2.7vw, 2.55rem);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  white-space: nowrap;
+}
+
+.plan-grid > .plan--popular .plan-price,
+.plan-grid > .plan--featured.plan--popular .plan-price {
+  font-size: clamp(2.45rem, 3.5vw, 3.15rem);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -.05em;
+}
+
+.plan-grid > .plan--featured.plan--popular {
+  min-height: 590px;
+  border: 2px solid #f5be22;
+  background: linear-gradient(155deg, #fffdf4 0%, #fff 48%, #f3f8f5 100%);
+  box-shadow: 0 24px 58px #003f321c;
+}
+
+.plan-grid > .plan--featured.plan--popular.is-visible {
+  transform: scale(1.035) !important;
+}
+
+.plan-grid > .plan--featured.plan--popular:hover,
+.plan-grid > .plan--featured.plan--popular:focus-within {
+  transform: scale(1.045) !important;
+  box-shadow: 0 30px 65px #003f3228;
+}
+
+.plan-grid .plan-intro {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  .plan-grid { gap: 1.5rem; }
+  .plan-grid > .plan,
+  .plan-grid > .plan--featured,
+  .plan-grid > .plan--popular,
+  .plan-grid > .plan--free { min-height: 560px; }
+}
+
+@media (max-width: 720px) {
+  .pricing-section,
+  #pricing,
+  section.pricing { padding-block: 4.5rem; }
+
+  .pricing .section-heading h2 { font-size: clamp(2.15rem, 8vw, 3rem); }
+
+  .plan-grid { gap: 1.5rem; }
+  .plan-grid > .plan,
+  .plan-grid > .plan--featured,
+  .plan-grid > .plan--popular,
+  .plan-grid > .plan--free { min-height: 510px; }
+
+  .plan-grid > .plan .plan-price,
+  .plan-grid > .plan--free .plan-price { font-size: 2.25rem; }
+
+  .plan-grid > .plan--popular .plan-price,
+  .plan-grid > .plan--featured.plan--popular .plan-price { font-size: 2.75rem; }
+}
+
+@media (max-width: 380px) {
+  .plan-grid > .plan .plan-price,
+  .plan-grid > .plan--free .plan-price { font-size: 2.05rem; }
+  .plan-grid > .plan--popular .plan-price,
+  .plan-grid > .plan--featured.plan--popular .plan-price { font-size: 2.45rem; }
+}
