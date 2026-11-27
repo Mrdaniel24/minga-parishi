@@ -22,4 +22,23 @@
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   reduced.addEventListener?.('change', start);
   start();
+
+  const billingOptions = [...document.querySelectorAll('[data-billing]')];
+  billingOptions.forEach(option => option.addEventListener('click', () => {
+    const yearly = option.dataset.billing === 'yearly';
+    billingOptions.forEach(item => {
+      const active = item === option;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', String(active));
+    });
+    document.querySelectorAll('[data-monthly][data-yearly]').forEach(price => {
+      price.classList.add('price-changing');
+      window.setTimeout(() => {
+        price.textContent = `TZS ${yearly ? price.dataset.yearly : price.dataset.monthly}`;
+        price.classList.remove('price-changing');
+      }, 120);
+    });
+    document.querySelectorAll('[data-period]').forEach(period => { period.textContent = yearly ? '/ mwaka' : '/ mwezi'; });
+    document.querySelectorAll('[data-equivalent]').forEach(note => { note.hidden = !yearly; });
+  }));
 })();
