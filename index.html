@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="assets/css/pricing-emphasis.css" />
   <link rel="stylesheet" href="assets/css/landing-premium.css" />
   <link rel="stylesheet" href="assets/css/pricing-presence.css" />
+  <link rel="stylesheet" href="assets/css/chat-showcase.css" />
 </head>
 <body>
   <header class="site-header">
@@ -60,8 +61,36 @@
     </section>
 
     <section class="section chat-section" id="chat">
-      <div class="chat-copy"><span class="eyebrow">Mawasiliano yenye muktadha</span><h2>Ujumbe ufike kwa watu sahihi</h2><p>Vyumba vya mazungumzo vitafuata muundo wa parokia. Ujumbe wa jumuiya unabaki kwa jumuiya hiyo; ujumbe wa kigango unawaunganisha viongozi na jumuiya zake; ujumbe wa parokia ni wa parokia nzima.</p><ul><li><b>Parokia</b><span>Ujumbe unaonekana kwa parokia nzima</span></li><li><b>Kigango</b><span>Ujumbe unaonekana kwa kigango na jumuiya zake</span></li><li><b>Jumuiya</b><span>Ujumbe unaonekana ndani ya jumuiya husika</span></li></ul></div>
-      <div class="chat-visual" aria-hidden="true"><div class="chat-window"><div class="chat-window__head"><span class="online-dot"></span><div><b>Jumuiya ya Mt. Yosefu</b><small>Jumuiya · Kigango cha Minga</small></div><span>•••</span></div><div class="bubble bubble--other">Karibuni kwenye taarifa za jumuiya yetu.<small>Katibu · 10:42</small></div><div class="bubble bubble--mine">Asante, nimepokea taarifa.<small>Muumini · 10:45</small></div><div class="chat-compose">Andika ujumbe… <span>➤</span></div></div><div class="scope-chip">🔒 Mazungumzo ya eneo husika</div></div>
+      <div class="chat-copy">
+        <span class="eyebrow">Mawasiliano ya parokia</span>
+        <h2>Ujumbe ufike kwa watu sahihi</h2>
+        <p class="chat-lead">Kila mazungumzo yanafuata ngazi ya parokia. Taarifa hubaki kwa watu wa eneo husika.</p>
+        <div class="chat-levels" aria-label="Ngazi za mazungumzo">
+          <article class="chat-level is-current" data-chat-level="0"><span class="chat-level__icon" aria-hidden="true">✣</span><div><h3>Parokia</h3><p>Taarifa na mijadala inayowahusu waumini wote wa parokia.</p></div><span class="chat-level__arrow" aria-hidden="true">↗</span></article>
+          <article class="chat-level" data-chat-level="1"><span class="chat-level__icon" aria-hidden="true">⌘</span><div><h3>Kigango</h3><p>Mazungumzo ya kigango pamoja na jumuiya zake.</p></div><span class="chat-level__arrow" aria-hidden="true">↗</span></article>
+          <article class="chat-level" data-chat-level="2"><span class="chat-level__icon" aria-hidden="true">◎</span><div><h3>Jumuiya</h3><p>Taarifa za karibu kwa wanajumuiya husika.</p></div><span class="chat-level__arrow" aria-hidden="true">↗</span></article>
+        </div>
+      </div>
+      <div class="chat-visual" aria-label="Mfano wa mazungumzo kwenye simu">
+        <div class="chat-orbit chat-orbit--one" aria-hidden="true"></div><div class="chat-orbit chat-orbit--two" aria-hidden="true"></div>
+        <div class="phone-shell">
+          <div class="phone-side-button" aria-hidden="true"></div>
+          <div class="phone-screen" id="chat-preview">
+            <div class="phone-status"><span>9:41</span><span aria-hidden="true">● ● ▰</span></div>
+            <div class="phone-notch" aria-hidden="true"><i></i></div>
+            <div class="chat-window">
+              <div class="chat-window__head"><span class="online-dot"></span><div><b data-chat-title>Parokia ya Mt. Aloyce Gonzaga</b><small data-chat-subtitle>Minga · Parokia nzima</small></div><span class="chat-menu" aria-hidden="true">•••</span></div>
+              <div class="chat-context"><span class="chat-context__icon" aria-hidden="true">⌖</span><span data-chat-context>Ujumbe unaonekana kwa waumini wote wa parokia</span><span class="chat-lock" aria-hidden="true">●</span></div>
+              <div class="chat-date">LEO</div>
+              <div class="bubble bubble--other"><span data-chat-message>Karibuni kwenye taarifa za parokia yetu.</span><small><span data-chat-sender>Katibu wa Parokia</span><time data-chat-time>10:42</time></small></div>
+              <div class="bubble bubble--mine"><span data-chat-reply>Asante, nimepokea taarifa.</span><small><span>Muumini</span><time data-chat-reply-time>10:45</time></small></div>
+              <div class="chat-compose"><span>Andika ujumbe…</span><b aria-hidden="true">➤</b></div>
+              <div class="phone-home" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-scope-chip"><span>●</span> <b data-chat-scope>Parokia</b> <i>·</i> Mazungumzo ya eneo husika</div>
+      </div>
     </section>
 
     <section class="section pricing" id="vifurushi">

@@ -23,6 +23,74 @@
   reduced.addEventListener?.('change', start);
   start();
 
+  const chatPreview = document.querySelector('#chat-preview');
+  if (chatPreview) {
+    const chatLevels = [
+      {
+        title: 'Parokia ya Mt. Aloyce Gonzaga', subtitle: 'Minga · Parokia nzima', scope: 'Parokia',
+        context: 'Ujumbe unaonekana kwa waumini wote wa parokia',
+        message: 'Karibuni kwenye taarifa za parokia yetu.', sender: 'Katibu wa Parokia', time: '10:42',
+        reply: 'Asante, nimepokea taarifa.', replyTime: '10:45'
+      },
+      {
+        title: 'Kigango cha Minga', subtitle: 'Parokia ya Minga', scope: 'Kigango',
+        context: 'Ujumbe unafika kigangoni na jumuiya zake',
+        message: 'Kikao cha kigango kitafanyika Jumapili baada ya misa.', sender: 'Katibu wa Kigango', time: '11:08',
+        reply: 'Nimepokea, tutafika kwa wakati.', replyTime: '11:12'
+      },
+      {
+        title: 'Jumuiya ya Mt. Yosefu', subtitle: 'Kigango cha Minga · Minga', scope: 'Jumuiya',
+        context: 'Ujumbe unaonekana ndani ya jumuiya hii',
+        message: 'Tukutane kwa sala ya jumuiya Ijumaa saa 10 jioni.', sender: 'Katibu wa Jumuiya', time: '12:16',
+        reply: 'Asante kwa taarifa, nitakuwepo.', replyTime: '12:20'
+      }
+    ];
+    const levels = [...document.querySelectorAll('[data-chat-level]')];
+    const setText = (selector, value) => {
+      const node = chatPreview.querySelector(selector);
+      if (node) node.textContent = value;
+    };
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    let chatIndex = 0;
+    let chatTimer = null;
+    let chatPaused = false;
+    const showChatLevel = next => {
+      chatIndex = (next + chatLevels.length) % chatLevels.length;
+      const chat = chatLevels[chatIndex];
+      chatPreview.classList.add('is-changing');
+      levels.forEach((level, i) => level.classList.toggle('is-current', i === chatIndex));
+      window.setTimeout(() => {
+        setText('[data-chat-title]', chat.title);
+        setText('[data-chat-subtitle]', chat.subtitle);
+        setText('[data-chat-context]', chat.context);
+        setText('[data-chat-scope]', chat.scope);
+        setText('[data-chat-message]', chat.message);
+        setText('[data-chat-sender]', chat.sender);
+        setText('[data-chat-time]', chat.time);
+        setText('[data-chat-reply]', chat.reply);
+        setText('[data-chat-reply-time]', chat.replyTime);
+        requestAnimationFrame(() => chatPreview.classList.remove('is-changing'));
+      }, 300);
+    };
+    const stopChatRotation = () => { if (chatTimer) clearInterval(chatTimer); chatTimer = null; };
+    const startChatRotation = () => {
+      stopChatRotation();
+      if (!chatPaused && !document.hidden && !reducedMotion.matches) {
+        chatTimer = setInterval(() => showChatLevel(chatIndex + 1), 6200);
+      }
+    };
+    const chatStage = document.querySelector('.chat-visual');
+    chatStage?.addEventListener('mouseenter', () => { chatPaused = true; stopChatRotation(); });
+    chatStage?.addEventListener('mouseleave', () => { chatPaused = false; startChatRotation(); });
+    chatStage?.addEventListener('focusin', stopChatRotation);
+    chatStage?.addEventListener('focusout', event => {
+      if (!chatStage.contains(event.relatedTarget)) startChatRotation();
+    });
+    document.addEventListener('visibilitychange', startChatRotation);
+    reducedMotion.addEventListener?.('change', startChatRotation);
+    startChatRotation();
+  }
+
   const billingOptions = [...document.querySelectorAll('[data-billing]')];
   billingOptions.forEach(option => option.addEventListener('click', () => {
     const yearly = option.dataset.billing === 'yearly';
