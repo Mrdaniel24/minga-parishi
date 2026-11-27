@@ -20,8 +20,20 @@
   <link rel="stylesheet" href="assets/css/pricing-presence.css" />
   <link rel="stylesheet" href="assets/css/chat-showcase.css" />
   <link rel="stylesheet" href="assets/css/hero-photo-overlay.css" />
+  <link rel="stylesheet" href="assets/css/landing-navbar.css" />
 </head>
 <body>
+  <header class="landing-header" data-landing-header>
+    <div class="landing-header__inner">
+      <a class="brand" href="#mwanzo" aria-label="Mfumo wa Parokia, mwanzo"><span class="brand-mark">✣</span><span>Mfumo wa <b>Parokia</b></span></a>
+      <nav class="landing-nav" id="landing-navigation" aria-label="Menyu kuu">
+        <a href="#vipengele">Vipengele</a><a href="#chat">Chat</a><a href="#vifurushi">Vifurushi</a><a href="#mawasiliano">Mawasiliano</a>
+        <div class="landing-nav__mobile-actions"><a class="landing-login" href="login.html">Ingia</a><a class="landing-cta" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Omba demo</a></div>
+      </nav>
+      <div class="landing-header__actions"><a class="landing-login" href="login.html">Ingia</a><a class="landing-cta" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Omba demo</a></div>
+      <button class="landing-menu-toggle" type="button" data-menu-toggle aria-controls="landing-navigation" aria-expanded="false" aria-label="Fungua menyu"><span></span><span></span><span></span></button>
+    </div>
+  </header>
   <main>
     <section class="hero" id="mwanzo">
       <div class="hero-copy">
@@ -100,7 +112,7 @@
       </div>
     </section>
 
-    <section class="closing"><div><span class="eyebrow">Anza kutumia</span><h2>Parokia yako iko tayari kwenda hatua inayofuata?</h2><p>Wasiliana nasi kuhusu demo, vifurushi na kuanzisha akaunti ya parokia yako.</p></div><div class="closing-actions"><a class="button button--gold" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Omba demo</a><a class="button button--outline" href="login.html">Ingia kwenye mfumo</a></div></section>
+    <section class="closing" id="mawasiliano"><div><span class="eyebrow">Anza kutumia</span><h2>Parokia yako iko tayari kwenda hatua inayofuata?</h2><p>Wasiliana nasi kuhusu demo, vifurushi na kuanzisha akaunti ya parokia yako.</p></div><div class="closing-actions"><a class="button button--gold" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Omba demo</a><a class="button button--outline" href="login.html">Ingia kwenye mfumo</a></div></section>
   </main>
   <footer class="site-footer"><a class="brand brand--footer" href="#mwanzo"><span class="brand-mark">✣</span><span>Mfumo wa <b>Parokia</b></span></a><span>Powered by <a href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Focus Tech</a></span></footer>
   <script src="assets/js/landing.js"></script>

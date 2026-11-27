@@ -1,6 +1,21 @@
 (() => {
   const root = document.querySelector('.showcase');
   if (!root) return;
+  const landingHeader = document.querySelector('[data-landing-header]');
+  const menuToggle = landingHeader?.querySelector('[data-menu-toggle]');
+  if (landingHeader && menuToggle) {
+    const setMenuOpen = open => {
+      landingHeader.classList.toggle('is-menu-open', open);
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Funga menyu' : 'Fungua menyu');
+    };
+    menuToggle.addEventListener('click', () => setMenuOpen(menuToggle.getAttribute('aria-expanded') !== 'true'));
+    landingHeader.querySelectorAll('.landing-nav a').forEach(link => link.addEventListener('click', () => setMenuOpen(false)));
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenuOpen(false); });
+    const updateHeader = () => landingHeader.classList.toggle('is-scrolled', window.scrollY > 20);
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    updateHeader();
+  }
   const slides = [...root.querySelectorAll('.slide')];
   const dots = [...root.querySelectorAll('[data-dot]')];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
