@@ -27,25 +27,32 @@
   if (chatPreview) {
     const chatLevels = [
       {
+        label: 'Ngazi ya Parokia', name: 'Parokia', icon: '✣',
+        description: 'Taarifa na mijadala inayowahusu waumini wote wa parokia.', audience: 'Waumini wote wa parokia',
         title: 'Parokia ya Mt. Aloyce Gonzaga', subtitle: 'Minga · Parokia nzima', scope: 'Parokia',
         context: 'Ujumbe unaonekana kwa waumini wote wa parokia',
         message: 'Karibuni kwenye taarifa za parokia yetu.', sender: 'Katibu wa Parokia', time: '10:42',
         reply: 'Asante, nimepokea taarifa.', replyTime: '10:45'
       },
       {
+        label: 'Ngazi ya Kigango', name: 'Kigango', icon: '⌘',
+        description: 'Mawasiliano ya kigango yanayowafikia viongozi na jumuiya zake.', audience: 'Waumini wa kigango na jumuiya zake',
         title: 'Kigango cha Minga', subtitle: 'Parokia ya Minga', scope: 'Kigango',
         context: 'Ujumbe unafika kigangoni na jumuiya zake',
         message: 'Kikao cha kigango kitafanyika Jumapili baada ya misa.', sender: 'Katibu wa Kigango', time: '11:08',
         reply: 'Nimepokea, tutafika kwa wakati.', replyTime: '11:12'
       },
       {
+        label: 'Ngazi ya Jumuiya', name: 'Jumuiya', icon: '◎',
+        description: 'Taarifa za karibu zinazowahusu wanajumuiya wa eneo husika.', audience: 'Wanajumuiya husika',
         title: 'Jumuiya ya Mt. Yosefu', subtitle: 'Kigango cha Minga · Minga', scope: 'Jumuiya',
         context: 'Ujumbe unaonekana ndani ya jumuiya hii',
         message: 'Tukutane kwa sala ya jumuiya Ijumaa saa 10 jioni.', sender: 'Katibu wa Jumuiya', time: '12:16',
         reply: 'Asante kwa taarifa, nitakuwepo.', replyTime: '12:20'
       }
     ];
-    const levels = [...document.querySelectorAll('[data-chat-level]')];
+    const story = document.querySelector('[data-chat-slide]');
+    const progress = [...(story?.querySelectorAll('.chat-progress i') || [])];
     const setText = (selector, value) => {
       const node = chatPreview.querySelector(selector);
       if (node) node.textContent = value;
@@ -58,8 +65,17 @@
       chatIndex = (next + chatLevels.length) % chatLevels.length;
       const chat = chatLevels[chatIndex];
       chatPreview.classList.add('is-changing');
-      levels.forEach((level, i) => level.classList.toggle('is-current', i === chatIndex));
+      story?.classList.add('is-changing');
       window.setTimeout(() => {
+        if (story) {
+          story.querySelector('[data-chat-level-label]').textContent = chat.label;
+          story.querySelector('[data-chat-level-title]').textContent = chat.name;
+          story.querySelector('[data-chat-slide-icon]').textContent = chat.icon;
+          story.querySelector('[data-chat-level-description]').textContent = chat.description;
+          story.querySelector('[data-chat-audience]').textContent = chat.audience;
+          story.querySelector('[data-chat-step]').innerHTML = `${String(chatIndex + 1).padStart(2, '0')} <i>/ 03</i>`;
+          progress.forEach((item, i) => item.classList.toggle('is-current', i === chatIndex));
+        }
         setText('[data-chat-title]', chat.title);
         setText('[data-chat-subtitle]', chat.subtitle);
         setText('[data-chat-context]', chat.context);
@@ -69,7 +85,10 @@
         setText('[data-chat-time]', chat.time);
         setText('[data-chat-reply]', chat.reply);
         setText('[data-chat-reply-time]', chat.replyTime);
-        requestAnimationFrame(() => chatPreview.classList.remove('is-changing'));
+        requestAnimationFrame(() => {
+          chatPreview.classList.remove('is-changing');
+          story?.classList.remove('is-changing');
+        });
       }, 300);
     };
     const stopChatRotation = () => { if (chatTimer) clearInterval(chatTimer); chatTimer = null; };
