@@ -3,7 +3,7 @@
   isolation: isolate;
   display: flex;
   align-items: center;
-  min-height: min(780px, calc(100svh - 78px));
+  min-height: max(720px, 100svh);
   padding: clamp(70px, 10vh, 120px) clamp(24px, 8vw, 126px) 118px;
   overflow: hidden;
   background: var(--emerald);
@@ -140,7 +140,7 @@
 
 @media (max-width: 640px) {
   .hero {
-    min-height: min(760px, calc(100svh - 66px));
+    min-height: max(680px, 100svh);
     padding: 72px 22px 108px;
     align-items: center;
   }

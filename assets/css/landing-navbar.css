@@ -1,17 +1,4 @@
-.landing-header {
-  position: sticky;
-  z-index: 30;
-  top: 0;
-  width: 100%;
-  background: #fff;
-  border-bottom: 0;
-  transition: background .25s;
-}
-
-.landing-header.is-scrolled {
-  background: rgba(255, 255, 255, .96);
-  backdrop-filter: blur(14px);
-}
+.landing-header { position: absolute; z-index: 30; top: 0; left: 0; width: 100%; background: transparent; }
 
 .landing-header__inner {
   position: relative;
@@ -26,9 +13,9 @@
   transition: min-height .25s;
 }
 
-.landing-header.is-scrolled .landing-header__inner { min-height: 72px; }
-.landing-header .brand { flex: 0 0 auto; color: var(--emerald); font-size: 1.05rem; }
-.landing-header .brand-mark { width: 40px; height: 40px; }
+.landing-header.is-scrolled .landing-header__inner { min-height: 82px; }
+.landing-header .brand { flex: 0 0 auto; color: #fff; font-size: 1.05rem; text-shadow: 0 2px 12px rgba(0, 35, 28, .45); }
+.landing-header .brand-mark { display: none; }
 
 .landing-nav {
   position: absolute;
@@ -40,14 +27,15 @@
 }
 
 .landing-nav > a {
-  color: #5e625f;
+  color: rgba(255, 255, 255, .94);
   font-size: .94rem;
   font-weight: 600;
   text-decoration: none;
   transition: color .2s;
+  text-shadow: 0 2px 12px rgba(0, 35, 28, .45);
 }
 
-.landing-nav > a:hover { color: #111; }
+.landing-nav > a:hover { color: var(--gold); }
 .landing-header__actions { display: flex; align-items: center; gap: 10px; }
 .landing-login, .landing-cta {
   display: inline-flex;
@@ -57,24 +45,24 @@
   padding: 0 17px;
   border: 0;
   border-radius: 7px;
-  color: #171717;
+  color: #fff;
   font-size: .87rem;
   font-weight: 700;
   text-decoration: none;
   transition: transform .2s, background .2s, color .2s, border-color .2s;
 }
 
-.landing-login { border: 1px solid #e1e1e1; background: #fff; }
-.landing-login:hover { border-color: #bdbdbd; background: #fafafa; }
-.landing-cta { background: #171717; color: #fff; }
-.landing-cta:hover { transform: translateY(-1px); background: #333; }
+.landing-login, .landing-cta { border: 0; border-radius: 0; background: transparent; }
+.landing-login:hover { color: var(--gold); }
+.landing-cta { color: var(--gold); }
+.landing-cta:hover { transform: translateY(-1px); color: #fff; }
 .landing-menu-toggle, .landing-nav__mobile-actions { display: none; }
 
 @media (max-width: 800px) {
   .landing-header__inner { min-height: 72px; padding-inline: 20px; }
-  .landing-header.is-scrolled .landing-header__inner { min-height: 66px; }
+  .landing-header.is-scrolled .landing-header__inner { min-height: 72px; }
   .landing-header .brand { font-size: .94rem; }
-  .landing-header .brand-mark { width: 37px; height: 37px; }
+  .landing-header .brand-mark { display: none; }
   .landing-header__actions { display: none; }
   .landing-menu-toggle {
     display: grid;
@@ -88,7 +76,7 @@
     background: transparent;
     cursor: pointer;
   }
-  .landing-menu-toggle span { display: block; height: 2px; border-radius: 2px; background: #222; transition: transform .2s, opacity .2s; }
+  .landing-menu-toggle span { display: block; height: 2px; border-radius: 2px; background: #fff; transition: transform .2s, opacity .2s; }
   .landing-header.is-menu-open .landing-menu-toggle span:first-child { transform: translateY(7px) rotate(45deg); }
   .landing-header.is-menu-open .landing-menu-toggle span:nth-child(2) { opacity: 0; }
   .landing-header.is-menu-open .landing-menu-toggle span:last-child { transform: translateY(-7px) rotate(-45deg); }
@@ -100,13 +88,13 @@
     display: none;
     gap: 0;
     padding: 8px 20px 18px;
-    border-bottom: 1px solid #ededed;
-    background: #fff;
-    box-shadow: 0 16px 28px rgba(0, 63, 50, .1);
+    border-bottom: 0;
+    background: transparent;
+    box-shadow: none;
     transform: none;
   }
   .landing-header.is-menu-open .landing-nav { display: grid; }
-  .landing-nav > a { padding: 13px 4px; border-bottom: 1px solid #f0f0f0; }
+  .landing-nav > a { padding: 13px 4px; border-bottom: 0; }
   .landing-nav__mobile-actions { display: flex; gap: 10px; padding-top: 15px; }
   .landing-nav__mobile-actions > a { flex: 1; }
 }
