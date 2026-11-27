@@ -41,4 +41,18 @@
     document.querySelectorAll('[data-period]').forEach(period => { period.textContent = yearly ? '/ mwaka' : '/ mwezi'; });
     document.querySelectorAll('[data-equivalent]').forEach(note => { note.hidden = !yearly; });
   }));
+
+  const plans = [...document.querySelectorAll('.plan')];
+  if ('IntersectionObserver' in window && !reduced.matches) {
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
+    }), { threshold: 0.15 });
+    plans.forEach((plan, i) => {
+      plan.style.setProperty('--plan-delay', `${i * 130}ms`);
+      observer.observe(plan);
+    });
+  } else plans.forEach(plan => plan.classList.add('is-visible'));
 })();
