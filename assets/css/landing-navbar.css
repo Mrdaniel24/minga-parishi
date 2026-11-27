@@ -36,6 +36,18 @@
 }
 
 .landing-nav > a:hover { color: var(--gold); }
+.landing-nav > a.landing-account {
+  min-height: 44px;
+  padding: 0 19px;
+  border: 1px solid rgba(255, 255, 255, .78);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: none;
+  backdrop-filter: blur(4px);
+}
+.landing-nav > a.landing-account:hover { border-color: var(--gold); background: rgba(255, 255, 255, .17); color: #fff; }
 .landing-header__actions { display: flex; align-items: center; gap: 10px; }
 .landing-login, .landing-cta {
   display: inline-flex;
@@ -96,6 +108,7 @@
   }
   .landing-header.is-menu-open .landing-nav { display: grid; }
   .landing-nav > a { padding: 13px 4px; border-bottom: 0; }
+  .landing-nav > a.landing-account { justify-self: start; margin-top: 8px; padding-inline: 18px; }
   .landing-nav__mobile-actions { display: flex; gap: 10px; padding-top: 15px; }
   .landing-nav__mobile-actions > a { flex: 1; }
 }
