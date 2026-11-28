@@ -15,7 +15,7 @@
   };
 
   P.selfOnly = () => !P.access.platform_admin && !(P.access.permissions || []).length && !!P.access.parishioner_id;
-  const MEMBER_ROUTES = new Set(['member-home','member-giving','member-family','member-requests','member-link','profile','chat','assistant']);
+  const MEMBER_ROUTES = new Set(['member-home','member-giving','member-family','member-requests','member-link','profile','assistant']);
 
   let routeSeq = 0;
   async function route() {
@@ -82,6 +82,7 @@
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
     if (PM.applyAccess) PM.applyAccess(P.access);
     PM.fillYears && PM.fillYears(P.ref.years.map(y => y.label));
+    P.initChatWidget && P.initChatWidget();
     // Scoped leaders land on their role-specific dashboard; members still use
     // the member portal, and the dashboard shortcuts lead into their own unit.
     if (P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) history.replaceState(null, '', hasMember ? '#/member-home' : '#/member-link');

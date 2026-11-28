@@ -122,7 +122,6 @@
     h('Kazi za Kila Siku');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
     a('Msaidizi wa AI', 'auto_awesome', 'assistant', 'finance.read', 'shared');
-    a('Chat za Parokia', 'forum', 'chat', null, 'shared');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');

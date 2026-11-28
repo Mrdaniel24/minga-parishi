@@ -2,8 +2,8 @@
    messages the signed-in account may read or send. */
 (function () {
   const P = window.Parish, V = P.views;
-  const roomIcon = type => ({ parish: 'church', kigango: 'account_tree', jumuiya: 'groups' }[type] || 'forum');
-  const roomLabel = type => ({ parish: 'Parokia nzima', kigango: 'Mazungumzo ya kigango', jumuiya: 'Mazungumzo ya jumuiya' }[type] || 'Mazungumzo');
+  const roomIcon = type => ({ parish: 'church', kigango: 'account_tree', jumuiya: 'groups', family: 'family_restroom', person: 'person' }[type] || 'forum');
+  const roomLabel = type => ({ parish: 'Parokia nzima', kigango: 'Mazungumzo ya kigango', jumuiya: 'Mazungumzo ya jumuiya', family: 'Familia', person: 'Ujumbe binafsi' }[type] || 'Mazungumzo');
   const chatError = error => {
     const message = error?.message || String(error);
     if (/chat_(rooms|messages)/i.test(message) && /(does not exist|schema cache|PGRST205|42P01)/i.test(message)) {
@@ -15,6 +15,8 @@
     const unit = room.org_unit_id ? P.ref.unitsById[room.org_unit_id] : null;
     const parent = unit?.parent_id ? P.ref.unitsById[unit.parent_id] : null;
     if (room.scope_type === 'jumuiya' && parent) return `Jumuiya · Kigango cha ${parent.name}`;
+    if (room.scope_type === 'family') return `Familia · ${P.ref.parish.short_name || P.ref.parish.official_name || 'Parokia'}`;
+    if (room.scope_type === 'person') return 'Mazungumzo binafsi';
     if (room.scope_type === 'kigango') return `Kigango · ${P.ref.parish.short_name || P.ref.parish.official_name || 'Parokia'}`;
     return roomLabel(room.scope_type);
   };
@@ -23,15 +25,19 @@
     if (activeChannel) supabase.removeChannel(activeChannel);
     activeChannel = null;
   };
-  window.addEventListener('hashchange', () => {
-    if (!/^#\/chat(?:\?|$)/.test(location.hash)) removeActiveChannel();
-  });
-
   V.chat = {
     title: 'Chat',
-    async render(box) {
+    async render(box, options = {}) {
       removeActiveChannel();
-      box.innerHTML = `<section class="chat-page">
+      const widget = !!options.widget;
+      box.innerHTML = widget ? `<div class="chat-widget__body">
+        <div class="chat-widget__picker"><button type="button" class="chat-widget__pick-button" data-picker-toggle aria-expanded="false"><span class="material-symbols-outlined">forum</span><span><small>MAZUNGUMZO</small><b data-current-room>Chagua eneo</b></span><span class="material-symbols-outlined chat-widget__pick-arrow">expand_more</span></button><div class="chat-widget__picker-menu" data-room-list hidden><div class="chat-state">Inatafuta mazungumzo…</div></div></div>
+        <section class="chat-conversation"><div class="chat-conversation__head" data-chat-head><span class="material-symbols-outlined">forum</span><div><b>Chagua mazungumzo</b><small>Ujumbe wa eneo ulilochagua utaonekana hapa.</small></div><span class="chat-connection" data-chat-connection aria-live="polite">Chagua eneo</span></div>
+          <div class="chat-messages" data-chat-messages aria-live="polite"><div class="chat-empty"><span class="material-symbols-outlined">forum</span><b>Karibu kwenye Chat</b><span>Chagua Parokia, Kigango au Jumuiya kuanza.</span></div></div>
+          <form class="chat-compose-form" data-chat-form><label class="sr-only" for="chat-message-input">Ujumbe</label><textarea id="chat-message-input" name="body" rows="1" maxlength="2000" placeholder="Andika ujumbe…" disabled required></textarea><button type="submit" aria-label="Tuma ujumbe" disabled><span class="material-symbols-outlined">send</span></button></form>
+          <p class="chat-footnote">Ujumbe unaonekana kwa washiriki walioidhinishwa wa eneo hili.</p>
+        </section>
+      </div>` : `<section class="chat-page">
         <header class="chat-page__intro"><div><span class="chat-eyebrow">Mawasiliano ya parokia</span><h2>Chat za Parokia</h2><p>Chagua eneo lako; mazungumzo yanafuata muundo wa Parokia.</p></div><span class="chat-lock"><span class="material-symbols-outlined">verified_user</span> Kila eneo lina mazungumzo yake</span></header>
         <div class="chat-layout"><aside class="chat-rooms" aria-label="Vyumba vya mazungumzo"><div class="chat-rooms__heading"><b>MAZUNGUMZO</b><span data-room-count>…</span></div><div data-room-list class="chat-rooms__list"><div class="chat-state">Inatafuta mazungumzo…</div></div></aside>
           <section class="chat-conversation"><div class="chat-conversation__head" data-chat-head><span class="material-symbols-outlined">forum</span><div><b>Chagua mazungumzo</b><small>Ujumbe wa eneo ulilochagua utaonekana hapa.</small></div><span class="chat-connection" data-chat-connection aria-live="polite">Chagua eneo</span></div>
@@ -43,6 +49,7 @@
       </section>`;
 
       const list = box.querySelector('[data-room-list]'), count = box.querySelector('[data-room-count]');
+      const pickerToggle = box.querySelector('[data-picker-toggle]'), currentRoom = box.querySelector('[data-current-room]');
       const head = box.querySelector('[data-chat-head]'), messages = box.querySelector('[data-chat-messages]');
       const connection = box.querySelector('[data-chat-connection]');
       const form = box.querySelector('[data-chat-form]'), input = form.elements.body, submit = form.querySelector('button');
@@ -52,7 +59,9 @@
       const roomButton = room => `<button class="chat-room" type="button" data-room-id="${P.esc(room.id)}" aria-label="Fungua ${P.esc(room.title)}"><span class="chat-room__icon material-symbols-outlined">${roomIcon(room.scope_type)}</span><span class="chat-room__copy"><b>${P.esc(room.title)}</b><small>${roomLabel(room.scope_type)}</small></span><span class="material-symbols-outlined chat-room__arrow">chevron_right</span></button>`;
       const renderRoomTree = () => {
         const parishRooms = rooms.filter(room => room.scope_type === 'parish');
-        const unitRooms = rooms.filter(room => room.scope_type !== 'parish');
+        const unitRooms = rooms.filter(room => ['kigango','jumuiya'].includes(room.scope_type));
+        const familyRooms = rooms.filter(room => room.scope_type === 'family');
+        const personRooms = rooms.filter(room => room.scope_type === 'person');
         const groups = new Map();
         unitRooms.forEach(room => {
           const unit = P.ref.unitsById[room.org_unit_id];
@@ -68,9 +77,9 @@
         groupList.forEach(group => group.children.sort((a, b) => a.title.localeCompare(b.title, 'sw')));
         return `${parishRooms.length ? `<section class="chat-room-section"><p>PAROKIA</p>${parishRooms.map(roomButton).join('')}</section>` : ''}${groupList.map((group, index) => {
           const roomsInGroup = [...(group.kigango ? [group.kigango] : []), ...group.children];
-          const open = groupList.length === 1 || index === 0;
+          const open = false;
           return `<details class="chat-branch" ${open ? 'open' : ''}><summary><span class="material-symbols-outlined">account_tree</span><b>${P.esc(group.name)}</b><small>${roomsInGroup.length} ${roomsInGroup.length === 1 ? 'chumba' : 'vyumba'}</small></summary><div class="chat-branch__rooms">${group.kigango ? roomButton(group.kigango) : ''}${group.children.map(roomButton).join('')}</div></details>`;
-        }).join('')}`;
+        }).join('')}${familyRooms.length ? `<details class="chat-branch"><summary><span class="material-symbols-outlined">family_restroom</span><b>Familia</b><small>${familyRooms.length}</small></summary><div class="chat-branch__rooms">${familyRooms.map(roomButton).join('')}</div></details>` : ''}${personRooms.length ? `<details class="chat-branch"><summary><span class="material-symbols-outlined">person</span><b>Ujumbe binafsi</b><small>${personRooms.length}</small></summary><div class="chat-branch__rooms">${personRooms.map(roomButton).join('')}</div></details>` : ''}`;
       };
       const renderMessages = rows => {
         if (!rows.length) {
@@ -100,6 +109,8 @@
         [...list.querySelectorAll('[data-room-id]')].find(el => el.dataset.roomId === room.id)?.closest('.chat-branch')?.setAttribute('open', '');
         head.querySelector('.material-symbols-outlined').textContent = roomIcon(room.scope_type);
         head.querySelector('div').innerHTML = `<b>${P.esc(room.title)}</b><small>${P.esc(roomContext(room))}</small>`;
+        if (currentRoom) currentRoom.textContent = room.title;
+        if (list && !list.hidden) { list.hidden = true; pickerToggle?.setAttribute('aria-expanded', 'false'); }
         input.disabled = false; submit.disabled = false;
         setConnection('connecting', 'Inaunganisha…');
         messages.innerHTML = '<div class="chat-state">Inapakia ujumbe…</div>';
@@ -120,16 +131,19 @@
         }
       };
       try {
-        rooms = await P.q(P.from('chat_rooms').select('id,parish_id,org_unit_id,scope_type,title').order('scope_type').order('title'));
-        count.textContent = String(rooms.length);
+        rooms = await P.q(P.from('chat_rooms').select('id,parish_id,org_unit_id,scope_type,title,family_id,person_key').order('scope_type').order('title'));
+        if (count) count.textContent = String(rooms.length);
         if (!rooms.length) { list.innerHTML = '<div class="chat-state">Hakuna chumba cha mazungumzo kilichoruhusiwa kwa akaunti hii.</div>'; return; }
-        const order = { parish: 0, kigango: 1, jumuiya: 2 };
+        const order = { parish: 0, kigango: 1, jumuiya: 2, family: 3, person: 4 };
         rooms.sort((a, b) => (order[a.scope_type] - order[b.scope_type]) || a.title.localeCompare(b.title, 'sw'));
         list.innerHTML = renderRoomTree();
         list.querySelectorAll('[data-room-id]').forEach(el => el.addEventListener('click', () => chooseRoom(rooms.find(room => room.id === el.dataset.roomId))));
-        const preferred = rooms.find(room => room.scope_type === 'jumuiya') || rooms.find(room => room.scope_type === 'parish') || rooms[0];
+        const preferred = rooms.find(room => room.scope_type === 'jumuiya') || rooms.find(room => room.scope_type === 'family') || rooms.find(room => room.scope_type === 'parish') || rooms[0];
         if (preferred) chooseRoom(preferred);
       } catch (e) { list.innerHTML = `<div class="chat-alert">${P.esc(chatError(e))}</div>`; }
+
+      pickerToggle?.addEventListener('click', () => { const open = list.hidden; list.hidden = !open; pickerToggle.setAttribute('aria-expanded', String(open)); });
+      box.addEventListener('click', event => { if (list && !list.hidden && !event.target.closest('.chat-widget__picker')) { list.hidden = true; pickerToggle?.setAttribute('aria-expanded', 'false'); } });
 
       form.addEventListener('submit', async event => {
         event.preventDefault();
@@ -149,5 +163,19 @@
       input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 130)}px`; });
       input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
     }
+  };
+
+  P.initChatWidget = function () {
+    if (document.querySelector('.chat-widget')) return;
+    const widget = document.createElement('aside');
+    widget.className = 'chat-widget';
+    widget.innerHTML = `<section class="chat-widget__panel" aria-label="Mazungumzo ya parokia" aria-hidden="true"><header class="chat-widget__header"><span class="chat-widget__mark material-symbols-outlined">forum</span><div><b>Mawasiliano</b><small>Jumuiya na parokia yako</small></div><button type="button" data-chat-close aria-label="Funga chat"><span class="material-symbols-outlined">close</span></button></header><div class="chat-widget__mount"></div></section><button type="button" class="chat-widget__fab" aria-label="Fungua chat" aria-expanded="false"><span class="material-symbols-outlined" data-fab-icon>forum</span><i></i></button>`;
+    document.body.appendChild(widget);
+    const panel = widget.querySelector('.chat-widget__panel'), fab = widget.querySelector('.chat-widget__fab');
+    const setOpen = open => { widget.classList.toggle('is-open', open); panel.setAttribute('aria-hidden', String(!open)); fab.setAttribute('aria-expanded', String(open)); fab.setAttribute('aria-label', open ? 'Funga chat' : 'Fungua chat'); widget.querySelector('[data-fab-icon]').textContent = open ? 'close' : 'forum'; };
+    fab.addEventListener('click', () => setOpen(!widget.classList.contains('is-open')));
+    widget.querySelector('[data-chat-close]').addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && widget.classList.contains('is-open')) setOpen(false); });
+    V.chat.render(widget.querySelector('.chat-widget__mount'), { widget: true });
   };
 })();
