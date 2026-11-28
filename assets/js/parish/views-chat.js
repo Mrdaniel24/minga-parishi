@@ -46,10 +46,11 @@
         </div>
       </section>`;
 
-      const list = box.querySelector('[data-room-list]'), count = box.querySelector('[data-room-count]');
-      const pickerToggle = document.querySelector('.chat-widget [data-picker-toggle]'), currentRoom = document.querySelector('.chat-widget [data-current-room]'), currentContext = document.querySelector('.chat-widget [data-current-context]');
+      const widgetRoot = box.closest('.chat-widget');
+      const list = (widgetRoot || box).querySelector('[data-room-list]'), count = box.querySelector('[data-room-count]');
+      const pickerToggle = (widgetRoot || box).querySelector('[data-picker-toggle]'), currentRoom = (widgetRoot || box).querySelector('[data-current-room]'), currentContext = (widgetRoot || box).querySelector('[data-current-context]');
       const head = box.querySelector('[data-chat-head]'), messages = box.querySelector('[data-chat-messages]');
-      const connection = box.querySelector('[data-chat-connection]') || document.querySelector('.chat-widget [data-chat-connection]');
+      const connection = box.querySelector('[data-chat-connection]') || (widgetRoot || box).querySelector('[data-chat-connection]');
       const form = box.querySelector('[data-chat-form]'), input = form.elements.body, submit = form.querySelector('button');
       let rooms = [], selected = null, loadingSeq = 0;
       const fmtTime = value => new Date(value).toLocaleString('sw-TZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -134,17 +135,24 @@
       try {
         rooms = await P.q(P.from('chat_rooms').select('id,parish_id,org_unit_id,scope_type,title,family_id,person_key').order('scope_type').order('title'));
         if (count) count.textContent = String(rooms.length);
-        if (!rooms.length) { list.innerHTML = '<div class="chat-state">Hakuna chumba cha mazungumzo kilichoruhusiwa kwa akaunti hii.</div>'; return; }
-        const order = { parish: 0, kigango: 1, jumuiya: 2, family: 3, person: 4 };
-        rooms.sort((a, b) => (order[a.scope_type] - order[b.scope_type]) || a.title.localeCompare(b.title, 'sw'));
-        list.innerHTML = renderRoomTree();
-        list.querySelectorAll('[data-room-id]').forEach(el => el.addEventListener('click', () => chooseRoom(rooms.find(room => room.id === el.dataset.roomId))));
-        const preferred = rooms.find(room => room.scope_type === 'jumuiya') || rooms.find(room => room.scope_type === 'family') || rooms.find(room => room.scope_type === 'parish') || rooms[0];
-        if (preferred) chooseRoom(preferred);
+        if (!rooms.length) list.innerHTML = '<div class="chat-state">Hakuna chumba cha mazungumzo kilichoruhusiwa kwa akaunti hii.</div>';
+        else {
+          const order = { parish: 0, kigango: 1, jumuiya: 2, family: 3, person: 4 };
+          rooms.sort((a, b) => (order[a.scope_type] - order[b.scope_type]) || a.title.localeCompare(b.title, 'sw'));
+          list.innerHTML = renderRoomTree();
+          list.querySelectorAll('[data-room-id]').forEach(el => el.addEventListener('click', () => chooseRoom(rooms.find(room => room.id === el.dataset.roomId))));
+          const preferred = rooms.find(room => room.scope_type === 'jumuiya') || rooms.find(room => room.scope_type === 'family') || rooms.find(room => room.scope_type === 'parish') || rooms[0];
+          if (preferred) chooseRoom(preferred);
+        }
       } catch (e) { list.innerHTML = `<div class="chat-alert">${P.esc(chatError(e))}</div>`; }
 
       pickerToggle?.addEventListener('click', () => { const open = list.hidden; list.hidden = !open; pickerToggle.setAttribute('aria-expanded', String(open)); });
-      box.addEventListener('click', event => { if (list && !list.hidden && !event.target.closest('.chat-widget__picker')) { list.hidden = true; pickerToggle?.setAttribute('aria-expanded', 'false'); } });
+      (widgetRoot || box).addEventListener('click', event => {
+        if (list && !list.hidden && !event.target.closest('.chat-widget__picker-menu') && !event.target.closest('[data-picker-toggle]')) {
+          list.hidden = true;
+          pickerToggle?.setAttribute('aria-expanded', 'false');
+        }
+      });
 
       form.addEventListener('submit', async event => {
         event.preventDefault();
