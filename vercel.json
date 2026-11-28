@@ -2,6 +2,11 @@
   "installCommand": "echo 'static site: nothing to install'",
   "buildCommand": "",
   "outputDirectory": ".",
+  "functions": {
+    "api/ai-assistant.js": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

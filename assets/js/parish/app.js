@@ -15,7 +15,7 @@
   };
 
   P.selfOnly = () => !P.access.platform_admin && !(P.access.permissions || []).length && !!P.access.parishioner_id;
-  const MEMBER_ROUTES = new Set(['member-home','member-giving','member-family','member-requests','member-link','profile','chat']);
+  const MEMBER_ROUTES = new Set(['member-home','member-giving','member-family','member-requests','member-link','profile','chat','assistant']);
 
   let routeSeq = 0;
   async function route() {
