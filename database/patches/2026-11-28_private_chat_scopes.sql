@@ -6,6 +6,10 @@ alter table public.chat_rooms add column if not exists family_id uuid references
 alter table public.chat_rooms add column if not exists person_key text;
 alter table public.chat_messages add column if not exists family_id uuid references public.families(id) on delete cascade;
 alter table public.chat_messages add column if not exists person_key text;
+-- The original table also has a generated CHECK on scope_type; widen it for private scopes.
+alter table public.chat_rooms drop constraint if exists chat_rooms_scope_type_check;
+alter table public.chat_rooms add constraint chat_rooms_scope_type_check
+  check (scope_type in ('parish','kigango','jumuiya','family','person'));
 alter table public.chat_rooms drop constraint if exists chat_room_scope_matches;
 alter table public.chat_rooms add constraint chat_room_scope_matches check (
   (scope_type = 'parish' and org_unit_id is null and family_id is null and person_key is null) or
@@ -13,6 +17,10 @@ alter table public.chat_rooms add constraint chat_room_scope_matches check (
   (scope_type = 'family' and org_unit_id is null and family_id is not null and person_key is null) or
   (scope_type = 'person' and org_unit_id is null and family_id is null and person_key is not null)
 );
+-- The original parish-only index matched every room with a NULL org_unit_id,
+-- including family rooms. Narrow it to parish rooms so families can have many rooms.
+drop index if exists public.chat_rooms_parish_scope_uq;
+create unique index if not exists chat_rooms_parish_scope_uq on public.chat_rooms(parish_id) where scope_type='parish';
 create unique index if not exists chat_rooms_family_uq on public.chat_rooms(parish_id,family_id) where scope_type='family';
 create unique index if not exists chat_rooms_person_uq on public.chat_rooms(parish_id,person_key) where scope_type='person';
 create index if not exists chat_rooms_family_idx on public.chat_rooms(parish_id,family_id) where family_id is not null;
