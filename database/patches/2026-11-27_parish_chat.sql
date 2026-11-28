@@ -40,10 +40,19 @@ create or replace function public.chat_can_access(p_parish_id uuid,p_room_unit_i
 returns boolean language sql stable security definer set search_path = public, auth as $$
   select auth.uid() is not null and exists (
     select 1 from public.profiles pr where pr.id=auth.uid() and coalesce(pr.status,'active')='active'
-  ) and (
+  ) and exists (select 1 from public.parishes p where p.id=p_parish_id)
+    and (p_room_unit_id is null or exists (
+      select 1 from public.org_units room_unit
+      where room_unit.id=p_room_unit_id and room_unit.parish_id=p_parish_id
+        and room_unit.is_active and room_unit.unit_type in ('kigango','jumuiya')
+    )) and (
     public.is_platform_admin() or
     exists(select 1 from public.parish_user_roles ur
       where ur.user_id=auth.uid() and ur.parish_id=p_parish_id
+        and (ur.org_unit_id is null or exists (
+          select 1 from public.org_units role_unit where role_unit.id=ur.org_unit_id
+            and role_unit.parish_id=p_parish_id and role_unit.is_active
+        ))
         and (p_room_unit_id is null or ur.org_unit_id is null or public.org_is_within(p_room_unit_id,ur.org_unit_id)
           or public.org_is_within(ur.org_unit_id,p_room_unit_id))) or
     exists(select 1 from public.parishioners m
