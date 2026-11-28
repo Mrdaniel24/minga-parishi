@@ -4,6 +4,7 @@
   const monthOptions = () => `<option value="">Mwaka mzima</option>${P.MONTHS.map((name, i) => `<option value="${i + 1}">${name}</option>`).join('')}`;
   V.assistant = {
     title: 'Msaidizi wa AI',
+    feature: 'ai_quick_ask',
     async render(el) {
       const canSearch = P.can('finance.read') && P.can('registry.read');
       const canSearchFamily = P.memberPortalMode && !!P.memberContext?.is_representative;

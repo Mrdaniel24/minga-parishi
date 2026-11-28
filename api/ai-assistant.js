@@ -171,6 +171,10 @@ module.exports = async (req, res) => {
       rpc('my_parish_access', token),
       rpc('member_portal_context', token).catch(() => ({})),
     ]);
+    const subscription = await rpc('my_parish_subscription_access', token).catch(() => null);
+    if (!subscription?.core_enabled || subscription?.features?.ai_quick_ask !== true) {
+      return send(res, 403, { error: 'AI Quick Ask inapatikana kwenye kifurushi cha Ripoti na Majibu ya Haraka.' });
+    }
     const perms = access.permissions || [];
     const memberView = input.audience === 'member' || !has(perms, 'finance.read') || !has(perms, 'registry.read');
     if (!has(perms, 'finance.read') && !member.parishioner_id) return send(res, 403, { error: 'Msaidizi wa AI unapatikana kwa akaunti ya muumini aliyeunganishwa au mwenye ruhusa ya fedha.' });

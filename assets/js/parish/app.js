@@ -8,6 +8,9 @@
   P.views = P.views || {};
 
   P.can = perm => !perm || P.access.platform_admin || (P.access.permissions || []).includes(perm);
+  P.hasFeature = feature => feature === 'core'
+    ? (P.subscription?.core_enabled ?? true)
+    : !!P.subscription?.features?.[feature];
   P.scopeUnit = () => {      // single scoped role (kigango/jumuiya leader) -> default filter
     const r = (P.access.roles || []).filter(r => r.org_unit_id);
     const wide = (P.access.roles || []).some(r => !r.org_unit_id);
@@ -29,6 +32,16 @@
     if (name === 'accounting' || name === 'reconciliation') history.replaceState(null, '', '#/dashboard');
     const view = name === 'accounting' || name === 'reconciliation' ? P.views.dashboard : (P.views[name] || P.views.dashboard);
     const main = document.getElementById('pm-view');
+    if (view.feature && !P.hasFeature(view.feature)) {
+      routeSeq++;
+      main.innerHTML = P.empty('Kipengele hiki kinapatikana kwenye kifurushi cha Ripoti na Majibu ya Haraka.');
+      return;
+    }
+    if (!P.hasFeature('core') && !P.access.platform_admin && name !== 'subscriptions') {
+      routeSeq++;
+      main.innerHTML = `<section class="pm-card pm-pad"><h1 class="pm-h2">Demo ya kuangalia</h1><p class="pm-muted">Akaunti hii haina kifurushi kinachowezesha taarifa halisi za parokia. Wasiliana nasi kuchagua kifurushi cha Usimamizi wa Parokia.</p><a class="pm-btn pm-btn--primary" href="https://focustec.co.tz/" target="_blank" rel="noopener noreferrer">Wasiliana nasi</a></section>`;
+      return;
+    }
     if (view.perm && !P.can(view.perm)) {
       routeSeq++;
       main.innerHTML = P.empty('Huna ruhusa ya kuona ukurasa huu.');
@@ -81,8 +94,13 @@
     const p = P.ref.parish;
     document.querySelectorAll('[data-parish-name]').forEach(el => { el.textContent = p.official_name || 'Parokia'; });
     if (PM.applyAccess) PM.applyAccess(P.access);
+    P.subscription = await P.rpc('my_parish_subscription_access').catch(() => ({
+      plan_code: 'parish', status: 'legacy', core_enabled: true, legacy: true,
+      features: { core: true, ai_quick_ask: false },
+    }));
+    if (PM.applyAccess) PM.applyAccess(P.access);
     PM.fillYears && PM.fillYears(P.ref.years.map(y => y.label));
-    P.initChatWidget && P.initChatWidget();
+    if (P.hasFeature('core')) P.initChatWidget && P.initChatWidget();
     // Scoped leaders land on their role-specific dashboard; members still use
     // the member portal, and the dashboard shortcuts lead into their own unit.
     if (P.memberPortalMode && (!location.hash || location.hash === '#/dashboard')) history.replaceState(null, '', hasMember ? '#/member-home' : '#/member-link');

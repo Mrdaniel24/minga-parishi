@@ -111,7 +111,7 @@
     const R = '#/';
     const items = [];
     const h = (t, portal = 'staff') => items.push({ h: t, portal });
-    const a = (label, icon, href, perm, portal = 'staff') => items.push({ label, icon, href: R + href, perm, portal });
+    const a = (label, icon, href, perm, portal = 'staff', feature = '') => items.push({ label, icon, href: R + href, perm, portal, feature });
     h('Akaunti Yangu', 'member');
     a('Nyumbani', 'home', 'member-home', 'member', 'member');
     a('Michango Yangu', 'volunteer_activism', 'member-giving', 'member', 'member');
@@ -121,7 +121,8 @@
     a('Wasifu Wangu', 'manage_accounts', 'profile', 'member', 'member');
     h('Kazi za Kila Siku');
     a('Dashibodi', 'dashboard', 'dashboard', '*');
-    a('Msaidizi wa AI', 'auto_awesome', 'assistant', 'finance.read', 'shared');
+    a('Msaidizi wa AI', 'auto_awesome', 'assistant', 'finance.read', 'shared', 'ai_quick_ask');
+    a('Vifurushi vya Parokia', 'workspace_premium', 'subscriptions', 'platform_admin');
     a('Vigango na Jumuiya', 'account_tree', 'units', 'registry.read|finance.read');
     a('Matangazo na SMS', 'campaign', 'comms', 'comms.send');
     a('Ripoti', 'bar_chart', 'reports', 'finance.read');
@@ -155,7 +156,7 @@
     nav.classList.add('kh-nav');
     nav.innerHTML = items.map(i => i.h
       ? `<p class="kh-nav-h" data-psection data-portal="${i.portal}">${i.h}</p>`
-      : `<a class="nav-item${isActive(i.href) ? ' nav-item-active' : ''}" href="${i.href}" data-pperm="${i.perm}" data-portal="${i.portal || 'staff'}" hidden>
+      : `<a class="nav-item${isActive(i.href) ? ' nav-item-active' : ''}" href="${i.href}" data-pperm="${i.perm}" data-portal="${i.portal || 'staff'}"${i.feature ? ` data-pfeature="${i.feature}"` : ''} hidden>
            <span class="material-symbols-outlined">${i.icon}</span><span>${i.label}</span></a>`).join('');
 
     // show only the links the user's parish roles allow
@@ -164,12 +165,15 @@
       const perms = new Set((acc && acc.permissions) || []);
       const any = acc && (acc.platform_admin || (acc.roles || []).length);
       const memberMode = !!window.Parish?.memberPortalMode;
+      const coreAllowed = !!acc?.platform_admin || window.Parish?.hasFeature('core') !== false;
       nav.querySelectorAll('[data-pperm]').forEach(el => {
         const p = el.dataset.pperm;
+        const featureAllowed = !el.dataset.pfeature || !!window.Parish?.subscription?.features?.[el.dataset.pfeature];
+        const coreRoute = el.getAttribute('href') === '#/subscriptions';
         const memberAllowed = p === 'member' && memberMode;
         const sharedAllowed = el.dataset.portal === 'shared' && memberMode && !!acc && (acc.platform_admin || (acc.roles || []).length > 0 || !!acc.parishioner_id);
-        const staffAllowed = el.dataset.portal !== 'member' && (!memberMode || el.dataset.portal === 'shared') && (p === 'self' ? !!acc?.parishioner_id : !!acc && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
-        el.hidden = !(memberAllowed || sharedAllowed || staffAllowed);
+        const staffAllowed = el.dataset.portal !== 'member' && (!memberMode || el.dataset.portal === 'shared') && (p === 'platform_admin' ? !!acc?.platform_admin : p === 'self' ? !!acc?.parishioner_id : !!acc && (acc.platform_admin || (p === '*' ? any : p.split('|').some(x => perms.has(x)))));
+        el.hidden = !(featureAllowed && (coreAllowed || coreRoute) && (memberAllowed || sharedAllowed || staffAllowed));
       });
       nav.querySelectorAll('[data-psection]').forEach(hd => { hd.hidden = hd.dataset.portal === 'member' ? !memberMode : memberMode; });
       nav.querySelectorAll('[data-psection]').forEach(hd => {
@@ -183,13 +187,16 @@
       const scopedLeader = !hasParishWideRole && accountRoles.length === 1
         ? accountRoles.find(r => ['kigango_leader', 'jumuiya_leader'].includes(r.role) && r.org_unit_id && ['kigango', 'jumuiya'].includes(r.unit_type))
         : null;
-      if (mobile) mobile.innerHTML = memberMode
+      if (mobile) {
+        mobile.style.display = coreAllowed ? '' : 'none';
+        mobile.innerHTML = memberMode
         ? `<a href="#/member-home" class="bottom-nav-item"><span class="material-symbols-outlined">home</span><span>Nyumbani</span></a><a href="#/member-giving" class="bottom-nav-item"><span class="material-symbols-outlined">volunteer_activism</span><span>Michango</span></a><a href="#/member-family" class="bottom-nav-item"><span class="material-symbols-outlined">family_restroom</span><span>Familia</span></a><a href="#/member-requests" class="bottom-nav-item"><span class="material-symbols-outlined">assignment</span><span>Maombi</span></a>${accCanStaff(acc) ? '<button data-portal-mode-toggle class="bottom-nav-item"><span class="material-symbols-outlined">swap_horiz</span><span>Watumishi</span></button>' : '<button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>'}`
         : scopedLeader?.role === 'jumuiya_leader'
           ? `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Nyumbani</span></a><a href="#/jumuiya?id=${scopedLeader.org_unit_id}&tab=mahudhurio" class="bottom-nav-item"><span class="material-symbols-outlined">how_to_reg</span><span>Mahudhurio</span></a><a href="#/jumuiya?id=${scopedLeader.org_unit_id}&tab=familia" class="bottom-nav-item"><span class="material-symbols-outlined">family_restroom</span><span>Familia</span></a><a href="#/reports?scope=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`
           : scopedLeader?.role === 'kigango_leader'
             ? `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Nyumbani</span></a><a href="#/kigango?id=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Jumuiya</span></a><a href="#/reports?scope=${scopedLeader.org_unit_id}" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`
             : `<a href="#/dashboard" class="bottom-nav-item"><span class="material-symbols-outlined">dashboard</span><span>Dashibodi</span></a><a href="#/units" class="bottom-nav-item"><span class="material-symbols-outlined">account_tree</span><span>Vigango</span></a><a href="#/payments" class="bottom-nav-item"><span class="material-symbols-outlined">point_of_sale</span><span>Miamala</span></a><a href="#/reports" class="bottom-nav-item"><span class="material-symbols-outlined">bar_chart</span><span>Ripoti</span></a><button data-sidebar-toggle class="bottom-nav-item"><span class="material-symbols-outlined">menu</span><span>Zaidi</span></button>`;
+      }
       const role = (acc && acc.roles || [])[0];
       const label = memberMode && !acc?.parishioner_id ? 'Unganisha na rejista'
         : memberMode ? 'Muumini'
