@@ -31,11 +31,9 @@
       removeActiveChannel();
       const widget = !!options.widget;
       box.innerHTML = widget ? `<div class="chat-widget__body">
-        <div class="chat-widget__picker"><button type="button" class="chat-widget__pick-button" data-picker-toggle aria-expanded="false"><span class="material-symbols-outlined">forum</span><span><small>MAZUNGUMZO</small><b data-current-room>Chagua eneo</b></span><span class="material-symbols-outlined chat-widget__pick-arrow">expand_more</span></button><div class="chat-widget__picker-menu" data-room-list hidden><div class="chat-state">Inatafuta mazungumzo…</div></div></div>
-        <section class="chat-conversation"><div class="chat-conversation__head" data-chat-head><span class="material-symbols-outlined">forum</span><div><b>Chagua mazungumzo</b><small>Ujumbe wa eneo ulilochagua utaonekana hapa.</small></div><span class="chat-connection" data-chat-connection aria-live="polite">Chagua eneo</span></div>
-          <div class="chat-messages" data-chat-messages aria-live="polite"><div class="chat-empty"><span class="material-symbols-outlined">forum</span><b>Karibu kwenye Chat</b><span>Chagua Parokia, Kigango au Jumuiya kuanza.</span></div></div>
+        <section class="chat-conversation">
+          <div class="chat-messages" data-chat-messages aria-live="polite"><div class="chat-empty"><span class="material-symbols-outlined">forum</span><b>Karibu kwenye mazungumzo</b><span>Chagua eneo kupitia kitufe cha juu ili kuona ujumbe wake.</span></div></div>
           <form class="chat-compose-form" data-chat-form><label class="sr-only" for="chat-message-input">Ujumbe</label><textarea id="chat-message-input" name="body" rows="1" maxlength="2000" placeholder="Andika ujumbe…" disabled required></textarea><button type="submit" aria-label="Tuma ujumbe" disabled><span class="material-symbols-outlined">send</span></button></form>
-          <p class="chat-footnote">Ujumbe unaonekana kwa washiriki walioidhinishwa wa eneo hili.</p>
         </section>
       </div>` : `<section class="chat-page">
         <header class="chat-page__intro"><div><span class="chat-eyebrow">Mawasiliano ya parokia</span><h2>Chat za Parokia</h2><p>Chagua eneo lako; mazungumzo yanafuata muundo wa Parokia.</p></div><span class="chat-lock"><span class="material-symbols-outlined">verified_user</span> Kila eneo lina mazungumzo yake</span></header>
@@ -49,9 +47,9 @@
       </section>`;
 
       const list = box.querySelector('[data-room-list]'), count = box.querySelector('[data-room-count]');
-      const pickerToggle = box.querySelector('[data-picker-toggle]'), currentRoom = box.querySelector('[data-current-room]');
+      const pickerToggle = document.querySelector('.chat-widget [data-picker-toggle]'), currentRoom = document.querySelector('.chat-widget [data-current-room]'), currentContext = document.querySelector('.chat-widget [data-current-context]');
       const head = box.querySelector('[data-chat-head]'), messages = box.querySelector('[data-chat-messages]');
-      const connection = box.querySelector('[data-chat-connection]');
+      const connection = box.querySelector('[data-chat-connection]') || document.querySelector('.chat-widget [data-chat-connection]');
       const form = box.querySelector('[data-chat-form]'), input = form.elements.body, submit = form.querySelector('button');
       let rooms = [], selected = null, loadingSeq = 0;
       const fmtTime = value => new Date(value).toLocaleString('sw-TZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -107,9 +105,12 @@
         loadingSeq++;
         list.querySelectorAll('[data-room-id]').forEach(el => el.classList.toggle('is-active', el.dataset.roomId === room.id));
         [...list.querySelectorAll('[data-room-id]')].find(el => el.dataset.roomId === room.id)?.closest('.chat-branch')?.setAttribute('open', '');
-        head.querySelector('.material-symbols-outlined').textContent = roomIcon(room.scope_type);
-        head.querySelector('div').innerHTML = `<b>${P.esc(room.title)}</b><small>${P.esc(roomContext(room))}</small>`;
         if (currentRoom) currentRoom.textContent = room.title;
+        if (currentContext) currentContext.textContent = roomContext(room);
+        if (head) {
+          head.querySelector('.material-symbols-outlined').textContent = roomIcon(room.scope_type);
+          head.querySelector('div').innerHTML = `<b>${P.esc(room.title)}</b><small>${P.esc(roomContext(room))}</small>`;
+        }
         if (list && !list.hidden) { list.hidden = true; pickerToggle?.setAttribute('aria-expanded', 'false'); }
         input.disabled = false; submit.disabled = false;
         setConnection('connecting', 'Inaunganisha…');
@@ -169,7 +170,7 @@
     if (document.querySelector('.chat-widget')) return;
     const widget = document.createElement('aside');
     widget.className = 'chat-widget';
-    widget.innerHTML = `<section class="chat-widget__panel" aria-label="Mazungumzo ya parokia" aria-hidden="true"><header class="chat-widget__header"><span class="chat-widget__mark material-symbols-outlined">forum</span><div><b>Mawasiliano</b><small>Jumuiya na parokia yako</small></div><button type="button" data-chat-close aria-label="Funga chat"><span class="material-symbols-outlined">close</span></button></header><div class="chat-widget__mount"></div></section><button type="button" class="chat-widget__fab" aria-label="Fungua chat" aria-expanded="false"><span class="material-symbols-outlined" data-fab-icon>forum</span><i></i></button>`;
+    widget.innerHTML = `<section class="chat-widget__panel" aria-label="Mazungumzo ya parokia" aria-hidden="true"><header class="chat-widget__header"><span class="chat-widget__mark material-symbols-outlined">forum</span><div class="chat-widget__heading"><b data-current-room>Mawasiliano</b><small data-current-context>Chagua eneo la mazungumzo</small></div><span class="chat-connection" data-chat-connection aria-live="polite">Chagua eneo</span><button type="button" class="chat-widget__scope" data-picker-toggle aria-label="Chagua eneo" aria-expanded="false"><span class="material-symbols-outlined">tune</span></button><button type="button" data-chat-close aria-label="Funga chat"><span class="material-symbols-outlined">close</span></button></header><div class="chat-widget__picker-menu" data-room-list hidden><div class="chat-state">Inatafuta mazungumzo…</div></div><div class="chat-widget__mount"></div></section><button type="button" class="chat-widget__fab" aria-label="Fungua chat" aria-expanded="false"><span class="material-symbols-outlined" data-fab-icon>forum</span><i></i></button>`;
     document.body.appendChild(widget);
     const panel = widget.querySelector('.chat-widget__panel'), fab = widget.querySelector('.chat-widget__fab');
     const setOpen = open => { widget.classList.toggle('is-open', open); panel.setAttribute('aria-hidden', String(!open)); fab.setAttribute('aria-expanded', String(open)); fab.setAttribute('aria-label', open ? 'Funga chat' : 'Fungua chat'); widget.querySelector('[data-fab-icon]').textContent = open ? 'close' : 'forum'; };
